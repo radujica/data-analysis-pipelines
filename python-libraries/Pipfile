@@ -8,6 +8,8 @@ name = "pypi"
 [packages]
 
 pandas = "*"
+"netcdf4" = "*"
+xarray = "*"
 
 
 [dev-packages]
