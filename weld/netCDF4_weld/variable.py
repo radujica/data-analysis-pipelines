@@ -39,7 +39,7 @@ class Variable(LazyOpResult):
 
     def __init__(self, ds, column_name, dimensions, attributes, expression, dtype):
         weld_type = WeldVec(numpy_to_weld_type_mapping[str(dtype)])
-        super(Variable, self).__init__(expression, weld_type)
+        LazyOpResult.__init__(self, expression, weld_type, 1)
 
         self.ds = ds
         self.column_name = column_name
@@ -102,13 +102,13 @@ class Variable(LazyOpResult):
         WeldObject.evaluate
 
         """
-        if isinstance(self.expression, WeldObject):
-            for key in self.expression.context:
+        if isinstance(self.expr, WeldObject):
+            for key in self.expr.context:
                 data = self._read_data().flatten()
                 # TODO: fix this HACK ~ about np masked array f32
                 if self.dtype is np.dtype(np.int16):
                     data = data.astype(np.int16)
-                self.expression.context[key] = data
+                self.expr.context[key] = data
             return super(Variable, self).evaluate(verbose, decode, passes, num_threads, apply_experimental_transforms)
         else:
             data = self._read_data().flatten()
@@ -128,7 +128,7 @@ class Variable(LazyOpResult):
                                         'dtype': self.dtype,
                                         'dimensions': self.dimensions,
                                         'attributes': self.attributes,
-                                        'expression': self.expression}
+                                        'expression': self.expr}
 
     # this and add are for learning/testing purposes
     def _element_wise_op(self, array, value, operation):
@@ -160,5 +160,5 @@ class Variable(LazyOpResult):
                         self.column_name,
                         self.dimensions,
                         self.attributes,
-                        self._element_wise_op(self.expression, value, '+'),
+                        self._element_wise_op(self.expr, value, '+'),
                         self.dtype)
