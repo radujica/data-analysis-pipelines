@@ -9,9 +9,9 @@ name = "pypi"
 
 numpy = "*"
 pandas = "*"
-"ad2d3ec" = {path = "/ufs/radujica/weld/python/pyweld/", editable = true}
-"8e190d1" = {path = "/ufs/radujica/weld/python/grizzly/", editable = true}
-"netCDF4" = "*"
+"netcdf4" = "*"
+"9aa4f98" = {path = "/ufs/radujica/Workspace/weld/python/pyweld", editable = true}
+"7409f53" = {path = "/ufs/radujica/Workspace/weld/python/grizzly", editable = true}
 
 
 [dev-packages]
