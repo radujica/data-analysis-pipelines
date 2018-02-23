@@ -111,6 +111,24 @@ class Variable(LazyOpResult):
     def __getitem__(self, item):
         pass
 
+    def head(self, n=10):
+        """ Read first n values eagerly
+
+        Note this data is not cached
+
+        Parameters
+        ----------
+        n : int
+            how many values to read
+
+        Returns
+        -------
+        np.array
+            raw data
+
+        """
+        return self._read_data(0, n, 1)
+
     # TODO: _read_data should take params!
     def evaluate(self, verbose=True, decode=True, passes=None, num_threads=1,
                  apply_experimental_transforms=False):
