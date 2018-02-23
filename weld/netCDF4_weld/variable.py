@@ -1,6 +1,6 @@
 from grizzly.encoders import NumPyEncoder, NumPyDecoder, numpy_to_weld_type_mapping
 from grizzly.lazy_op import LazyOpResult
-from weld.types import WeldVec
+from numpy.ma import MaskedArray
 from weld.weldobject import WeldObject
 import numpy as np
 
@@ -14,6 +14,8 @@ class Variable(LazyOpResult):
     ----------
     ds : netCDF4.Dataset
         the Dataset from which this variable originates
+    ds_id : int
+        links this variable to a specific Dataset based on the Dataset's id
     column_name : str
         the variable name in the dataset
     dimensions : tuple
@@ -33,28 +35,41 @@ class Variable(LazyOpResult):
     """
     _encoder = NumPyEncoder()
     _decoder = NumPyDecoder()
-    # _input_counter and _obj_input_mapping are used to keep track of which variables come from which raw data
-    _input_counter = 0
-    _obj_input_mapping = {}
+    # keep track of variable id -> Weld's _inpX assigned name
+    _input_mapping = {}
+    # cache the materialized, i.e. read, data; variable id -> data
+    _materialized_columns = {}
 
-    def __init__(self, ds, column_name, dimensions, attributes, expression, dtype):
-        weld_type = WeldVec(numpy_to_weld_type_mapping[str(dtype)])
+    def __init__(self, ds, ds_id, column_name, dimensions, attributes, expression, dtype):
+        inferred_dtype = self._infer_dtype(dtype, attributes)
+        # IMO this should be WeldVec(...) HERE and not enforced during evaluate()
+        weld_type = numpy_to_weld_type_mapping[str(inferred_dtype)]
         LazyOpResult.__init__(self, expression, weld_type, 1)
 
         self.ds = ds
+        self.ds_id = ds_id
+        # maybe worth it to make it a 'true' id
+        self._id = ds_id + column_name
         self.column_name = column_name
         self.dimensions = dimensions
         self.attributes = attributes
-        self.dtype = dtype
+        # when reading data with netCDF4, the values are multiplied by the scale_factor if it exists
+        self.dtype = inferred_dtype
 
-        if not isinstance(expression, WeldObject):
-            Variable._obj_input_mapping[Variable._input_counter] = expression
-            Variable._input_counter += 1
+    # TODO: this doesn't seem robust; perhaps float64 is also possible?
+    @staticmethod
+    def _infer_dtype(dtype, attributes):
+        if 'scale_factor' in attributes:
+            return np.dtype(np.float32)
+        else:
+            return dtype
 
     # TODO: this could be better; look at what netcdf4 does
-    # TODO: look at scale_factor and update accordingly (like in netcdf4)
+    # TODO: flatten can be avoided?
     def _read_data(self, start=0, end=None, stride=None):
-        """ Eagerly reads data from file
+        """ Reads data from file
+
+        Once data is read, the result is stored. On subsequent reads, this stored data is returned.
 
         Parameters
         ----------
@@ -75,22 +90,31 @@ class Variable(LazyOpResult):
         Python slicing
 
         """
+        if self._id in self._materialized_columns:
+            return self._materialized_columns[self._id]
+
         if end is None and stride is None:
-            return self.ds.variables[self.column_name][start:]
+            data = self.ds.variables[self.column_name][start:]
         else:
-            return self.ds.variables[self.column_name][start:end:stride]
+            data = self.ds.variables[self.column_name][start:end:stride]
+        # remove MaskedArrays, just np.array please
+        if isinstance(data, MaskedArray):
+            data = data.filled(np.nan)
+        # want dimension = 1
+        data = data.flatten()
+        # cache the data for further reads
+        self._materialized_columns[self._id] = data
+
+        return data
 
     # TODO: this should encode start, end, stride in weld code ~ iter
     def __getitem__(self, item):
         pass
 
     # TODO: _read_data should take params!
-    # TODO: maybe flatten can be avoided?
     def evaluate(self, verbose=True, decode=True, passes=None, num_threads=1,
                  apply_experimental_transforms=False):
-        """ Evaluate the expression on this variable and read the data necessary
-
-        Note that after 1 evaluate, the result is already materialized in context
+        """ Evaluate the expression on this variable and read the data necessar
 
         Returns
         -------
@@ -102,18 +126,11 @@ class Variable(LazyOpResult):
         WeldObject.evaluate
 
         """
+        data = self._read_data()
         if isinstance(self.expr, WeldObject):
-            for key in self.expr.context:
-                data = self._read_data().flatten()
-                # TODO: fix this HACK ~ about np masked array f32
-                if self.dtype is np.dtype(np.int16):
-                    data = data.astype(np.int16)
-                self.expr.context[key] = data
+            self.expr.context[self._input_mapping[self._id]] = data
             return super(Variable, self).evaluate(verbose, decode, passes, num_threads, apply_experimental_transforms)
         else:
-            data = self._read_data().flatten()
-            # if self.dtype is np.dtype(np.int32):
-            #     data = data.astype(np.int32)
             return data
 
     # TODO: reduce printed expression context if materialized; can be looooooooooooooooong
@@ -135,6 +152,10 @@ class Variable(LazyOpResult):
         weld_obj = WeldObject(self._encoder, self._decoder)
 
         array_var = weld_obj.update(array)
+        # this means an _inpX id was returned for this column/variable; keep track of it
+        if array_var is not None:
+            self._input_mapping[self._id] = array_var
+
         if isinstance(array, WeldObject):
             array_var = array.obj_id
             weld_obj.dependencies[array_var] = array
@@ -157,6 +178,7 @@ class Variable(LazyOpResult):
 
     def add(self, value):
         return Variable(self.ds,
+                        self.ds_id,
                         self.column_name,
                         self.dimensions,
                         self.attributes,
