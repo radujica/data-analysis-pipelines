@@ -1,9 +1,6 @@
 from collections import OrderedDict
-from netCDF4 import num2date
 from variable import Variable
 import pandas_weld as pdw
-import numpy as np
-import pandas as pd
 
 
 class Dataset(object):
@@ -74,6 +71,7 @@ class Dataset(object):
         pass
 
     # TODO: this could look nicer; look at how pandas does it?
+    # TODO: this reads raw data but if there was an operation on it, it's OLD data
     # currently also returns head data
     def __repr__(self):
         string_representation = """columns:\n\t%(columns)s\ndimensions: %(dimensions)s"""
@@ -90,36 +88,27 @@ class Dataset(object):
                        {k: v.add(value) for k, v in self.variables.iteritems()},
                        self.dimensions)
 
-    # TODO
-    def _process_column(self, column_name, ordered_dimensions):
-        full_variable = self.variables[column_name]
-        variable_dims = full_variable.dimensions
-        raw_data = full_variable[0:]  # full_variable.expression?
+    # only flatten seems necessary, which currently done anyway when reading;
+    # no broadcast_to or transpose is necessary for my datasets
+    # though did not identify use cases where they are needed at all
+    def _process_column(self, column_name):
+        return self.variables[column_name].expr
 
-        shape = tuple(ordered_dimensions[d] for d in variable_dims)
-        expanded_data = np.broadcast_to(raw_data.filled(np.nan), shape)
-        axes = tuple(variable_dims.index(d) for d in ordered_dimensions)
-        transposed_data = np.transpose(expanded_data, axes)
-        reshaped_data = transposed_data.reshape(-1)
-        return reshaped_data
+    def _process_dimension(self, name):
+        return self.variables[name].expr
 
-    # TODO: type the computations in weld IR
     def to_dataframe(self):
         columns = [k for k in self.variables if k not in self.dimensions]
         ordered_dimensions = OrderedDict(map(lambda kv: (kv[0], kv[1].size),
                                              OrderedDict(self.dimensions.items()).items()))
 
-        # the data
-        data = []
-        for k in columns:
-            data.append(self._process_column(k, ordered_dimensions))
-
-        def convert_datetime(variable):
-            return pd.to_datetime(num2date(variable[0:], variable.units, calendar=variable.calendar))
-
+        # columns data, either WeldObject or raw
+        data = [self._process_column(k) for k in columns]
         # the dimensions
-        indexes = [convert_datetime(self.ds.variables[k]) if hasattr(self.ds.variables[k], 'calendar')
-                   else self.ds.variables[k][0:] for k in ordered_dimensions]
-        index = pd.MultiIndex.from_product(indexes, names=ordered_dimensions)
+        indexes = [self._process_dimension(k) for k in ordered_dimensions]
+        # need the types of each dimension
+        indexes_types = [self.variables[k].dtype for k in ordered_dimensions]
+
+        index = pdw.MultiIndex.from_product(indexes, indexes_types, names=ordered_dimensions)
 
         return pdw.DataFrame(dict(zip(columns, data)), index=index)
