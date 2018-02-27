@@ -1,5 +1,6 @@
 from grizzly.encoders import NumPyEncoder, NumPyDecoder, numpy_to_weld_type_mapping
 from grizzly.lazy_op import LazyOpResult
+from netCDF4 import num2date
 from numpy.ma import MaskedArray
 from weld.weldobject import WeldObject
 import numpy as np
@@ -64,8 +65,7 @@ class Variable(LazyOpResult):
         else:
             return dtype
 
-    # TODO: this could be better; look at what netcdf4 does
-    # TODO: flatten can be avoided?
+    # TODO: flatten/reshape(-1)-ing always might not be the best idea
     def _read_data(self, start=0, end=None, stride=None):
         """ Reads data from file
 
@@ -101,7 +101,10 @@ class Variable(LazyOpResult):
         if isinstance(data, MaskedArray):
             data = data.filled(np.nan)
         # want dimension = 1
-        data = data.flatten()
+        data = data.reshape(-1)
+        # if a datetime variable, want python's datetime
+        if 'calendar' in self.attributes:
+            data = num2date(data, self.attributes['units'], calendar=self.attributes['calendar'])
         # cache the data for further reads
         self._materialized_columns[self._id] = data
 
