@@ -1,12 +1,15 @@
 from grizzly.encoders import NumPyEncoder, NumPyDecoder, numpy_to_weld_type_mapping
 from weld.weldobject import WeldObject
 
+# the methods are only intended to work with numpy, so have a single encoder/decoder
 _encoder = NumPyEncoder()
 _decoder = NumPyDecoder()
 
 
 # TODO: the helper methods should probably reside in the numpy package
-def duplicate_elements(array, n, dtype, multiple=False):
+# TODO: could generalize to return either values or indices
+
+def duplicate_elements_indices(array, n, dtype, cartesian=False):
     """ Expands array by multiplying each element n times
 
     Parameters
@@ -17,18 +20,19 @@ def duplicate_elements(array, n, dtype, multiple=False):
         how many times to repeat each element
     dtype : np.dtype
         type of the elements in the array
-    multiple : boolean
+    cartesian : boolean
         True if used internally by cartesian_product to signify the operation
         has been done once already and hence must behave slightly different
 
     Returns
     -------
     WeldObject
+        the expanded array containing the indices, not the elements
 
     Examples
     --------
-    >>> duplicate_elements(np.array([1, 2, 3], dtype=np.int32), 2, np.dtype(np.int32))
-    [1, 1, 2, 2, 3, 3]
+    >>> duplicate_elements_indices(np.array([1, 2, 3], dtype=np.int32), 2, np.dtype(np.int32))
+    [0, 0, 1, 1, 2, 2]
 
     """
     weld_obj = WeldObject(_encoder, _decoder)
@@ -55,36 +59,37 @@ def duplicate_elements(array, n, dtype, multiple=False):
     )"""
 
     weld_obj.weld_code = weld_template % {'array': array_var,
-                                          'n': n,
-                                          'index_or_value': 'n' if multiple else 'i',
-                                          'type': 'i64' if multiple else numpy_to_weld_type_mapping[str(dtype)]}
+                                          'n': '%sL' % n if type(n) is long else n,
+                                          'index_or_value': 'n' if cartesian else 'i',
+                                          'type': 'i64' if cartesian else numpy_to_weld_type_mapping[str(dtype)]}
 
     return weld_obj
 
 
-def duplicate_array(array, n, dtype, multiple=False):
+def duplicate_array_indices(array, n, dtype, cartesian=False):
     """ Duplicate array n times
 
     Parameters
     ----------
     array : np.array / WeldObject
         the source data
-    n : int
+    n : long
         how many times to repeat the source array
     dtype : np.dtype
         type of the elements in the array
-    multiple : boolean
+    cartesian : boolean
         True if used internally by cartesian_product to signify the operation
         has been done once already and hence must behave slightly different
 
     Returns
     -------
     WeldObject
+        the expanded array containing the indices, not the elements
 
     Examples
     --------
-    >>> duplicate_array(np.array([1, 2, 3], dtype=np.int32), 2, np.dtype(np.int32))
-    [1, 2, 3, 1, 2, 3]
+    >>> duplicate_array_indices(np.array([1, 2, 3], dtype=np.int32), 2, np.dtype(np.int32))
+    [0, 1, 2, 0, 1, 2]
 
     """
     weld_obj = WeldObject(_encoder, _decoder)
@@ -111,9 +116,9 @@ def duplicate_array(array, n, dtype, multiple=False):
     )"""
 
     weld_obj.weld_code = weld_template % {'array': array_var,
-                                          'n': n,
-                                          'index_or_value': 'n' if multiple else 'i',
-                                          'type': 'i64' if multiple else numpy_to_weld_type_mapping[str(dtype)]}
+                                          'n': '%sL' % n if type(n) is long else n,
+                                          'index_or_value': 'n' if cartesian else 'i',
+                                          'type': 'i64' if cartesian else numpy_to_weld_type_mapping[str(dtype)]}
 
     return weld_obj
 
@@ -128,7 +133,6 @@ class _WeldObjectIdPair(object):
         return self.weld_object + ', ' + self.object_id
 
 
-# TODO: could generalize to return either values or indices
 # TODO: properly test starting with WeldObjects too
 def cartesian_product_indices(arrays, arrays_types):
     """ Performs cartesian product between all arrays
@@ -144,7 +148,7 @@ def cartesian_product_indices(arrays, arrays_types):
 
     Returns
     -------
-    WeldObject
+    [WeldObject]
 
     Examples
     --------
@@ -187,34 +191,34 @@ def cartesian_product_indices(arrays, arrays_types):
 
     # first 2 arrays are cartesian-produced by default
     weld_objects[0].weld_object = \
-        duplicate_elements(weld_objects[0].weld_object,
-                           'len(%s)' % weld_objects[1].object_id,
-                           arrays_types[0])
+        duplicate_elements_indices(weld_objects[0].weld_object,
+                                   'len(%s)' % weld_objects[1].object_id,
+                                   arrays_types[0])
     weld_objects[1].weld_object = \
-        duplicate_array(weld_objects[1].weld_object,
-                        'len(%s)' % weld_objects[0].object_id,
-                        arrays_types[1])
+        duplicate_array_indices(weld_objects[1].weld_object,
+                                'len(%s)' % weld_objects[0].object_id,
+                                arrays_types[1])
 
     # handle the remaining arrays, i.e. for index > 2
     for i in xrange(2, number_of_arrays):
         for j in xrange(0, i):
             weld_objects[j].weld_object = \
-                duplicate_elements(weld_objects[j].weld_object,
-                                   'len(%s)' % weld_objects[i].object_id,
-                                   arrays_types[j],
-                                   multiple=True)
+                duplicate_elements_indices(weld_objects[j].weld_object,
+                                           'len(%s)' % weld_objects[i].object_id,
+                                           arrays_types[j],
+                                           cartesian=True)
 
         weld_objects[i].weld_object = \
-            duplicate_array(weld_objects[i].weld_object,
-                            'len(%s)' % weld_objects[0].object_id,
-                            arrays_types[i])
+            duplicate_array_indices(weld_objects[i].weld_object,
+                                    'len(%s)' % weld_objects[0].object_id,
+                                    arrays_types[i])
 
         for j in xrange(1, i):
             weld_objects[i].weld_object = \
-                duplicate_array(weld_objects[i].weld_object,
-                                'len(%s)' % weld_objects[j].object_id,
-                                arrays_types[i],
-                                multiple=True)
+                duplicate_array_indices(weld_objects[i].weld_object,
+                                        'len(%s)' % weld_objects[j].object_id,
+                                        arrays_types[i],
+                                        cartesian=True)
 
     return [t.weld_object for t in weld_objects]
 
