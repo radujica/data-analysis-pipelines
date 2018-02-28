@@ -98,6 +98,13 @@ class Dataset(object):
         return self.variables[name].expr
 
     def to_dataframe(self):
+        """ Convert Dataset to pandas_weld DataFrame
+
+        Returns
+        -------
+        pdw.DataFrame
+
+        """
         columns = [k for k in self.variables if k not in self.dimensions]
         ordered_dimensions = OrderedDict(map(lambda kv: (kv[0], kv[1].size),
                                              OrderedDict(self.dimensions.items()).items()))
@@ -111,4 +118,4 @@ class Dataset(object):
 
         index = pdw.MultiIndex.from_product(indexes, indexes_types, names=ordered_dimensions)
 
-        return pdw.DataFrame(dict(zip(columns, data)), index=index)
+        return pdw.DataFrame(data=dict(zip(columns, data)), index=index)
