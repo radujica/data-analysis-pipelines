@@ -224,15 +224,46 @@ def cartesian_product_indices(arrays, arrays_types):
 
 
 # maybe extend LazyOpResult?
-# TODO: docs on this
 class MultiIndex(object):
     def __init__(self, levels, labels, names):
+        """ Create Weld-ed MultiIndex
+
+        Parameters
+        ----------
+        levels : list
+            np.arrays or WeldObjects
+        labels : list
+            np.arrays or WeldObjects
+        names : dict
+            name -> size
+
+        Returns
+        -------
+        MultiIndex
+
+        """
         self.levels = levels
         self.labels = labels
         self.names = names
 
     @classmethod
     def from_product(cls, levels, levels_types, names):
+        """ Create MultiIndex when no labels are available
+
+        Parameters
+        ----------
+        levels : list
+            np.arrays or WeldObjects
+        levels_types : list
+            types of the levels in the same order
+        names : dict
+            name -> size
+
+        Returns
+        -------
+        MultiIndex
+
+        """
         labels = cartesian_product_indices(levels, levels_types)
 
         return cls(levels, labels, names)
