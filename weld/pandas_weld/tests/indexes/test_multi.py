@@ -15,15 +15,15 @@ class CartesianProductTests(unittest.TestCase):
         array2_dtype = np.dtype(np.int32)
         array2 = np.array([3, 5], dtype=array2_dtype)
 
-        result = cartesian_product_indices([array1, array2], [array1_dtype, array2_dtype])
+        result = cartesian_product_indices([array1, array2])
 
         expected_array1_result = np.array([0, 0, 1, 1], dtype=np.int64)
         expected_array2_result = np.array([0, 1, 0, 1], dtype=np.int64)
 
-        np.testing.assert_array_equal(result[0].evaluate(WeldVec(WeldLong()), verbose=False),
+        np.testing.assert_array_equal(result[0].evaluate(verbose=False),
                                       expected_array1_result,
                                       "First array result is incorrect")
-        np.testing.assert_array_equal(result[1].evaluate(WeldVec(WeldLong()), verbose=False),
+        np.testing.assert_array_equal(result[1].evaluate(verbose=False),
                                       expected_array2_result,
                                       "Second array result is incorrect")
 
@@ -34,22 +34,21 @@ class CartesianProductTests(unittest.TestCase):
         array2_dtype = np.dtype(np.int32)
         array2 = np.array([3, 5], dtype=array2_dtype)
         array3_dtype = np.dtype(np.int32)
-        array3 = np.array([4, 6], dtype=array1_dtype)
+        array3 = np.array([4, 6], dtype=array3_dtype)
 
-        result = cartesian_product_indices([array1, array2, array3],
-                                           [array1_dtype, array2_dtype, array3_dtype])
+        result = cartesian_product_indices([array1, array2, array3])
 
         expected_array1_result = np.array([0, 0, 0, 0, 1, 1, 1, 1], dtype=np.int64)
         expected_array2_result = np.array([0, 0, 1, 1, 0, 0, 1, 1], dtype=np.int64)
         expected_array3_result = np.array([0, 1, 0, 1, 0, 1, 0, 1], dtype=np.int64)
 
-        np.testing.assert_array_equal(result[0].evaluate(WeldVec(WeldLong()), verbose=False),
+        np.testing.assert_array_equal(result[0].evaluate(verbose=False),
                                       expected_array1_result,
                                       "First array result is incorrect")
-        np.testing.assert_array_equal(result[1].evaluate(WeldVec(WeldLong()), verbose=False),
+        np.testing.assert_array_equal(result[1].evaluate(verbose=False),
                                       expected_array2_result,
                                       "Second array result is incorrect")
-        np.testing.assert_array_equal(result[2].evaluate(WeldVec(WeldLong()), verbose=False),
+        np.testing.assert_array_equal(result[2].evaluate(verbose=False),
                                       expected_array3_result,
                                       "Third array result is incorrect")
 
@@ -60,15 +59,15 @@ class CartesianProductTests(unittest.TestCase):
         array2_dtype = np.dtype(np.int32)
         array2 = np.array([3, 5, 7], dtype=array2_dtype)
 
-        result = cartesian_product_indices([array1, array2], [array1_dtype, array2_dtype])
+        result = cartesian_product_indices([array1, array2])
 
         expected_array1_result = np.array([0, 0, 0, 1, 1, 1], dtype=np.int64)
         expected_array2_result = np.array([0, 1, 2, 0, 1, 2], dtype=np.int64)
 
-        np.testing.assert_array_equal(result[0].evaluate(WeldVec(WeldLong()), verbose=False),
+        np.testing.assert_array_equal(result[0].evaluate(verbose=False),
                                       expected_array1_result,
                                       "First array result is incorrect")
-        np.testing.assert_array_equal(result[1].evaluate(WeldVec(WeldLong()), verbose=False),
+        np.testing.assert_array_equal(result[1].evaluate(verbose=False),
                                       expected_array2_result,
                                       "Second array result is incorrect")
 
@@ -79,15 +78,15 @@ class CartesianProductTests(unittest.TestCase):
         array2_dtype = np.dtype(np.int32)
         array2 = np.array([4, 5], dtype=array2_dtype)
 
-        result = cartesian_product_indices([array1, array2], [array1_dtype, array2_dtype])
+        result = cartesian_product_indices([array1, array2])
 
         expected_array1_result = np.array([0, 0, 1, 1, 2, 2], dtype=np.int64)
         expected_array2_result = np.array([0, 1, 0, 1, 0, 1], dtype=np.int64)
 
-        np.testing.assert_array_equal(result[0].evaluate(WeldVec(WeldLong()), verbose=False),
+        np.testing.assert_array_equal(result[0].evaluate(verbose=False),
                                       expected_array1_result,
                                       "First array result is incorrect")
-        np.testing.assert_array_equal(result[1].evaluate(WeldVec(WeldLong()), verbose=False),
+        np.testing.assert_array_equal(result[1].evaluate(verbose=False),
                                       expected_array2_result,
                                       "Second array result is incorrect")
 
@@ -111,11 +110,11 @@ class DuplicateElementsTests(unittest.TestCase):
         array = np.array([1, 2, 3], dtype=array_dtype)
         n = 4L
 
-        result = duplicate_elements_indices(array, n, array_dtype)
+        result = duplicate_elements_indices(array, n)
 
         expected_array_result = np.array([0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2], dtype=np.int64)
 
-        np.testing.assert_array_equal(result.evaluate(WeldVec(WeldLong()), verbose=False),
+        np.testing.assert_array_equal(result.evaluate(verbose=False),
                                       expected_array_result)
 
 
@@ -126,11 +125,11 @@ class DuplicateArrayTests(unittest.TestCase):
         array = np.array([1, 2, 3], dtype=array_dtype)
         n = 4L
 
-        result = duplicate_array_indices(array, n, array_dtype)
+        result = duplicate_array_indices(array, n)
 
         expected_array_result = np.array([0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2], dtype=np.int64)
 
-        np.testing.assert_array_equal(result.evaluate(WeldVec(WeldLong()), verbose=False),
+        np.testing.assert_array_equal(result.evaluate(verbose=False),
                                       expected_array_result)
 
 
