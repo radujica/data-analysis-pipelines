@@ -8,8 +8,9 @@ class Dataset(object):
 
     Parameters
     ----------
-    ds : netCDF4 Dataset
-        the original dataset
+    read_file_func : func
+        func which when called reads the file; in this case, must return a netCDF4.Dataset which can be used to
+        read variables from
     variables : dict {name : netCDF4_weld Variables}
         used when doing operations on the Dataset to create new result Dataset
     dimensions : dict {name : size}
@@ -23,26 +24,28 @@ class Dataset(object):
     # used to assign a unique id to this dataset which is needed for variable tracking
     _dataset_counter = 0
 
-    def __init__(self, ds, variables=None, dimensions=None):
-        self.ds = ds
+    def __init__(self, read_file_func, variables=None, dimensions=None):
+        self.read_file_func = read_file_func
+        # TODO: should cache this too
+        self.ds = self.read_file_func()
         self._id = self._create_dataset_id()
 
         if variables is None:
             # create OrderedDict of column_name -> Variable; use the variable name as expression/weld_code
             self.variables = OrderedDict(map(lambda kv: (kv[0],
-                                                         Variable(ds,
+                                                         Variable(read_file_func,
                                                                   self._id,
                                                                   kv[0],
                                                                   kv[1].dimensions,
                                                                   kv[1].__dict__,
                                                                   kv[0],
                                                                   kv[1].dtype)),
-                                             ds.variables.items()))
+                                             self.ds.variables.items()))
         else:
             self.variables = variables
 
         if dimensions is None:
-            self.dimensions = OrderedDict(map(lambda kv: (kv[0], kv[1].size), ds.dimensions.items()))
+            self.dimensions = OrderedDict(map(lambda kv: (kv[0], kv[1].size), self.ds.dimensions.items()))
         else:
             self.dimensions = dimensions
 
@@ -55,10 +58,12 @@ class Dataset(object):
         return ds_id
 
     # this materializes everything right now
-    def evaluate_all(self, verbose=True):
+    def evaluate_all(self, verbose=True, decode=True, passes=None, num_threads=1,
+                     apply_experimental_transforms=False):
         materialized_variables = {}
         for variable in self.variables.items():
-            materialized_variables[variable[0]] = variable[1].evaluate(verbose=verbose)
+            materialized_variables[variable[0]] = variable[1].evaluate(verbose, decode, passes,
+                                                                       num_threads, apply_experimental_transforms)
 
         string_representation = """%(repr)s\ndata: %(data)s"""
 
@@ -71,20 +76,15 @@ class Dataset(object):
         pass
 
     # TODO: this could look nicer; look at how pandas does it?
-    # TODO: this reads raw data but if there was an operation on it, it's OLD data
-    # currently also returns head data
     def __repr__(self):
         string_representation = """columns:\n\t%(columns)s\ndimensions: %(dimensions)s"""
 
-        column_data = [self.variables[k].head() for k in self._columns]
-
-        return string_representation % {'columns': '\n\t'.join(map(lambda x: str(x),
-                                                                   zip(self._columns, column_data))),
+        return string_representation % {'columns': self._columns,
                                         'dimensions': self.dimensions.keys()}
 
     # add number to each variable value; JUST for learning/testing purposes
     def add(self, value):
-        return Dataset(self.ds,
+        return Dataset(self.read_file_func,
                        {k: v.add(value) for k, v in self.variables.iteritems()},
                        self.dimensions)
 
@@ -92,10 +92,10 @@ class Dataset(object):
     # no broadcast_to or transpose is necessary for my datasets
     # though did not identify use cases where they are needed at all
     def _process_column(self, column_name):
-        return self.variables[column_name].expr
+        return self.variables[column_name]
 
     def _process_dimension(self, name):
-        return self.variables[name].expr
+        return self.variables[name]
 
     def to_dataframe(self):
         """ Convert Dataset to pandas_weld DataFrame
@@ -106,16 +106,14 @@ class Dataset(object):
 
         """
         columns = [k for k in self.variables if k not in self.dimensions]
-        ordered_dimensions = OrderedDict(map(lambda kv: (kv[0], kv[1].size),
+        ordered_dimensions = OrderedDict(map(lambda kv: (kv[0], kv[1]),
                                              OrderedDict(self.dimensions.items()).items()))
 
         # columns data, either WeldObject or raw
         data = [self._process_column(k) for k in columns]
         # the dimensions
         indexes = [self._process_dimension(k) for k in ordered_dimensions]
-        # need the types of each dimension
-        indexes_types = [self.variables[k].dtype for k in ordered_dimensions]
 
-        index = pdw.MultiIndex.from_product(indexes, indexes_types, names=ordered_dimensions)
+        index = pdw.MultiIndex.from_product(indexes, list(ordered_dimensions.keys()))
 
-        return pdw.DataFrame(data=dict(zip(columns, data)), index=index)
+        return pdw.DataFrame(dict(zip(columns, data)), index)
