@@ -13,9 +13,8 @@ class Variable(LazyData):
 
     Parameters
     ----------
-    read_file_func : func
-        func which when called reads the file; in this case, returns a netCDF4.Dataset which can be used to
-        read variables from
+    read_file_func : netCDF4.Dataset
+        the Dataset from which this variable originates
     ds_id : int
         links this variable to a specific Dataset based on the Dataset's id
     column_name : str
