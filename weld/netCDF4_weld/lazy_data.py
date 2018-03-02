@@ -15,6 +15,8 @@ class InputMapping(object):
     input_function : function
         to call when evaluating, bringing the data from file to memory (i.e. reading the file)
     input_function_args : tuple
+    materialized_data : np.ndarray or others
+        starts by being None; as soon as it's read, it is cached here
 
     Returns
     -------
@@ -26,12 +28,14 @@ class InputMapping(object):
         self.weld_input_names = []
         self.input_functions = []
         self.input_function_args = []
+        self.materialized_data = []
 
-    def append(self, data_id, weld_input_name, read_input_function, read_input_function_args):
+    def append(self, data_id, weld_input_name, read_input_function, read_input_function_args, materialized_data=None):
         self.data_ids.append(data_id)
         self.weld_input_names.append(weld_input_name)
         self.input_functions.append(read_input_function)
         self.input_function_args.append(read_input_function_args)
+        self.materialized_data.append(materialized_data)
 
     def read(self, index):
         """ Read data at index
@@ -49,6 +53,16 @@ class InputMapping(object):
             probably np.array
         """
         return self.input_functions[index](*self.input_function_args[index])
+
+    def retrieve(self, index):
+        if self.materialized_data[index] is not None:
+            return self.materialized_data[index]
+        else:
+            data = self.read(index)
+            # cache it for later
+            self.materialized_data[index] = data
+
+            return data
 
 
 class LazyData(LazyOpResult):
@@ -75,8 +89,6 @@ class LazyData(LazyOpResult):
 
     """
     input_mapping = InputMapping()
-    # cache the materialized, i.e. read, data; data_id -> data
-    materialized_columns = {}
 
     def __init__(self, expr, weld_type, dim, data_id=None, read_func=None, read_func_args=None):
         super(LazyData, self).__init__(expr, weld_type, dim)
@@ -96,15 +108,14 @@ class LazyData(LazyOpResult):
                 if weld_input in self.input_mapping.weld_input_names:
                     index = self.input_mapping.weld_input_names.index(weld_input)
                     # TODO: tests!
-                    # TODO: cache materialized stuff
-                    self.expr.context[weld_input] = self.input_mapping.read(index)
+                    self.expr.context[weld_input] = self.input_mapping.retrieve(index)
 
             return super(LazyData, self).evaluate(verbose, decode, passes, num_threads, apply_experimental_transforms)
         else:
             # there's no operation on the data, so just read and return
             if self.data_id is not None:
                 index = self.input_mapping.data_ids.index(self.data_id)
-                return self.input_mapping.read(index)
+                return self.input_mapping.retrieve(index)
             # data did not come from file so already 'stored' in expr
             else:
                 return self.expr
