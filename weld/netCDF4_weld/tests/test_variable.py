@@ -20,12 +20,12 @@ class VariableTests(unittest.TestCase):
     attributes: OrderedDict([(u'_FillValue', -9999), (u'units', u'Celsius'), (u'scale_factor', 0.01)])
     expression: tg"""
 
-        self.assertEqual(repr(self.variable), expected_repr)
+        self.assertEqual(expected_repr, repr(self.variable))
 
     def test_evaluate(self):
         expected_result = np.array([np.nan, 10., 10.099999, np.nan, np.nan, 10.2], dtype=np.float32)
 
-        np.testing.assert_array_equal(self.variable.evaluate(verbose=False), expected_result)
+        np.testing.assert_array_equal(expected_result, self.variable.evaluate(verbose=False))
 
 
 def main():

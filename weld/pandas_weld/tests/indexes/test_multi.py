@@ -1,9 +1,10 @@
 import unittest
 import numpy as np
-from pandas_weld.core.indexes.multi import cartesian_product_indices, duplicate_elements_indices, \
-    duplicate_array_indices
+from weld.types import WeldLong
 
-# TODO: implement cartesian product tests starting from weld objects
+from netCDF4_weld.lazy_data import LazyData
+from pandas_weld.core.indexes.multi import cartesian_product_indices, duplicate_elements_indices, \
+    duplicate_array_indices, MultiIndex
 
 
 class CartesianProductTests(unittest.TestCase):
@@ -19,11 +20,11 @@ class CartesianProductTests(unittest.TestCase):
         expected_array1_result = np.array([0, 0, 1, 1], dtype=np.int64)
         expected_array2_result = np.array([0, 1, 0, 1], dtype=np.int64)
 
-        np.testing.assert_array_equal(result[0].evaluate(verbose=False),
-                                      expected_array1_result,
+        np.testing.assert_array_equal(expected_array1_result,
+                                      result[0].evaluate(verbose=False),
                                       "First array result is incorrect")
-        np.testing.assert_array_equal(result[1].evaluate(verbose=False),
-                                      expected_array2_result,
+        np.testing.assert_array_equal(expected_array2_result,
+                                      result[1].evaluate(verbose=False),
                                       "Second array result is incorrect")
 
     @staticmethod
@@ -41,14 +42,14 @@ class CartesianProductTests(unittest.TestCase):
         expected_array2_result = np.array([0, 0, 1, 1, 0, 0, 1, 1], dtype=np.int64)
         expected_array3_result = np.array([0, 1, 0, 1, 0, 1, 0, 1], dtype=np.int64)
 
-        np.testing.assert_array_equal(result[0].evaluate(verbose=False),
-                                      expected_array1_result,
+        np.testing.assert_array_equal(expected_array1_result,
+                                      result[0].evaluate(verbose=False),
                                       "First array result is incorrect")
-        np.testing.assert_array_equal(result[1].evaluate(verbose=False),
-                                      expected_array2_result,
+        np.testing.assert_array_equal(expected_array2_result,
+                                      result[1].evaluate(verbose=False),
                                       "Second array result is incorrect")
-        np.testing.assert_array_equal(result[2].evaluate(verbose=False),
-                                      expected_array3_result,
+        np.testing.assert_array_equal(expected_array3_result,
+                                      result[2].evaluate(verbose=False),
                                       "Third array result is incorrect")
 
     @staticmethod
@@ -63,11 +64,11 @@ class CartesianProductTests(unittest.TestCase):
         expected_array1_result = np.array([0, 0, 0, 1, 1, 1], dtype=np.int64)
         expected_array2_result = np.array([0, 1, 2, 0, 1, 2], dtype=np.int64)
 
-        np.testing.assert_array_equal(result[0].evaluate(verbose=False),
-                                      expected_array1_result,
+        np.testing.assert_array_equal(expected_array1_result,
+                                      result[0].evaluate(verbose=False),
                                       "First array result is incorrect")
-        np.testing.assert_array_equal(result[1].evaluate(verbose=False),
-                                      expected_array2_result,
+        np.testing.assert_array_equal(expected_array2_result,
+                                      result[1].evaluate(verbose=False),
                                       "Second array result is incorrect")
 
     @staticmethod
@@ -82,11 +83,11 @@ class CartesianProductTests(unittest.TestCase):
         expected_array1_result = np.array([0, 0, 1, 1, 2, 2], dtype=np.int64)
         expected_array2_result = np.array([0, 1, 0, 1, 0, 1], dtype=np.int64)
 
-        np.testing.assert_array_equal(result[0].evaluate(verbose=False),
-                                      expected_array1_result,
+        np.testing.assert_array_equal(expected_array1_result,
+                                      result[0].evaluate(verbose=False),
                                       "First array result is incorrect")
-        np.testing.assert_array_equal(result[1].evaluate(verbose=False),
-                                      expected_array2_result,
+        np.testing.assert_array_equal(expected_array2_result,
+                                      result[1].evaluate(verbose=False),
                                       "Second array result is incorrect")
 
     @staticmethod
@@ -102,11 +103,11 @@ class CartesianProductTests(unittest.TestCase):
         expected_array1_result = np.array([0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2], dtype=np.int64)
         expected_array2_result = np.array([0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1], dtype=np.int64)
 
-        np.testing.assert_array_equal(result[0].evaluate(verbose=False),
-                                      expected_array1_result,
+        np.testing.assert_array_equal(expected_array1_result,
+                                      result[0].evaluate(verbose=False),
                                       "First array result is incorrect")
-        np.testing.assert_array_equal(result[1].evaluate(verbose=False),
-                                      expected_array2_result,
+        np.testing.assert_array_equal(expected_array2_result,
+                                      result[1].evaluate(verbose=False),
                                       "Second array result is incorrect")
 
     @staticmethod
@@ -122,11 +123,11 @@ class CartesianProductTests(unittest.TestCase):
         expected_array1_result = np.array([0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2], dtype=np.int64)
         expected_array2_result = np.array([0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3], dtype=np.int64)
 
-        np.testing.assert_array_equal(result[0].evaluate(verbose=False),
-                                      expected_array1_result,
+        np.testing.assert_array_equal(expected_array1_result,
+                                      result[0].evaluate(verbose=False),
                                       "First array result is incorrect")
-        np.testing.assert_array_equal(result[1].evaluate(verbose=False),
-                                      expected_array2_result,
+        np.testing.assert_array_equal(expected_array2_result,
+                                      result[1].evaluate(verbose=False),
                                       "Second array result is incorrect")
 
     @staticmethod
@@ -145,11 +146,11 @@ class CartesianProductTests(unittest.TestCase):
         expected_array2_result = np.array([0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3],
                                           dtype=np.int64)
 
-        np.testing.assert_array_equal(result[0].evaluate(verbose=False),
-                                      expected_array1_result,
+        np.testing.assert_array_equal(expected_array1_result,
+                                      result[0].evaluate(verbose=False),
                                       "First array result is incorrect")
-        np.testing.assert_array_equal(result[1].evaluate(verbose=False),
-                                      expected_array2_result,
+        np.testing.assert_array_equal(expected_array2_result,
+                                      result[1].evaluate(verbose=False),
                                       "Second array result is incorrect")
 
 
@@ -164,8 +165,8 @@ class DuplicateElementsTests(unittest.TestCase):
 
         expected_array_result = np.array([0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2], dtype=np.int64)
 
-        np.testing.assert_array_equal(result.evaluate(verbose=False),
-                                      expected_array_result)
+        np.testing.assert_array_equal(expected_array_result,
+                                      result.evaluate(verbose=False))
 
     @staticmethod
     def test_correct_lazy_data_input():
@@ -178,8 +179,8 @@ class DuplicateElementsTests(unittest.TestCase):
 
         expected_array_result = np.array([0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2], dtype=np.int64)
 
-        np.testing.assert_array_equal(result.evaluate(verbose=False),
-                                      expected_array_result)
+        np.testing.assert_array_equal(expected_array_result,
+                                      result.evaluate(verbose=False))
 
 
 class DuplicateArrayTests(unittest.TestCase):
@@ -193,8 +194,8 @@ class DuplicateArrayTests(unittest.TestCase):
 
         expected_array_result = np.array([0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2], dtype=np.int64)
 
-        np.testing.assert_array_equal(result.evaluate(verbose=False),
-                                      expected_array_result)
+        np.testing.assert_array_equal(expected_array_result,
+                                      result.evaluate(verbose=False))
 
     @staticmethod
     def test_correct_lazy_data_input():
@@ -207,8 +208,48 @@ class DuplicateArrayTests(unittest.TestCase):
 
         expected_array_result = np.array([0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5], dtype=np.int64)
 
-        np.testing.assert_array_equal(result.evaluate(verbose=False),
-                                      expected_array_result)
+        np.testing.assert_array_equal(expected_array_result,
+                                      result.evaluate(verbose=False))
+
+
+class MultiIndexTests(unittest.TestCase):
+    @staticmethod
+    def test_from_product_raw():
+        levels = [np.array([1, 2]), np.array([3, 4])]
+        names = ['a', 'b']
+
+        result = MultiIndex.from_product(levels, names)
+
+        expected_result = MultiIndex([np.array([1, 2]), np.array([3, 4])],
+                                     [np.array([0, 0, 1, 1]), np.array([0, 1, 0, 1])],
+                                     ['a', 'b'])
+
+        np.testing.assert_array_equal(expected_result.levels[0], result.levels[0])
+        np.testing.assert_array_equal(expected_result.levels[1], result.levels[1])
+        np.testing.assert_array_equal(expected_result.labels[0], result.labels[0].evaluate(verbose=False))
+        np.testing.assert_array_equal(expected_result.labels[1], result.labels[1].evaluate(verbose=False))
+        np.testing.assert_array_equal(expected_result.names, result.names)
+
+    @staticmethod
+    def test_from_product():
+        levels = [LazyData(np.array([1, 2]), WeldLong(), 1), LazyData(np.array([3, 4]), WeldLong(), 1)]
+        names = ['a', 'b']
+
+        result = MultiIndex.from_product(levels, names)
+
+        expected_result = MultiIndex([LazyData(np.array([1, 2]), WeldLong(), 1),
+                                      LazyData(np.array([3, 4]), WeldLong(), 1)],
+                                     [LazyData(np.array([0, 0, 1, 1]), WeldLong(), 1),
+                                      LazyData(np.array([0, 1, 0, 1]), WeldLong(), 1)],
+                                     ['a', 'b'])
+
+        for i in xrange(2):
+            np.testing.assert_array_equal(expected_result.levels[i].evaluate(verbose=False),
+                                          result.levels[i].evaluate(verbose=False))
+            np.testing.assert_array_equal(expected_result.labels[i].evaluate(verbose=False),
+                                          result.labels[i].evaluate(verbose=False))
+
+        np.testing.assert_array_equal(expected_result.names, result.names)
 
 
 def main():
