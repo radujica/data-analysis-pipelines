@@ -1,0 +1,29 @@
+netcdf tg {
+dimensions:
+	longitude = 2 ;
+	latitude = 3 ;
+variables:
+	float longitude(longitude) ;
+		longitude:_FillValue = NaNf ;
+		longitude:long_name = "Longitude values" ;
+		longitude:units = "degrees_east" ;
+		longitude:standard_name = "longitude" ;
+	float latitude(latitude) ;
+		latitude:_FillValue = NaNf ;
+		latitude:long_name = "Latitude values" ;
+		latitude:units = "degrees_north" ;
+		latitude:standard_name = "latitude" ;
+	short tg(latitude, longitude) ;
+		tg:_FillValue = -9999s ;
+		tg:units = "Celsius" ;
+		tg:scale_factor = 0.01f ;
+
+// global
+		:Ensembles_ECAD = "16.0" ;
+		:Conventions = "CF-1.4" ;
+
+data:
+ longitude = 25.5, 26 ;
+ latitude = 10, 11, 12 ;
+ tg = _, 1000, 1010, _, _, 1020 ;
+}
