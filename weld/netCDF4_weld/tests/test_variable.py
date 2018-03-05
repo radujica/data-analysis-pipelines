@@ -2,10 +2,11 @@ import unittest
 import netCDF4
 import netCDF4_weld
 import numpy as np
+import os
 
 
 def read_dataset():
-    return netCDF4.Dataset('sample.nc')
+    return netCDF4.Dataset((os.path.dirname(__file__))+'/sample.nc')
 
 
 class VariableTests(unittest.TestCase):
