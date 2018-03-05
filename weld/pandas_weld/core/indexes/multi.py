@@ -11,7 +11,6 @@ _decoder = NumPyDecoder()
 
 # TODO: the helper methods should probably reside in the numpy package
 # TODO: could generalize to return either values or indices
-# TODO: fix bug when inputs are objects
 
 def _duplicate_elements_indices(array, n, weld_type, cartesian=False):
     weld_obj = WeldObject(_encoder, _decoder)
@@ -69,13 +68,9 @@ def duplicate_elements_indices(array, n, cartesian=False):
     [0, 0, 1, 1, 2, 2]
 
     """
-    data_id = None
-    read_func = None
     if isinstance(array, LazyData):
         weld_type = array.weld_type
         array = array.expr
-        data_id = array.data_id
-        read_func = array.read_func
     elif isinstance(array, np.ndarray):
         weld_type = numpy_to_weld_type_mapping[str(array.dtype)]
     else:
@@ -83,9 +78,7 @@ def duplicate_elements_indices(array, n, cartesian=False):
 
     return LazyData(_duplicate_elements_indices(array, n, weld_type, cartesian),
                     WeldLong(),
-                    1,
-                    data_id,
-                    read_func)
+                    1)
 
 
 def _duplicate_array_indices(array, n, weld_type, cartesian=False):
@@ -144,13 +137,9 @@ def duplicate_array_indices(array, n, cartesian=False):
     [0, 1, 2, 0, 1, 2]
 
     """
-    data_id = None
-    read_func = None
     if isinstance(array, LazyData):
         weld_type = array.weld_type
         array = array.expr
-        data_id = array.data_id
-        read_func = array.read_func
     elif isinstance(array, np.ndarray):
         weld_type = numpy_to_weld_type_mapping[str(array.dtype)]
     else:
@@ -158,12 +147,10 @@ def duplicate_array_indices(array, n, cartesian=False):
 
     return LazyData(_duplicate_array_indices(array, n, weld_type, cartesian),
                     WeldLong(),
-                    1,
-                    data_id,
-                    read_func)
+                    1)
 
 
-# helper class to name pair elements in cartesian_product_indices
+# helper class to name pair elements in _cartesian_product_indices
 class _WeldObjectIdPair(object):
     def __init__(self, weld_object, object_id):
         self.weld_object = weld_object
@@ -190,12 +177,14 @@ def _cartesian_product_indices(arrays, arrays_types, number_of_arrays):
 
         weld_objects.append(_WeldObjectIdPair(weld_obj, array_var))
 
-    # update the context of each weld object with the others
+    # update and add dependencies to the other objects
     for i in xrange(number_of_arrays):
         for j in xrange(0, i):
-            weld_objects[i].weld_object.context[weld_objects[j].object_id] = arrays[j]
+            array_var = weld_objects[i].weld_object.update(weld_objects[j].weld_object)
+            weld_objects[i].weld_object.dependencies[array_var] = weld_objects[j].weld_object
         for j in xrange(i + 1, number_of_arrays):
-            weld_objects[i].weld_object.context[weld_objects[j].object_id] = arrays[j]
+            array_var = weld_objects[i].weld_object.update(weld_objects[j].weld_object)
+            weld_objects[i].weld_object.dependencies[array_var] = weld_objects[j].weld_object
 
     # first 2 arrays are cartesian-produced by default
     weld_objects[0].weld_object = \
@@ -208,6 +197,8 @@ def _cartesian_product_indices(arrays, arrays_types, number_of_arrays):
                                  arrays_types[1])
 
     # handle the remaining arrays, i.e. for index > 2
+    # the arrays up to i need to be _duplicate_elements_indices once while the ith array needs to
+    # be _duplicate_array_indices i times
     for i in xrange(2, number_of_arrays):
         for j in xrange(0, i):
             weld_objects[j].weld_object = \
@@ -231,7 +222,6 @@ def _cartesian_product_indices(arrays, arrays_types, number_of_arrays):
     return [k.weld_object for k in weld_objects]
 
 
-# TODO: properly test starting with WeldObjects too
 def cartesian_product_indices(arrays):
     """ Performs cartesian product between all arrays
 
@@ -239,7 +229,7 @@ def cartesian_product_indices(arrays):
 
     Parameters
     ----------
-    arrays : list of np.array or WeldObject
+    arrays : list of np.array or LazyData
         list containing arrays that need to be in the product
 
     Returns
