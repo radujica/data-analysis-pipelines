@@ -16,6 +16,7 @@ pandas = "*"
 
 [dev-packages]
 
+xarray = "*"
 
 
 [requires]
