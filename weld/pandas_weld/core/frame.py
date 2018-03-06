@@ -1,19 +1,18 @@
+import pandas_weld as pdw
+
+
 class DataFrame(object):
+    """ Weld-ed pandas DataFrame
+
+    Parameters
+    ----------
+    data : dict
+        column names -> data array
+    index : pdw.MultiIndex
+        index
+
+    """
     def __init__(self, data, index):
-        """ Weld-ed pandas DataFrame
-
-        Parameters
-        ----------
-        data : dict
-            column names -> data array
-        index : pdw.MultiIndex
-            index
-
-        Returns
-        -------
-        pdw.DataFrame
-
-        """
         self.data = data
         self.index = index
 
@@ -40,3 +39,13 @@ class DataFrame(object):
                                         'index': self.index.evaluate_all(verbose, decode, passes,
                                                                          num_threads, apply_experimental_transforms),
                                         'columns': materialized_columns}
+
+    def __iter__(self):
+        for column_name in self.data:
+            yield column_name
+
+    def __getitem__(self, item):
+        return pdw.Series(self.data[item].expr,
+                          self.data[item].weld_type,
+                          1,
+                          self.data[item].data_id)
