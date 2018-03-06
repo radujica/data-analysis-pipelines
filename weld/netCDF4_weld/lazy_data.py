@@ -77,7 +77,8 @@ class LazyData(LazyOpResult):
     dim : int
         dimensionality of data
     data_id : str
-        given only by parsers to record the existence of new data from file
+        given only by parsers to record the existence of new data from file; needs to be passed on
+        to other LazyData children objects, e.g. when creating a pandas_weld.Series from netCDF4_weld.Variable
     read_func : func
         function to call if the data is required (evaluated)
     read_func_args : tuple
@@ -96,6 +97,9 @@ class LazyData(LazyOpResult):
 
         # only want to record new id's
         if data_id is not None and data_id not in self.input_mapping.data_ids:
+            # if either is None, LazyData was created/used incorrectly
+            if read_func is None or read_func_args is None:
+                raise ValueError('Attempted to create LazyData by passing a data_id with no read functions')
             # need to record the weld_input id from WeldObject, so generate it here
             array_var = WeldObject.generate_input_name(self.expr)
             self.input_mapping.append(data_id, array_var, read_func, read_func_args)
