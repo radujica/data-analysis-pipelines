@@ -107,7 +107,7 @@ class Dataset(object):
         """
         columns = [k for k in self.variables if k not in self.dimensions]
         ordered_dimensions = OrderedDict(map(lambda kv: (kv[0], kv[1]),
-                                             OrderedDict(self.dimensions.items()).items()))
+                                             OrderedDict(sorted(self.dimensions.items())).items()))
 
         # columns data, either WeldObject or raw
         data = [self._process_column(k) for k in columns]
