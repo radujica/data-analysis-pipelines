@@ -8,8 +8,12 @@ class DataFrame(object):
     ----------
     data : dict
         column names -> data array
-    index : pdw.MultiIndex
+    index : pandas_weld.MultiIndex
         index
+
+    See also
+    --------
+    pandas.DataFrame
 
     """
     def __init__(self, data, index):

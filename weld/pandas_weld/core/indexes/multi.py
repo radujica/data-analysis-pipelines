@@ -49,7 +49,7 @@ def duplicate_elements_indices(array, n, cartesian=False):
 
     Parameters
     ----------
-    array : np.array / WeldObject
+    array : np.array / LazyData
         the source data
     n : long
         how many times to repeat each element
@@ -118,7 +118,7 @@ def duplicate_array_indices(array, n, cartesian=False):
 
     Parameters
     ----------
-    array : np.array / WeldObject
+    array : np.array / LazyData
         the source data
     n : long
         how many times to repeat the source array
@@ -243,7 +243,7 @@ def cartesian_product_indices(arrays):
 
     See also
     --------
-    pd.MultiIndex
+    pandas.MultiIndex
 
     """
     number_of_arrays = len(arrays)
@@ -271,7 +271,7 @@ def cartesian_product_indices(arrays):
 
 
 class MultiIndex(object):
-    """ Create Weld-ed MultiIndex
+    """ Weld-ed pandas MultiIndex
 
     It is assumed that the parameter lists are in the same order,
     i.e. same indexes match
@@ -285,9 +285,9 @@ class MultiIndex(object):
     names : list
         str
 
-    Returns
-    -------
-    MultiIndex
+    See also
+    --------
+    pandas.MultiIndex
 
     """
     def __init__(self, levels, labels, names):

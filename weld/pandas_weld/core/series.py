@@ -18,6 +18,10 @@ class Series(LazyData):
         generated only by parsers to record the existence of new data from file; needs to be passed on
         to other LazyData children objects, e.g. when creating a pandas_weld.Series from netCDF4_weld.Variable
 
+    See also
+    --------
+    pandas.Series
+
     """
     _encoder = NumPyEncoder()
     _decoder = NumPyDecoder()

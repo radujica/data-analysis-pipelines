@@ -11,7 +11,7 @@ class Dataset(object):
     read_file_func : func
         func which when called reads the file; in this case, must return a netCDF4.Dataset which can be used to
         read variables from
-    variables : dict {name : netCDF4_weld Variables}
+    variables : dict {name : netCDF4_weld.Variable}
         used when doing operations on the Dataset to create new result Dataset
     dimensions : dict {name : size}
         used when doing operations on the Dataset to create new result Dataset
@@ -88,9 +88,8 @@ class Dataset(object):
                        {k: v.add(value) for k, v in self.variables.iteritems()},
                        self.dimensions)
 
-    # only flatten seems necessary, which currently done anyway when reading;
-    # no broadcast_to or transpose is necessary for my datasets
-    # though did not identify use cases where they are needed at all
+    # broadcast_to does not seem necessary (at least for my datasets)
+    # TODO: add 1) transpose, and 2) flatten as weld ops
     def _process_column(self, column_name):
         return self.variables[column_name]
 
@@ -102,14 +101,14 @@ class Dataset(object):
 
         Returns
         -------
-        pdw.DataFrame
+        pandas_weld.DataFrame
 
         """
         columns = [k for k in self.variables if k not in self.dimensions]
         ordered_dimensions = OrderedDict(map(lambda kv: (kv[0], kv[1]),
                                              OrderedDict(sorted(self.dimensions.items())).items()))
 
-        # columns data, either WeldObject or raw
+        # columns data, either LazyData or raw
         data = [self._process_column(k) for k in columns]
         # the dimensions
         indexes = [self._process_dimension(k) for k in ordered_dimensions]
