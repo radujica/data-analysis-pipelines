@@ -1,6 +1,6 @@
 from grizzly.encoders import NumPyEncoder, NumPyDecoder
 from weld.weldobject import WeldObject
-from netCDF4_weld.lazy_data import LazyData
+from lazy_data import LazyData
 
 
 class Series(LazyData):

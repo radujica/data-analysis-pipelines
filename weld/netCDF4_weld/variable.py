@@ -1,6 +1,6 @@
 from grizzly.encoders import NumPyEncoder, NumPyDecoder, numpy_to_weld_type_mapping
 from numpy.ma import MaskedArray
-from netCDF4_weld.lazy_data import LazyData
+from lazy_data import LazyData
 from weld.weldobject import WeldObject
 import numpy as np
 import netCDF4

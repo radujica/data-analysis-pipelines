@@ -1,7 +1,7 @@
 from grizzly.encoders import NumPyEncoder, NumPyDecoder, numpy_to_weld_type_mapping
 from weld.types import WeldLong
 from weld.weldobject import WeldObject
-from netCDF4_weld.lazy_data import LazyData
+from lazy_data import LazyData
 import numpy as np
 
 # the methods are only intended to work with numpy, so have a single encoder/decoder

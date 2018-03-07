@@ -2,7 +2,7 @@ import unittest
 import numpy as np
 from weld.types import WeldLong
 
-from netCDF4_weld.lazy_data import LazyData
+from lazy_data import LazyData
 from pandas_weld.core.indexes.multi import cartesian_product_indices, duplicate_elements_indices, \
     duplicate_array_indices, MultiIndex
 
