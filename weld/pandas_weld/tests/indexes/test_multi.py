@@ -3,8 +3,8 @@ import numpy as np
 from weld.types import WeldLong
 
 from lazy_data import LazyData
-from pandas_weld.core.indexes.multi import cartesian_product_indices, duplicate_elements_indices, \
-    duplicate_array_indices, MultiIndex
+from pandas_weld.core.indexes.multi import MultiIndex
+from numpy_weld.core.cartesian import duplicate_elements_indices, duplicate_array_indices, cartesian_product_indices
 
 
 class CartesianProductTests(unittest.TestCase):
