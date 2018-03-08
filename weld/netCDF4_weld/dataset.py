@@ -53,7 +53,7 @@ class Dataset(object):
 
     def _create_dataset_id(self):
         ds_id = '_ds' + str(self._dataset_counter)
-        self._dataset_counter += 1
+        Dataset._dataset_counter += 1
 
         return ds_id
 

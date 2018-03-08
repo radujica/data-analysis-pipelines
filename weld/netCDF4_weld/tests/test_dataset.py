@@ -5,30 +5,31 @@ import pandas_weld
 import numpy as np
 import xarray as xr
 import os
+from datetime import datetime
 
 
 class DatasetTests(unittest.TestCase):
-    PATH_1 = (os.path.dirname(__file__))+'/sample.nc'
-    PATH_2 = (os.path.dirname(__file__))+'/sample_ext.nc'
+    PATH = (os.path.dirname(__file__)) + '/sample.nc'
+    PATH_EXT = (os.path.dirname(__file__)) + '/sample_ext.nc'
 
     @staticmethod
     def _read_dataset_1():
-        return netCDF4.Dataset(DatasetTests.PATH_1)
+        return netCDF4.Dataset(DatasetTests.PATH)
 
     @staticmethod
     def _read_dataset_2():
-        return netCDF4.Dataset(DatasetTests.PATH_2)
+        return netCDF4.Dataset(DatasetTests.PATH_EXT)
 
     def setUp(self):
-        self.ds1 = netCDF4_weld.Dataset(DatasetTests._read_dataset_1)
-        self.ds2 = netCDF4_weld.Dataset(DatasetTests._read_dataset_2)
+        self.ds = netCDF4_weld.Dataset(DatasetTests._read_dataset_1)
+        self.ds_ext = netCDF4_weld.Dataset(DatasetTests._read_dataset_2)
 
     def test_repr(self):
         expected_result = """columns:
 \t[u'tg']
 dimensions: [u'longitude', u'latitude']"""
 
-        self.assertEqual(expected_result, repr(self.ds1))
+        self.assertEqual(expected_result, repr(self.ds))
 
     def test_evaluate(self):
         pass
@@ -40,7 +41,7 @@ dimensions: [u'longitude', u'latitude']"""
                                                     ['latitude', 'longitude'])
         expected_result = pandas_weld.DataFrame(data, index)
 
-        result = self.ds1.to_dataframe()
+        result = self.ds.to_dataframe()
 
         self.assertListEqual(expected_result.data.keys(), result.data.keys())
         np.testing.assert_array_equal(expected_result.data['tg'], result.data['tg'].evaluate(verbose=False))
@@ -63,30 +64,37 @@ dimensions: [u'longitude', u'latitude']"""
                                    dtype=np.float32)}
         index = pandas_weld.MultiIndex.from_product([np.array([10., 11., 12.], dtype=np.float32),
                                                      np.array([25.5, 26.], dtype=np.float32),
-                                                     np.array(['1950-01-01', '1950-01-02', '1950-01-03',
-                                                               '1950-01-04', '1950-01-05'],
-                                                              dtype=np.dtype('M8[D]')).astype('O')],
+                                                     np.array([datetime(1950, 1, 1), datetime(1950, 1, 2),
+                                                               datetime(1950, 1, 3), datetime(1950, 1, 4),
+                                                               datetime(1950, 1, 5)])],
                                                     ['latitude', 'longitude', 'time'])
         expected_result = pandas_weld.DataFrame(data, index)
 
-        result = self.ds2.to_dataframe()
+        result = self.ds_ext.to_dataframe()
 
         self.assertListEqual(expected_result.data.keys(), result.data.keys())
         np.testing.assert_array_equal(expected_result.data['tg'], result.data['tg'].evaluate(verbose=False))
         np.testing.assert_array_equal(expected_result.data['tg_ext'], result.data['tg_ext'].evaluate(verbose=False))
 
         self.assertListEqual(expected_result.index.names, result.index.names)
-        for i in xrange(3):
+        for i in xrange(2):
             np.testing.assert_array_equal(expected_result.index.levels[i],
                                           result.index.levels[i].evaluate(verbose=False))
             np.testing.assert_array_equal(expected_result.index.labels[i].evaluate(verbose=False),
                                           result.index.labels[i].evaluate(verbose=False))
 
+        # date is a special case since xarray makes a DatetimeIndex of Timestamps, but
+        # reading from Variable makes an array of Timestamps
+        np.testing.assert_array_equal([k.date() for k in expected_result.index.levels[2]],
+                                      result.index.levels[2].evaluate(verbose=False))
+        np.testing.assert_array_equal(expected_result.index.labels[2].evaluate(verbose=False),
+                                      result.index.labels[2].evaluate(verbose=False))
+
     # i.e. test if result is same as by doing with xarray
     def test_to_dataframe_convention(self):
-        expected_result = xr.open_dataset(DatasetTests.PATH_1).to_dataframe()
+        expected_result = xr.open_dataset(DatasetTests.PATH).to_dataframe()
 
-        result = self.ds1.to_dataframe()
+        result = self.ds.to_dataframe()
 
         # data; if adding more columns to sample.nc, test those too here!
         np.testing.assert_array_equal(expected_result['tg'], result['tg'].evaluate(verbose=False))
@@ -100,21 +108,28 @@ dimensions: [u'longitude', u'latitude']"""
                                           result.index.labels[i].evaluate(verbose=False))
 
     def test_to_dataframe_convention_3_indexes(self):
-        expected_result = xr.open_dataset(DatasetTests.PATH_2).to_dataframe()
+        expected_result = xr.open_dataset(DatasetTests.PATH_EXT).to_dataframe()
 
-        result = self.ds2.to_dataframe()
+        result = self.ds_ext.to_dataframe()
 
-        # data; if adding more columns to sample.nc, test those too here!
+        # data; if adding more columns to sample_ext.nc, test those too here!
         np.testing.assert_array_equal(expected_result['tg'], result['tg'].evaluate(verbose=False))
         np.testing.assert_array_equal(expected_result['tg_ext'], result['tg_ext'].evaluate(verbose=False))
 
         # index
         self.assertListEqual(expected_result.index.names, result.index.names)
-        for i in xrange(3):
+        for i in xrange(2):
             np.testing.assert_array_equal(expected_result.index.levels[i],
                                           result.index.levels[i].evaluate(verbose=False))
             np.testing.assert_array_equal(expected_result.index.labels[i],
                                           result.index.labels[i].evaluate(verbose=False))
+
+        # date is a special case since xarray makes a DatetimeIndex of Timestamps, but
+        # reading from Variable makes an array of Timestamps
+        np.testing.assert_array_equal([k.date() for k in expected_result.index.levels[2]],
+                                      result.index.levels[2].evaluate(verbose=False))
+        np.testing.assert_array_equal(expected_result.index.labels[2],
+                                      result.index.labels[2].evaluate(verbose=False))
 
 
 def main():

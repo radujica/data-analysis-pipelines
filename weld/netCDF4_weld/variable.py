@@ -3,6 +3,7 @@ from numpy.ma import MaskedArray
 from lazy_data import LazyData
 from weld.weldobject import WeldObject
 import numpy as np
+import pandas as pd
 import netCDF4
 
 
@@ -63,10 +64,12 @@ class Variable(LazyData):
     def _infer_dtype(dtype, attributes):
         if 'scale_factor' in attributes:
             return np.dtype(np.float32)
+        # calendar is stored as int in netCDF4, but we want the datetime format later which is encoded as a str(?)
+        elif 'calendar' in attributes:
+            return np.dtype(np.object)
         else:
             return dtype
 
-    # TODO: flatten/reshape(-1)-ing always might not be the best idea
     @staticmethod
     def read_data(read_file_func, variable_name, start=0, end=None, stride=None):
         """ Reads data from file
@@ -105,13 +108,28 @@ class Variable(LazyData):
             data = ds.variables[variable_name][start:end:stride]
         # remove MaskedArrays, just np.array please
         if isinstance(data, MaskedArray):
+            # xarray seems to read them as floats if there are missing values, so doing the same here;
+            # TODO: handle the other non-float types
+            if data.dtype == np.int32:
+                data = data.astype(np.float32)
             data = data.filled(np.nan)
+        # this is going to be used by pandas which has sorted indexes, so the data must also be transposed;
+        # numpy can do it very efficiently with no copy, however this links this library to pandas which is not good
+        # TODO: encode in weld, though probably slower
+        dimensions = ds.variables[variable_name].dimensions
+        axes = tuple([dimensions.index(k) for k in sorted(dimensions)])
+        data = np.transpose(data, axes)
+        # TODO: encode in weld, though probably slower
         # want dimension = 1
         data = data.reshape(-1)
         # if a datetime variable, want python's datetime
         attributes = ds.variables[variable_name].__dict__
+        # xarray creates a pandas DatetimeIndex with Timestamps; to save time, a shortcut is taken to convert
+        # netCDF4 python date -> pandas timestamp -> py datetime
+        # TODO: weld pandas DatetimeIndex & Timestamp
         if 'calendar' in attributes:
-            data = netCDF4.num2date(data, attributes['units'], calendar=attributes['calendar'])
+            data = np.array([pd.Timestamp(k).date() for k in netCDF4.num2date(data, attributes['units'],
+                                                                              calendar=attributes['calendar'])])
 
         return data
 
