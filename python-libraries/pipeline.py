@@ -2,7 +2,7 @@ import xarray as xr
 import numpy as np
 import os
 
-PATH_HOME = os.getenv('HOME', '/')
+PATH_HOME = os.getenv('HOME2', '/')
 PATH_DATASETS_ROOT = '/datasets/ECAD/original/small_sample/'
 FILES = ['tg', 'tg_err', 'tn', 'tn_err', 'tx', 'tx_err', 'pp', 'pp_err', 'rr', 'rr_err']
 PATH_EXTENSION = '.nc'
@@ -41,7 +41,7 @@ df = df.drop(columns=['pp_err', 'rr_err'])
 
 
 # 4. explore the data through aggregations
-print(df.describe())
+print(df.describe())    # EVALUATE STEP
 
 
 # 5. compute absolute difference between max and min values;
@@ -59,10 +59,10 @@ df = df.reset_index()
 # the actual udf to convert from date to custom year+month format
 df['year_month'] = df['time'].map(lambda x: x.year * 100 + x.month)
 # group by month and rename columns appropriately
-df_grouped = df[['latitude', 'longitude', 'year_month', 'tg', 'tn', 'tx', 'pp', 'rr']]\
-    .groupby(['latitude', 'longitude', 'year_month'])\
-    .std()\
-    .rename(columns={'tg': 'tg_std', 'tn': 'tn_std', 'tx': 'tx_std', 'pp': 'pp_std', 'rr': 'rr_std'})\
+df_grouped = df[['latitude', 'longitude', 'year_month', 'tg', 'tn', 'tx', 'pp', 'rr']] \
+    .groupby(['latitude', 'longitude', 'year_month']) \
+    .std() \
+    .rename(columns={'tg': 'tg_std', 'tn': 'tn_std', 'tx': 'tx_std', 'pp': 'pp_std', 'rr': 'rr_std'}) \
     .reset_index()
 # merge the results
 df = df.merge(df_grouped, on=['latitude', 'longitude', 'year_month'], how='inner')
@@ -70,3 +70,5 @@ df = df.merge(df_grouped, on=['latitude', 'longitude', 'year_month'], how='inner
 del df_grouped
 df = df.drop('year_month', axis=1)
 df = df.set_index(['latitude', 'longitude', 'time'])
+
+print(df)   # EVALUATE STEP
