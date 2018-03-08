@@ -1,11 +1,10 @@
 from unittest import TestLoader, TestSuite, TextTestRunner
-from indexes import DuplicateElementsTests, DuplicateArrayTests, CartesianProductTests
+from pandas_weld.tests import MultiIndexTests
 
+# TODO: this could be extended a bit to have such a script in each sub-package
 if __name__ == '__main__':
     loader = TestLoader()
-    suite = TestSuite((loader.loadTestsFromTestCase(DuplicateElementsTests),
-                       loader.loadTestsFromTestCase(DuplicateArrayTests),
-                       loader.loadTestsFromTestCase(CartesianProductTests),
+    suite = TestSuite((loader.loadTestsFromTestCase(MultiIndexTests),
                        ))
 
     runner = TextTestRunner(verbosity=2)
