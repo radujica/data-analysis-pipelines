@@ -88,8 +88,6 @@ class Dataset(object):
                        {k: v.add(value) for k, v in self.variables.iteritems()},
                        self.dimensions)
 
-    # broadcast_to does not seem necessary (at least for my datasets)
-    # TODO: add 1) transpose, and 2) flatten as weld ops
     def _process_column(self, column_name):
         return self.variables[column_name]
 
@@ -105,14 +103,14 @@ class Dataset(object):
 
         """
         columns = [k for k in self.variables if k not in self.dimensions]
-        ordered_dimensions = OrderedDict(map(lambda kv: (kv[0], kv[1]),
-                                             OrderedDict(sorted(self.dimensions.items())).items()))
+        dimensions = OrderedDict(map(lambda kv: (kv[0], kv[1]),
+                                     OrderedDict(self.dimensions.items()).items()))
 
         # columns data, either LazyData or raw
         data = [self._process_column(k) for k in columns]
         # the dimensions
-        indexes = [self._process_dimension(k) for k in ordered_dimensions]
+        indexes = [self._process_dimension(k) for k in dimensions]
 
-        index = pdw.MultiIndex.from_product(indexes, list(ordered_dimensions.keys()))
+        index = pdw.MultiIndex.from_product(indexes, list(dimensions.keys()))
 
         return pdw.DataFrame(dict(zip(columns, data)), index)
