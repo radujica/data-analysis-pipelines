@@ -56,8 +56,9 @@ class DataFrame(object):
 
         Parameters
         ----------
-        item : str or slice
-            if str, returns a column as a Series; if slice, returns a sliced DataFrame
+        item : str or slice or list
+            if str, returns a column as a Series; if slice, returns a sliced DataFrame; if list, returns a DataFrame
+            with only the columns from the list
 
         Returns
         -------
@@ -88,10 +89,19 @@ class DataFrame(object):
             new_index = self.index[item]
 
             # making a new dataframe here seems kinda pointless atm due to func_args being updated
-            return DataFrame(new_data,
-                             new_index)
+            return DataFrame(new_data, new_index)
+        elif isinstance(item, list):
+            new_data = {}
+
+            for column_name in item:
+                if not isinstance(column_name, str):
+                    raise ValueError('expected a list of column names as strings')
+
+                new_data[column_name] = self.data[column_name]
+
+            return DataFrame(new_data, self.index)
         else:
-            raise ValueError('expected a str or slice in DataFrame.__getitem__')
+            raise ValueError('expected a str, slice, or list in DataFrame.__getitem__')
 
     def head(self, n=10):
         """ Eagerly evaluates the DataFrame
