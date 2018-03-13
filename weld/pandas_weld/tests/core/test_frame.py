@@ -35,6 +35,20 @@ class DataFrameTests(unittest.TestCase):
                                           result.index.labels[i].evaluate(verbose=False))
         np.testing.assert_array_equal(expected_result.index.names, result.index.names)
 
+    def test_setitem_new(self):
+        new_column = np.array([11, 12, 13, 14])
+
+        self.df['col3'] = new_column
+
+        np.testing.assert_array_equal(new_column, self.df['col3'].evaluate(verbose=False))
+
+    def test_setitem_replace(self):
+        new_column = np.array([11, 12, 13, 14])
+
+        self.df['col2'] = new_column
+
+        np.testing.assert_array_equal(new_column, self.df['col2'].evaluate(verbose=False))
+
 
 def main():
     unittest.main()

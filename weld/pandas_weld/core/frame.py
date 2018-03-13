@@ -79,7 +79,6 @@ class DataFrame(object):
         else:
             raise ValueError('expected a str or slice in DataFrame.__getitem__')
 
-    # TODO: check/test; currently does NOT test for same length
     def __setitem__(self, key, value):
         self.data[key] = value
 
