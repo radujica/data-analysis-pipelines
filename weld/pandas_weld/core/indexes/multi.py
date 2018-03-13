@@ -57,7 +57,8 @@ class MultiIndex(object):
         if not isinstance(item, slice):
             raise ValueError('expected a slice in MultiIndex.__getitem__')
 
-        # TODO: slice the index too
+        # TODO: figure out a way to slice the index; each data variable might have different dimensions order (?)
+        # so it seems more complicated than just adding a parameter to the variable read_data
         return MultiIndex(self.levels, self.labels, self.names)
 
     @staticmethod

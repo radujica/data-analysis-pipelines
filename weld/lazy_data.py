@@ -7,6 +7,8 @@ from grizzly.lazy_op import LazyOpResult, WeldObject
 # maybe a higher up class from which LazyData and LazyOpResult inherit could do it; the input_mapping seems to be a
 # better fit to WeldObject too
 # TODO: figure out a better way to generate data_id's; perhaps a better 'DB'-like way to store the data also
+# TODO: (better) decouple netCDF4_weld and pandas_weld hence making pandas_weld getitem more generic;
+# need an interface between parser and pandas; maybe store in lazydata which from parser the data came from?
 class InputMapping(object):
     """ Maps lazy data from file
 

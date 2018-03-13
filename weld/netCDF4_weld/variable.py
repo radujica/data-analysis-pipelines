@@ -118,6 +118,9 @@ class Variable(LazyData):
         # the actual read from file call
         data = ds.variables[variable_name][tuple_slices]
 
+        # TODO: transpose might be required when data variables have dimensions in a different order than the
+        # dimensions declarations
+
         # want dimension = 1
         data = data.reshape(-1)
 

@@ -206,3 +206,11 @@ class DuplicateArrayTests(unittest.TestCase):
 
         np.testing.assert_array_equal(expected_array_result,
                                       result.evaluate(verbose=False))
+
+
+def main():
+    unittest.main()
+
+
+if __name__ == '__main__':
+    main()
