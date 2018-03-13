@@ -1,6 +1,11 @@
 from grizzly.lazy_op import LazyOpResult, WeldObject
 
 
+# TODO: better solutions for recurring problem of having to always check LazyData or raw;
+# maybe make container for all input, i.e. all raw data is wrapped in LazyOpResult?
+# TODO: make an easier distinction between data that comes from file (LazyData) and non (currently still LazyData);
+# maybe a higher up class from which LazyData and LazyOpResult inherit could do it; the input_mapping seems to be a
+# better fit to WeldObject too
 # TODO: figure out a better way to generate data_id's; perhaps a better 'DB'-like way to store the data also
 class InputMapping(object):
     """ Maps lazy data from file
@@ -51,10 +56,24 @@ class InputMapping(object):
         -------
         data
             probably np.array
+
         """
         return self.input_functions[index](*self.input_function_args[index])
 
     def retrieve(self, index):
+        """ Higher function that can also retrieve from cache
+
+        Parameters
+        ----------
+        index : int
+            the index where the function and its arguments to read from file are stored
+
+        Returns
+        -------
+        data
+            probably np.array
+
+        """
         if self.materialized_data[index] is not None:
             return self.materialized_data[index]
         else:
@@ -64,7 +83,24 @@ class InputMapping(object):
 
             return data
 
+    def update_input_function_args(self, index, args):
+        """ Update the read function args
 
+        Used for subset
+
+        Parameters
+        ----------
+        index : int
+            the index where the function and its arguments to read from file are stored
+        args : tuple
+            new args
+
+        """
+        self.input_function_args[index] = args
+
+
+# TODO: a more general way to store object_id -> read_func & args (as in, whatever object extends lazydata)
+# such that subset does NOT need to be applied to the entire pipeline for that input
 class LazyData(LazyOpResult):
     """ Extension of LazyOpResult adding lazy data reading
 
@@ -91,6 +127,9 @@ class LazyData(LazyOpResult):
     """
     input_mapping = InputMapping()
 
+    # TODO: maybe just store dtype too? not sure if there are any other than np.dtype and even if there are,
+    # they could also be stored; if there are, all operations (e.g. cartesian product) would need to be updated anyway
+    # TODO: storing the length could also be useful, e.g. like in cartesian
     def __init__(self, expr, weld_type, dim, data_id=None, read_func=None, read_func_args=None):
         super(LazyData, self).__init__(expr, weld_type, dim)
         self.data_id = data_id
@@ -111,7 +150,6 @@ class LazyData(LazyOpResult):
             for weld_input in self.expr.context.keys():
                 if weld_input in self.input_mapping.weld_input_names:
                     index = self.input_mapping.weld_input_names.index(weld_input)
-                    # TODO: tests!
                     self.expr.context[weld_input] = self.input_mapping.retrieve(index)
 
             return super(LazyData, self).evaluate(verbose, decode, passes, num_threads, apply_experimental_transforms)
