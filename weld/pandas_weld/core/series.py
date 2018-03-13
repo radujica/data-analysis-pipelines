@@ -1,6 +1,7 @@
 from grizzly.encoders import NumPyEncoder, NumPyDecoder
 from weld.weldobject import WeldObject
 from lazy_data import LazyData
+from utils import subset, replace_slice_defaults
 
 
 class Series(LazyData):
@@ -8,12 +9,10 @@ class Series(LazyData):
 
     Parameters
     ----------
-    expression : np.ndarray / WeldObject
+    data : np.ndarray / WeldObject
         what shall be evaluated
     weld_type : WeldType
         of the elements
-    dimension : int
-        dimensionality of data
     data_id : str
         generated only by parsers to record the existence of new data from file; needs to be passed on
         to other LazyData children objects, e.g. when creating a pandas_weld.Series from netCDF4_weld.Variable
@@ -26,8 +25,27 @@ class Series(LazyData):
     _encoder = NumPyEncoder()
     _decoder = NumPyDecoder()
 
-    def __init__(self, expression, weld_type, dimension, data_id=None):
-        super(Series, self).__init__(expression, weld_type, dimension, data_id)
+    # TODO: should accept and store dtype instead; also see TODO @LazyData
+    def __init__(self, data, weld_type, data_id=None):
+        super(Series, self).__init__(data, weld_type, 1, data_id)
+
+    def __getitem__(self, item):
+        if not isinstance(item, slice):
+            raise ValueError('expected a slice in Series.__getitem__')
+
+        item = replace_slice_defaults(item)
+
+        # update func_args so that less data is read from file
+        if isinstance(self, LazyData) and self.data_id is not None:
+            index = self.input_mapping.data_ids.index(self.data_id)
+            old_args = self.input_mapping.input_function_args[index]
+            slice_as_tuple = (slice(item.start, item.stop, item.step),)
+            new_args = old_args + (slice_as_tuple,)
+            self.input_mapping.update_input_function_args(index, new_args)
+
+        return Series(subset(self, item).expr,
+                      self.weld_type,
+                      self.data_id)
 
     @staticmethod
     def _aggregate(array, operation, weld_type):
