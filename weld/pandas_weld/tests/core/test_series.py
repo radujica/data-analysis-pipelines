@@ -27,6 +27,26 @@ class SeriesTests(unittest.TestCase):
 
         np.testing.assert_array_equal(expected_result, result)
 
+    @staticmethod
+    def test_head_raw():
+        data = np.array([1, 2, 3])
+        series = Series(data, numpy_to_weld_type_mapping['int64'])
+
+        expected_result = np.array([1, 2])
+        result = series.head(2)
+
+        np.testing.assert_array_equal(expected_result, result)
+
+    @staticmethod
+    def test_head():
+        data = LazyData(np.array([1, 2, 3]), numpy_to_weld_type_mapping['int64'], 1)
+        series = Series(data.expr, numpy_to_weld_type_mapping['int64'])
+
+        expected_result = np.array([1, 2])
+        result = series.head(2)
+
+        np.testing.assert_array_equal(expected_result, result)
+
 
 def main():
     unittest.main()

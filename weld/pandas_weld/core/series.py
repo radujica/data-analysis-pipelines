@@ -2,6 +2,7 @@ from grizzly.encoders import NumPyEncoder, NumPyDecoder
 from weld.weldobject import WeldObject
 from lazy_data import LazyData
 from utils import subset, replace_slice_defaults
+import numpy as np
 
 
 class Series(LazyData):
@@ -30,6 +31,23 @@ class Series(LazyData):
         super(Series, self).__init__(data, weld_type, 1, data_id)
 
     def __getitem__(self, item):
+        """ Lazy operation to select a subset of the series
+
+        Has consequences! Any previous and/or following operations on
+        the data within will be done only on this subset of the data
+
+        Parameters
+        ----------
+        item : slice
+            a slice of the data for the number of desired rows; currently
+            must contain a stop value and will not work as expected for
+            start != 0 and stride != 1
+
+        Returns
+        -------
+        Series
+
+        """
         if not isinstance(item, slice):
             raise ValueError('expected a slice in Series.__getitem__')
 
@@ -46,6 +64,41 @@ class Series(LazyData):
         return Series(subset(self, item).expr,
                       self.weld_type,
                       self.data_id)
+
+    def head(self, n=10):
+        """ Eager operation to read first n rows
+
+        This operation has no consequences, unlike getitem
+
+        Parameters
+        ----------
+        n : int
+            how many rows
+
+        Returns
+        -------
+        np.array
+            or other raw data
+
+        """
+        slice_ = replace_slice_defaults(slice(n))
+        data = self.expr
+
+        if self.data_id is not None:
+            index = self.input_mapping.data_ids.index(self.data_id)
+            old_args = self.input_mapping.input_function_args[index]
+            slice_as_tuple = (slice_,)
+            new_args = old_args + (slice_as_tuple,)
+            data = self.input_mapping.input_functions[index](*new_args)
+
+        if isinstance(data, WeldObject):
+            data = self.evaluate(verbose=False)
+        elif isinstance(data, np.ndarray):
+            data = data[:n]
+        else:
+            raise ValueError('underlying data is neither LazyData nor np.ndarray')
+
+        return data
 
     @staticmethod
     def _aggregate(array, operation, weld_type):

@@ -48,8 +48,22 @@ class DataFrame(object):
         for column_name in self.data:
             yield column_name
 
-    # this is special in that if there's a slice, it restricts all previous and next operations on the DataFrame
     def __getitem__(self, item):
+        """ Retrieve either column or slice of data
+
+        Has consequences! Any previous and/or following operations on
+        the data within will be done only on this subset of the data
+
+        Parameters
+        ----------
+        item : str or slice
+            if str, returns a column as a Series; if slice, returns a sliced DataFrame
+
+        Returns
+        -------
+        Series or DataFrame
+
+        """
         if isinstance(item, str):
             element = self.data[item]
             if isinstance(element, LazyData):
@@ -79,9 +93,35 @@ class DataFrame(object):
         else:
             raise ValueError('expected a str or slice in DataFrame.__getitem__')
 
+    def head(self, n=10):
+        """ Eagerly evaluates the DataFrame
+
+        This operation has no consequences, unlike getitem.
+
+        Parameters
+        ----------
+        n : int
+            how many rows to return
+
+        Returns
+        -------
+        str
+            the output of evaluate on the sliced DataFrame
+
+        """
+        slice_ = replace_slice_defaults(slice(n))
+
+        new_data = {}
+        for column_name in self.data:
+            # making series because Series has the proper method to slice something; re-use the code above
+            series = self[str(column_name)]
+
+            # by not passing a data_id, the data is not linked to the input_mapping read
+            new_data[column_name] = Series(series.head(n), series.weld_type)
+
+        new_index = self.index[slice_]
+
+        return DataFrame(new_data, new_index).evaluate(verbose=False)
+
     def __setitem__(self, key, value):
         self.data[key] = value
-
-    # TODO: action like evaluate; does NOT modify input_mapping func_args
-    def head(self, n=100):
-        raise NotImplementedError
