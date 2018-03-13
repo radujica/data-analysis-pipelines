@@ -34,7 +34,7 @@ dimensions: [u'longitude', u'latitude']"""
         pass
 
     def test_to_dataframe(self):
-        data = {'tg': np.array([np.nan, 10, 10.099999, np.nan, np.nan, 10.2], dtype=np.float32)}
+        data = {'tg': np.array([-99.99, 10, 10.099999, -99.99, -99.99, 10.2], dtype=np.float32)}
         index = pandas_weld.MultiIndex.from_product([np.array([25.5, 26.], dtype=np.float32),
                                                     np.array([10., 11., 12.], dtype=np.float32)],
                                                     ['longitude', 'latitude'])
@@ -53,13 +53,13 @@ dimensions: [u'longitude', u'latitude']"""
                                           result.index.labels[i].evaluate(verbose=False))
 
     def test_to_dataframe_3_indexes(self):
-        data = {'tg': np.array([np.nan, 10., 10.099999, np.nan, np.nan, 10.2, np.nan, np.nan, np.nan, 10.3, 10.4, 10.5,
-                                10.599999, 10.7, 10.8, 10.9, np.nan, np.nan, np.nan, np.nan, 11., 11., 11., 11.,
-                                np.nan, np.nan, np.nan, np.nan, 12., 13.],
+        data = {'tg': np.array([-99.99, 10., 10.099999, -99.99, -99.99, 10.2, -99.99, -99.99, -99.99, 10.3, 10.4, 10.5,
+                                10.599999, 10.7, 10.8, 10.9, -99.99, -99.99, -99.99, -99.99, 11., 11., 11., 11.,
+                                -99.99, -99.99, -99.99, -99.99, 12., 13.],
                                dtype=np.float32),
-                'tg_ext': np.array([np.nan, 1000., 1010., np.nan, np.nan, 1020., np.nan, np.nan, np.nan, 1030., 10401.,
-                                    10502., 10603., 10704., 10805., 10906., np.nan, np.nan, np.nan, np.nan, 11001.,
-                                    11002., 11003., 11004., np.nan, np.nan, np.nan, np.nan, 12005., 13006.],
+                'tg_ext': np.array([-9999, 1000., 1010., -9999, -9999, 1020., -9999, -9999, -9999, 1030., 10401.,
+                                    10502., 10603., 10704., 10805., 10906., -9999, -9999, -9999, -9999, 11001.,
+                                    11002., 11003., 11004., -9999, -9999, -9999, -9999, 12005., 13006.],
                                    dtype=np.float32)}
         index = pandas_weld.MultiIndex.from_product([np.array([25.5, 26.], dtype=np.float32),
                                                      np.array([10., 11., 12.], dtype=np.float32),

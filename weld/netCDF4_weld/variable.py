@@ -1,7 +1,7 @@
 from grizzly.encoders import NumPyEncoder, NumPyDecoder, numpy_to_weld_type_mapping
-from numpy.ma import MaskedArray
 from lazy_data import LazyData
 from weld.weldobject import WeldObject
+from netCDF4_weld.utils import convert_row_to_nd_slices
 import numpy as np
 import pandas as pd
 import netCDF4
@@ -40,10 +40,10 @@ class Variable(LazyData):
 
     def __init__(self, read_file_func, ds_id, column_name, dimensions, attributes, expression, dtype):
         inferred_dtype = self._infer_dtype(dtype, attributes)
-        # IMO this should be WeldVec(...) HERE and not enforced during evaluate()
         weld_type = numpy_to_weld_type_mapping[str(inferred_dtype)]
         data_id = self._create_data_id(ds_id, column_name)
-        LazyData.__init__(self, expression, weld_type, 1, data_id, self.read_data, (read_file_func, column_name))
+        LazyData.__init__(self, expression, weld_type, 1, data_id,
+                          self.read_data, (read_file_func, column_name))
 
         self.read_file_func = read_file_func
         self.ds_id = ds_id
@@ -59,19 +59,19 @@ class Variable(LazyData):
     def _create_data_id(ds_id, column_name):
         return ds_id + '_' + column_name
 
-    # TODO: this doesn't seem robust; perhaps float64 is also possible?
     @staticmethod
     def _infer_dtype(dtype, attributes):
+        # TODO: can it be float64?
         if 'scale_factor' in attributes:
             return np.dtype(np.float32)
         # calendar is stored as int in netCDF4, but we want the datetime format later which is encoded as a str(?)
-        elif 'calendar' in attributes:
+        if 'calendar' in attributes:
             return np.dtype(np.object)
         else:
             return dtype
 
     @staticmethod
-    def read_data(read_file_func, variable_name, start=0, end=None, stride=None):
+    def read_data(read_file_func, variable_name, tuple_slices=None):
         """ Reads data from file
 
         Once data is read, the result is stored. On subsequent reads, this stored data is returned.
@@ -83,12 +83,8 @@ class Variable(LazyData):
             variable_name can be read and returned
         variable_name : str
             the name of the variable
-        start : int
-            index to start reading data from
-        end : int
-            where to stop
-        stride : int
-            how much to jump between each read
+        tuple_slices : ()
+            of slices for selecting data
 
         Returns
         -------
@@ -102,20 +98,29 @@ class Variable(LazyData):
         """
         ds = read_file_func()
 
-        if end is None and stride is None:
-            data = ds.variables[variable_name][start:]
+        if tuple_slices is not None:
+            if not isinstance(tuple_slices, tuple):
+                raise ValueError('expected a tuple of slices')
+
+            for elem in tuple_slices:
+                if not isinstance(elem, slice):
+                    raise ValueError('expected slice in tuple_slices')
+
+            # user wants a slice of rows, so convert to netCDF4 slices for all dimensions
+            if len(tuple_slices) == 1:
+                tuple_slices = convert_row_to_nd_slices(tuple_slices, ds.variables[variable_name].shape)
         else:
-            data = ds.variables[variable_name][start:end:stride]
-        # remove MaskedArrays, just np.array please
-        if isinstance(data, MaskedArray):
-            # xarray seems to read them as floats if there are missing values, so doing the same here
-            # TODO: handle the other non-float types
-            if data.dtype == np.int32:
-                data = data.astype(np.float32)
-            data = data.filled(np.nan)
+            # same as [:]
+            tuple_slices = slice(None)
+
+        # want just np.array, no MaskedArray; let netCDF4 do the work of replacing missing values
+        ds.variables[variable_name].set_auto_mask(False)
+        # the actual read from file call
+        data = ds.variables[variable_name][tuple_slices]
+
         # want dimension = 1
         data = data.reshape(-1)
-        # if a datetime variable, want python's datetime
+
         attributes = ds.variables[variable_name].__dict__
         # xarray creates a pandas DatetimeIndex with Timestamps (as it should); to save time however,
         # a shortcut is taken to convert netCDF4 python date -> pandas timestamp -> py datetime
@@ -125,10 +130,6 @@ class Variable(LazyData):
                                                                               calendar=attributes['calendar'])])
 
         return data
-
-    # TODO: this should encode start, end, stride in weld code ~ iter
-    def __getitem__(self, item):
-        pass
 
     def head(self, n=10):
         """ Read first n values eagerly
@@ -146,7 +147,7 @@ class Variable(LazyData):
             raw data
 
         """
-        return self.read_data(self.read_file_func, self.column_name, 0, n, 1)
+        return self.read_data(self.read_file_func, self.column_name, (slice(0, n, 1),))
 
     # TODO: reduce printed expression context if materialized; can be looooooooooooooooong
     def __repr__(self):
@@ -172,7 +173,6 @@ class Variable(LazyData):
             array_var = array.obj_id
             weld_obj.dependencies[array_var] = array
 
-        # TODO: remove result(?); result should only be called once in a pipeline iirc
         weld_template = """
         result(
             for(%(array)s, 

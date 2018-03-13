@@ -70,11 +70,6 @@ class Dataset(object):
         return string_representation % {'repr': self.__repr__(),
                                         'data': materialized_variables}
 
-    # TODO: this shall check what variables are used later and only evaluate those
-    def evaluate(self, verbose=True, decode=True, passes=None, num_threads=1,
-                 apply_experimental_transforms=False):
-        pass
-
     # TODO: this could look nicer; look at how pandas does it?
     def __repr__(self):
         string_representation = """columns:\n\t%(columns)s\ndimensions: %(dimensions)s"""
@@ -94,6 +89,7 @@ class Dataset(object):
     def _process_dimension(self, name):
         return self.variables[name]
 
+    # TODO: move to pandas_weld; conceptually, makes more sense there
     def to_dataframe(self):
         """ Convert Dataset to pandas_weld DataFrame
 

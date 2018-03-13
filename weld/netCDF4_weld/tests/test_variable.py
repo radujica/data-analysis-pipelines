@@ -3,6 +3,7 @@ import netCDF4
 import netCDF4_weld
 import numpy as np
 import os
+from netCDF4_weld.utils import convert_row_to_nd_slices
 
 
 def read_dataset():
@@ -24,9 +25,14 @@ class VariableTests(unittest.TestCase):
         self.assertEqual(expected_repr, repr(self.variable))
 
     def test_evaluate(self):
-        expected_result = np.array([np.nan, 10., 10.099999, np.nan, np.nan, 10.2], dtype=np.float32)
+        expected_result = np.array([-99.99, 10., 10.099999, -99.99, -99.99, 10.2], dtype=np.float32)
 
         np.testing.assert_array_equal(expected_result, self.variable.evaluate(verbose=False))
+
+    def test_head(self):
+        expected_result = np.array([-99.99, 10.], dtype=np.float32)
+
+        np.testing.assert_array_equal(expected_result, self.variable.head(2))
 
 
 def main():
