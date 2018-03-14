@@ -2,6 +2,8 @@ import unittest
 import pandas_weld as pdw
 import numpy as np
 from grizzly.encoders import numpy_to_weld_type_mapping
+from indexes.test_multi import test_equal_multiindex
+from pandas_weld.tests.utils import evaluate_if_necessary
 
 
 class DataFrameTests(unittest.TestCase):
@@ -13,7 +15,7 @@ class DataFrameTests(unittest.TestCase):
 
     def test_getitem_column(self):
         expected_result = np.array([1, 2, 3, 4])
-        result = self.df['col1'].evaluate(verbose=False)
+        result = evaluate_if_necessary(self.df['col1'])
 
         np.testing.assert_array_equal(expected_result, result)
 
@@ -25,16 +27,12 @@ class DataFrameTests(unittest.TestCase):
 
         result = self.df[:2]
 
-        np.testing.assert_array_equal(expected_result['col1'].evaluate(verbose=False),
-                                      result['col1'].evaluate(verbose=False))
-        np.testing.assert_array_equal(expected_result['col2'].evaluate(verbose=False),
-                                      result['col2'].evaluate(verbose=False))
+        np.testing.assert_array_equal(evaluate_if_necessary(expected_result['col1']),
+                                      evaluate_if_necessary(result['col1']))
+        np.testing.assert_array_equal(evaluate_if_necessary(expected_result['col2']),
+                                      evaluate_if_necessary(result['col2']))
 
-        for i in xrange(2):
-            np.testing.assert_array_equal(expected_result.index.levels[i], result.index.levels[i])
-            np.testing.assert_array_equal(expected_result.index.labels[i].evaluate(verbose=False),
-                                          result.index.labels[i].evaluate(verbose=False))
-        np.testing.assert_array_equal(expected_result.index.names, result.index.names)
+        test_equal_multiindex(expected_result.index, result.index)
 
     def test_getitem_list(self):
         data = {'col1': np.array([1, 2, 3, 4]),
@@ -44,37 +42,33 @@ class DataFrameTests(unittest.TestCase):
 
         result = self.df[['col1', 'col2']]
 
-        np.testing.assert_array_equal(expected_result['col1'].evaluate(verbose=False),
-                                      result['col1'].evaluate(verbose=False))
-        np.testing.assert_array_equal(expected_result['col2'].evaluate(verbose=False),
-                                      result['col2'].evaluate(verbose=False))
+        np.testing.assert_array_equal(evaluate_if_necessary(expected_result['col1']),
+                                      evaluate_if_necessary(result['col1']))
+        np.testing.assert_array_equal(evaluate_if_necessary(expected_result['col2']),
+                                      evaluate_if_necessary(result['col2']))
 
-        for i in xrange(2):
-            np.testing.assert_array_equal(expected_result.index.levels[i], result.index.levels[i])
-            np.testing.assert_array_equal(expected_result.index.labels[i].evaluate(verbose=False),
-                                          result.index.labels[i].evaluate(verbose=False))
-        np.testing.assert_array_equal(expected_result.index.names, result.index.names)
+        test_equal_multiindex(expected_result.index, result.index)
 
     def test_setitem_new(self):
         new_column = np.array([11, 12, 13, 14])
 
         self.df['col3'] = new_column
 
-        np.testing.assert_array_equal(new_column, self.df['col3'].evaluate(verbose=False))
+        np.testing.assert_array_equal(new_column, evaluate_if_necessary(self.df['col3']))
 
     def test_setitem_series(self):
         new_column = np.array([11, 12, 13, 14])
 
         self.df['col3'] = pdw.Series(new_column, numpy_to_weld_type_mapping[str(new_column.dtype)])
 
-        np.testing.assert_array_equal(new_column, self.df['col3'].evaluate(verbose=False))
+        np.testing.assert_array_equal(new_column, evaluate_if_necessary(self.df['col3']))
 
     def test_setitem_replace(self):
         new_column = np.array([11, 12, 13, 14])
 
         self.df['col2'] = new_column
 
-        np.testing.assert_array_equal(new_column, self.df['col2'].evaluate(verbose=False))
+        np.testing.assert_array_equal(new_column, evaluate_if_necessary(self.df['col2']))
 
     def test_drop_str(self):
         data = {'col2': np.array([5., 6., 7., 8.])}
@@ -84,14 +78,10 @@ class DataFrameTests(unittest.TestCase):
         result = self.df.drop('col1')
 
         self.assertListEqual(expected_result.data.keys(), result.data.keys())
-        np.testing.assert_array_equal(expected_result['col2'].evaluate(verbose=False),
-                                      result['col2'].evaluate(verbose=False))
+        np.testing.assert_array_equal(evaluate_if_necessary(expected_result['col2']),
+                                      evaluate_if_necessary(result['col2']))
 
-        for i in xrange(2):
-            np.testing.assert_array_equal(expected_result.index.levels[i], result.index.levels[i])
-            np.testing.assert_array_equal(expected_result.index.labels[i].evaluate(verbose=False),
-                                          result.index.labels[i].evaluate(verbose=False))
-        np.testing.assert_array_equal(expected_result.index.names, result.index.names)
+        test_equal_multiindex(expected_result.index, result.index)
 
     def test_drop_list(self):
         data = {}
@@ -102,11 +92,7 @@ class DataFrameTests(unittest.TestCase):
 
         self.assertListEqual(expected_result.data.keys(), result.data.keys())
 
-        for i in xrange(2):
-            np.testing.assert_array_equal(expected_result.index.levels[i], result.index.levels[i])
-            np.testing.assert_array_equal(expected_result.index.labels[i].evaluate(verbose=False),
-                                          result.index.labels[i].evaluate(verbose=False))
-        np.testing.assert_array_equal(expected_result.index.names, result.index.names)
+        test_equal_multiindex(expected_result.index, result.index)
 
 
 def main():

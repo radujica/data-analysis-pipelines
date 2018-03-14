@@ -3,6 +3,7 @@ import numpy as np
 from grizzly.encoders import numpy_to_weld_type_mapping
 from lazy_data import LazyData
 from pandas_weld import Series
+from pandas_weld.tests.utils import evaluate_if_necessary
 
 
 class SeriesTests(unittest.TestCase):
@@ -12,7 +13,7 @@ class SeriesTests(unittest.TestCase):
         series = Series(data, numpy_to_weld_type_mapping['int64'])
 
         expected_result = np.array([1, 2])
-        result = series[:2].evaluate(verbose=False)
+        result = evaluate_if_necessary(series[:2])
 
         np.testing.assert_array_equal(expected_result, result)
 
@@ -23,7 +24,7 @@ class SeriesTests(unittest.TestCase):
         series = Series(data.expr, weld_type)
 
         expected_result = np.array([1, 2])
-        result = series[:2].evaluate(verbose=False)
+        result = evaluate_if_necessary(series[:2])
 
         np.testing.assert_array_equal(expected_result, result)
 
