@@ -55,7 +55,7 @@ class MultiIndex(object):
 
     def __getitem__(self, item):
         if not isinstance(item, slice):
-            raise ValueError('expected a slice in MultiIndex.__getitem__')
+            raise TypeError('expected a slice in MultiIndex.__getitem__')
 
         # TODO: figure out a way to slice the index; each data variable might have different dimensions order (?)
         # so it seems more complicated than just adding a parameter to the variable read_data
@@ -70,7 +70,7 @@ class MultiIndex(object):
         elif isinstance(array, np.ndarray):
             return array
         else:
-            raise ValueError('expected LazyData or np.ndarray')
+            raise TypeError('expected LazyData or np.ndarray')
 
     def evaluate(self, verbose=True, decode=True, passes=None, num_threads=1,
                  apply_experimental_transforms=False):

@@ -51,7 +51,7 @@ def subset(array, slice_):
 
     """
     if not isinstance(slice_, slice):
-        raise ValueError('expected a slice in subset')
+        raise TypeError('expected a slice in subset')
 
     if isinstance(array, LazyData):
         weld_type = array.weld_type
@@ -59,7 +59,7 @@ def subset(array, slice_):
     elif isinstance(array, np.ndarray):
         weld_type = numpy_to_weld_type_mapping[str(array.dtype)]
     else:
-        raise NotImplementedError
+        raise TypeError('expected array as LazyData or np.ndarray')
 
     return LazyData(_subset(array, slice_, weld_type),
                     weld_type,
@@ -70,7 +70,7 @@ def subset(array, slice_):
 # TODO: make slicing more flexible
 def replace_slice_defaults(slice_, default_start=0, default_step=1):
     if not isinstance(slice_, slice):
-        raise ValueError('expected a slice in replace_slice_none')
+        raise TypeError('expected a slice in replace_slice_none')
 
     start = slice_.start
     stop = slice_.stop

@@ -49,7 +49,7 @@ class Series(LazyData):
 
         """
         if not isinstance(item, slice):
-            raise ValueError('expected a slice in Series.__getitem__')
+            raise TypeError('expected a slice in Series.__getitem__')
 
         item = replace_slice_defaults(item)
 
@@ -96,7 +96,7 @@ class Series(LazyData):
         elif isinstance(data, np.ndarray):
             data = data[:n]
         else:
-            raise ValueError('underlying data is neither LazyData nor np.ndarray')
+            raise TypeError('underlying data is neither LazyData nor np.ndarray')
 
         return data
 

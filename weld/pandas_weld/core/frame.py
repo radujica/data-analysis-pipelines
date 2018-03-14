@@ -75,7 +75,7 @@ class DataFrame(object):
                 return Series(element,
                               numpy_to_weld_type_mapping[str(element.dtype)])
             else:
-                raise ValueError('column is neither LazyData nor np.ndarray')
+                raise TypeError('column is neither LazyData nor np.ndarray')
         elif isinstance(item, slice):
             item = replace_slice_defaults(item)
 
@@ -95,13 +95,13 @@ class DataFrame(object):
 
             for column_name in item:
                 if not isinstance(column_name, str):
-                    raise ValueError('expected a list of column names as strings')
+                    raise TypeError('expected a list of column names as strings')
 
                 new_data[column_name] = self.data[column_name]
 
             return DataFrame(new_data, self.index)
         else:
-            raise ValueError('expected a str, slice, or list in DataFrame.__getitem__')
+            raise TypeError('expected a str, slice, or list in DataFrame.__getitem__')
 
     def head(self, n=10):
         """ Eagerly evaluates the DataFrame
@@ -145,9 +145,9 @@ class DataFrame(object):
 
         """
         if not isinstance(key, str):
-            raise ValueError('expected key as a str')
+            raise TypeError('expected key as a str')
         elif not isinstance(value, LazyData) and not isinstance(value, np.ndarray):
-            raise ValueError('expected value as LazyData or np.ndarray')
+            raise TypeError('expected value as LazyData or np.ndarray')
 
         self.data[key] = value
 
@@ -182,4 +182,4 @@ class DataFrame(object):
 
             return DataFrame(new_data, self.index)
         else:
-            raise ValueError('expected columns as a str or a list of str')
+            raise TypeError('expected columns as a str or a list of str')
