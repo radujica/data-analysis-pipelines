@@ -1,4 +1,7 @@
 import unittest
+
+from grizzly.encoders import numpy_to_weld_type_mapping
+
 import pandas_weld as pdw
 import numpy as np
 
@@ -58,6 +61,13 @@ class DataFrameTests(unittest.TestCase):
         new_column = np.array([11, 12, 13, 14])
 
         self.df['col3'] = new_column
+
+        np.testing.assert_array_equal(new_column, self.df['col3'].evaluate(verbose=False))
+
+    def test_setitem_series(self):
+        new_column = np.array([11, 12, 13, 14])
+
+        self.df['col3'] = pdw.Series(new_column, numpy_to_weld_type_mapping[str(new_column.dtype)])
 
         np.testing.assert_array_equal(new_column, self.df['col3'].evaluate(verbose=False))
 

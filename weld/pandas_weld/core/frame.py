@@ -134,4 +134,19 @@ class DataFrame(object):
         return DataFrame(new_data, new_index).evaluate(verbose=False)
 
     def __setitem__(self, key, value):
+        """ Add/update DataFrame column
+
+        Parameters
+        ----------
+        key : str
+            column name
+        value : np.ndarray / LazyData
+            note it does NOT check for the same length as the other columns
+
+        """
+        if not isinstance(key, str):
+            raise ValueError('expected key as a str')
+        elif not isinstance(value, LazyData) and not isinstance(value, np.ndarray):
+            raise ValueError('expected value as LazyData or np.ndarray')
+
         self.data[key] = value
