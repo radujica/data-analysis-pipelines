@@ -56,7 +56,7 @@ class DataFrame(object):
 
         Parameters
         ----------
-        item : str or slice or list
+        item : str, slice, or list of str
             if str, returns a column as a Series; if slice, returns a sliced DataFrame; if list, returns a DataFrame
             with only the columns from the list
 
@@ -150,3 +150,36 @@ class DataFrame(object):
             raise ValueError('expected value as LazyData or np.ndarray')
 
         self.data[key] = value
+
+    def drop(self, columns):
+        """ Drop 1 or more columns
+
+        Unlike pandas drop, this is currently restricted to dropping columns
+
+        Parameters
+        ----------
+        columns : str or list of str
+            column name or list of column names to drop
+
+        Returns
+        -------
+        DataFrame
+            returns a new DataFrame without these columns
+
+        """
+        if isinstance(columns, str):
+            new_data = {}
+            for column_name in self.data:
+                if column_name != columns:
+                    new_data[column_name] = self.data[column_name]
+
+            return DataFrame(new_data, self.index)
+        elif isinstance(columns, list):
+            new_data = {}
+            for column_name in self.data:
+                if column_name not in columns:
+                    new_data[column_name] = self.data[column_name]
+
+            return DataFrame(new_data, self.index)
+        else:
+            raise ValueError('expected columns as a str or a list of str')

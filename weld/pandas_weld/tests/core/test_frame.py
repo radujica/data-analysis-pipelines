@@ -1,9 +1,7 @@
 import unittest
-
-from grizzly.encoders import numpy_to_weld_type_mapping
-
 import pandas_weld as pdw
 import numpy as np
+from grizzly.encoders import numpy_to_weld_type_mapping
 
 
 class DataFrameTests(unittest.TestCase):
@@ -77,6 +75,38 @@ class DataFrameTests(unittest.TestCase):
         self.df['col2'] = new_column
 
         np.testing.assert_array_equal(new_column, self.df['col2'].evaluate(verbose=False))
+
+    def test_drop_str(self):
+        data = {'col2': np.array([5., 6., 7., 8.])}
+        index = pdw.MultiIndex.from_product([np.array([1, 2]), np.array([3, 4])], ['a', 'b'])
+        expected_result = pdw.DataFrame(data, index)
+
+        result = self.df.drop('col1')
+
+        self.assertListEqual(expected_result.data.keys(), result.data.keys())
+        np.testing.assert_array_equal(expected_result['col2'].evaluate(verbose=False),
+                                      result['col2'].evaluate(verbose=False))
+
+        for i in xrange(2):
+            np.testing.assert_array_equal(expected_result.index.levels[i], result.index.levels[i])
+            np.testing.assert_array_equal(expected_result.index.labels[i].evaluate(verbose=False),
+                                          result.index.labels[i].evaluate(verbose=False))
+        np.testing.assert_array_equal(expected_result.index.names, result.index.names)
+
+    def test_drop_list(self):
+        data = {}
+        index = pdw.MultiIndex.from_product([np.array([1, 2]), np.array([3, 4])], ['a', 'b'])
+        expected_result = pdw.DataFrame(data, index)
+
+        result = self.df.drop(['col1', 'col2'])
+
+        self.assertListEqual(expected_result.data.keys(), result.data.keys())
+
+        for i in xrange(2):
+            np.testing.assert_array_equal(expected_result.index.levels[i], result.index.levels[i])
+            np.testing.assert_array_equal(expected_result.index.labels[i].evaluate(verbose=False),
+                                          result.index.labels[i].evaluate(verbose=False))
+        np.testing.assert_array_equal(expected_result.index.names, result.index.names)
 
 
 def main():
