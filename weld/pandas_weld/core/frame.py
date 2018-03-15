@@ -1,5 +1,6 @@
 from grizzly.encoders import numpy_to_weld_type_mapping
 from lazy_data import LazyData
+from pandas_weld.weld import weld_filter
 from series import Series
 from utils import replace_slice_defaults
 import numpy as np
@@ -68,9 +69,9 @@ class DataFrame(object):
         if isinstance(item, str):
             element = self.data[item]
             if isinstance(element, LazyData):
-                return Series(self.data[item].expr,
-                              self.data[item].weld_type,
-                              self.data[item].data_id)
+                return Series(element.expr,
+                              element.weld_type,
+                              element.data_id)
             elif isinstance(element, np.ndarray):
                 return Series(element,
                               numpy_to_weld_type_mapping[str(element.dtype)])
@@ -99,6 +100,32 @@ class DataFrame(object):
 
                 new_data[column_name] = self.data[column_name]
 
+            return DataFrame(new_data, self.index)
+        elif isinstance(item, Series):
+            if not item.weld_type == numpy_to_weld_type_mapping['bool']:
+                raise ValueError('expected series of bool to filter DataFrame rows')
+
+            new_data = {}
+            for column_name in self.data:
+                data = self.data[column_name]
+
+                if isinstance(data, LazyData):
+                    weld_type = data.weld_type
+                    data_id = data.data_id
+                    data = data.expr
+                elif isinstance(data, np.ndarray):
+                    weld_type = numpy_to_weld_type_mapping[str(data.dtype)]
+                    data_id = None
+                else:
+                    raise TypeError('expected data in column to be of type LazyData or np.ndarray')
+
+                new_data[column_name] = Series(weld_filter(data,
+                                                           item.expr,
+                                                           weld_type),
+                                               weld_type,
+                                               data_id)
+
+            # TODO: also filter index.levels
             return DataFrame(new_data, self.index)
         else:
             raise TypeError('expected a str, slice, or list in DataFrame.__getitem__')

@@ -1,6 +1,7 @@
+from weld.types import WeldBit
 from weld.weldobject import WeldObject
 from lazy_data import LazyData
-from pandas_weld.weld import weld_aggregate
+from pandas_weld.weld import weld_aggregate, weld_compare
 from utils import subset, replace_slice_defaults
 import numpy as np
 
@@ -11,7 +12,7 @@ class Series(LazyData):
     Parameters
     ----------
     data : np.ndarray / WeldObject
-        what shall be evaluated
+        raw data or weld expression
     weld_type : WeldType
         of the elements
     data_id : str
@@ -26,6 +27,8 @@ class Series(LazyData):
 
     # TODO: should accept and store dtype instead; also see TODO @LazyData
     def __init__(self, data, weld_type, data_id=None):
+        if not isinstance(data, (np.ndarray, WeldObject)):
+            raise TypeError('expected np.ndarray or WeldObject in Series.__init__')
         super(Series, self).__init__(data, weld_type, 1, data_id)
 
     def __getitem__(self, item):
@@ -48,6 +51,8 @@ class Series(LazyData):
         """
         if not isinstance(item, slice):
             raise TypeError('expected a slice in Series.__getitem__')
+
+        # TODO: add functionality for series, e.g. series[series < 10]
 
         item = replace_slice_defaults(item)
 
@@ -97,6 +102,38 @@ class Series(LazyData):
             raise TypeError('underlying data is neither LazyData nor np.ndarray')
 
         return data
+
+    # all comparisons are assumed to be on scalars
+    def _comparison(self, other, comparison):
+        if not isinstance(other, (str, unicode, int, long, float, bool)):
+            raise TypeError('can only compare with scalars')
+
+        assert isinstance(comparison, (str, unicode))
+
+        return Series(weld_compare(self.expr,
+                                   other,
+                                   comparison,
+                                   self.weld_type),
+                      WeldBit(),
+                      self.data_id)
+
+    def __lt__(self, other):
+        return self._comparison(other, '<')
+
+    def __le__(self, other):
+        return self._comparison(other, '<=')
+
+    def __eq__(self, other):
+        return self._comparison(other, '==')
+
+    def __ne__(self, other):
+        return self._comparison(other, '!=')
+
+    def __ge__(self, other):
+        return self._comparison(other, '>=')
+
+    def __gt__(self, other):
+        return self._comparison(other, '>')
 
     def sum(self):
         """ Sums all the elements

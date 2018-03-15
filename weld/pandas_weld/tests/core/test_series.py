@@ -48,6 +48,16 @@ class SeriesTests(unittest.TestCase):
 
         np.testing.assert_array_equal(expected_result, result)
 
+    @staticmethod
+    def test_comparison():
+        data = np.array([1, 2, 3, 4])
+        series = Series(data, numpy_to_weld_type_mapping['int64'])
+
+        expected_result = np.array([True, True, False, False])
+        result = evaluate_if_necessary(series < 3)
+
+        np.testing.assert_array_equal(expected_result, result)
+
 
 def main():
     unittest.main()

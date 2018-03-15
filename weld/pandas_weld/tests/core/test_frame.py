@@ -49,6 +49,22 @@ class DataFrameTests(unittest.TestCase):
 
         test_equal_multiindex(expected_result.index, result.index)
 
+    # i.e. filter like df[df[column] < 10]
+    def test_getitem_series(self):
+        data = {'col1': np.array([1, 2]),
+                'col2': np.array([5., 6.])}
+        index = pdw.MultiIndex.from_product([np.array([1, 2]), np.array([3, 4])], ['a', 'b'])
+        expected_result = pdw.DataFrame(data, index)
+
+        result = self.df[self.df['col1'] < 3]
+
+        np.testing.assert_array_equal(evaluate_if_necessary(expected_result['col1']),
+                                      evaluate_if_necessary(result['col1']))
+        np.testing.assert_array_equal(evaluate_if_necessary(expected_result['col2']),
+                                      evaluate_if_necessary(result['col2']))
+
+        test_equal_multiindex(expected_result.index, result.index)
+
     def test_setitem_new(self):
         new_column = np.array([11, 12, 13, 14])
 
