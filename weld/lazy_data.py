@@ -6,9 +6,9 @@ from grizzly.lazy_op import LazyOpResult, WeldObject
 # TODO: make an easier distinction between data that comes from file (LazyData) and non (currently still LazyData);
 # maybe a higher up class from which LazyData and LazyOpResult inherit could do it; the input_mapping seems to be a
 # better fit to WeldObject too
-# TODO: figure out a better way to generate data_id's; perhaps a better 'DB'-like way to store the data also
 # TODO: (better) decouple netCDF4_weld and pandas_weld hence making pandas_weld getitem more generic;
 # need an interface between parser and pandas; maybe store in lazydata which from parser the data came from?
+# TODO: just remove dependency on grizzly, so also remove lazyOpResult ^
 class InputMapping(object):
     """ Maps lazy data from file
 
@@ -65,6 +65,9 @@ class InputMapping(object):
     def retrieve(self, index):
         """ Higher function that can also retrieve from cache
 
+        Note that using this won't allow different subsets of the data to be read; a weld_input will be
+        permanently linked to this materialized data.
+
         Parameters
         ----------
         index : int
@@ -101,8 +104,6 @@ class InputMapping(object):
         self.input_function_args[index] = args
 
 
-# TODO: a more general way to store object_id -> read_func & args (as in, whatever object extends lazydata)
-# such that subset does NOT need to be applied to the entire pipeline for that input
 class LazyData(LazyOpResult):
     """ Extension of LazyOpResult adding lazy data reading
 
@@ -129,6 +130,21 @@ class LazyData(LazyOpResult):
     """
     input_mapping = InputMapping()
 
+    _data_counter = 0
+
+    # one can pass e.g. the column name at readable_reference for a more readable id
+    @staticmethod
+    def generate_id(readable_reference=None):
+        data_id = '_data_id%d' % LazyData._data_counter
+        LazyData._data_counter += 1
+        if readable_reference is not None:
+            if not isinstance(readable_reference, (str, unicode)):
+                raise TypeError('readable_reference must be a str')
+
+            data_id = '%s_%s' % (data_id, readable_reference)
+
+        return data_id
+
     # TODO: maybe just store dtype too? not sure if there are any other than np.dtype and even if there are,
     # they could also be stored; if there are, all operations (e.g. cartesian product) would need to be updated anyway
     # TODO: storing the length could also be useful, e.g. like in cartesian
@@ -141,25 +157,20 @@ class LazyData(LazyOpResult):
             # if either is None, LazyData was created/used incorrectly
             if read_func is None or read_func_args is None:
                 raise ValueError('Attempted to create LazyData by passing a data_id with no read functions')
-            # need to record the weld_input id from WeldObject, so generate it here
-            array_var = WeldObject.generate_input_name(self.expr)
-            self.input_mapping.append(data_id, array_var, read_func, read_func_args)
+            # ensure that this holds
+            if not isinstance(expr, WeldObject):
+                raise TypeError('LazyData from file must always have a WeldObject as expr')
+            self.input_mapping.append(data_id, expr.weld_code, read_func, read_func_args)
 
     def evaluate(self, verbose=True, decode=True, passes=None, num_threads=1,
                  apply_experimental_transforms=False):
         if isinstance(self.expr, WeldObject):
             # replace context values for every lazy recorded file input
-            for weld_input in self.expr.context.keys():
-                if weld_input in self.input_mapping.weld_input_names:
-                    index = self.input_mapping.weld_input_names.index(weld_input)
-                    self.expr.context[weld_input] = self.input_mapping.retrieve(index)
+            for value in self.expr.context.values():
+                if str(value) in self.input_mapping.data_ids:
+                    index = self.input_mapping.data_ids.index(value)
+                    self.expr.context[self.input_mapping.weld_input_names[index]] = self.input_mapping.retrieve(index)
 
             return super(LazyData, self).evaluate(verbose, decode, passes, num_threads, apply_experimental_transforms)
         else:
-            # there's no operation on the data, so just read and return
-            if self.data_id is not None:
-                index = self.input_mapping.data_ids.index(self.data_id)
-                return self.input_mapping.retrieve(index)
-            # data did not come from file so already 'stored' in expr
-            else:
-                return self.expr
+            return self.expr

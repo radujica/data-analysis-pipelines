@@ -1,4 +1,6 @@
 from collections import OrderedDict
+from weld.weldobject import WeldObject
+from lazy_data import LazyData
 from variable import Variable
 import pandas_weld as pdw
 
@@ -21,26 +23,13 @@ class Dataset(object):
     netCDF4.Dataset
 
     """
-    # used to assign a unique id to this dataset which is needed for variable tracking
-    _dataset_counter = 0
 
     def __init__(self, read_file_func, variables=None, dimensions=None):
         self.read_file_func = read_file_func
-        # TODO: should cache this too
         self.ds = self.read_file_func()
-        self._id = self._create_dataset_id()
 
         if variables is None:
-            # create OrderedDict of column_name -> Variable; use the variable name as expression/weld_code
-            self.variables = OrderedDict(map(lambda kv: (kv[0],
-                                                         Variable(read_file_func,
-                                                                  self._id,
-                                                                  kv[0],
-                                                                  kv[1].dimensions,
-                                                                  kv[1].__dict__,
-                                                                  kv[0],
-                                                                  kv[1].dtype)),
-                                             self.ds.variables.items()))
+            self.variables = self._create_variables(read_file_func)
         else:
             self.variables = variables
 
@@ -51,11 +40,27 @@ class Dataset(object):
 
         self._columns = [k for k in self.variables if k not in self.dimensions]
 
-    def _create_dataset_id(self):
-        ds_id = '_ds' + str(self._dataset_counter)
-        Dataset._dataset_counter += 1
+    # create OrderedDict of column_name -> Variable
+    def _create_variables(self, read_file_func):
+        variables = OrderedDict()
 
-        return ds_id
+        for kv in self.ds.variables.items():
+            # create weld object which will represent this data
+            weld_obj = WeldObject(Variable.encoder, Variable.decoder)
+            # generate a data_id to act as placeholder to the data
+            data_id = LazyData.generate_id(kv[0])
+            # update the context of this WeldObject and retrieve the generated _inpX id; WeldObject._registry
+            # will hence link this data_id to the _inpX id
+            weld_input_id = weld_obj.update(data_id)
+            # should always be a new object, else there's a bug somewhere
+            assert weld_input_id is not None
+            # the code is just the input
+            weld_obj.weld_code = '%s' % weld_input_id
+
+            variables[kv[0]] = Variable(read_file_func, kv[0], data_id, kv[1].dimensions,
+                                        kv[1].__dict__, weld_obj, kv[1].dtype)
+
+        return variables
 
     # this materializes everything right now
     def evaluate_all(self, verbose=True, decode=True, passes=None, num_threads=1,

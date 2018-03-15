@@ -150,13 +150,14 @@ def duplicate_array_indices(array, n, cartesian=False):
 
 
 # helper class to name pair elements in _cartesian_product_indices
+# need to keep track of the original arrays obj_id
 class _WeldObjectIdPair(object):
     def __init__(self, weld_object, object_id):
         self.weld_object = weld_object
         self.object_id = object_id
 
     def __repr__(self):
-        return self.weld_object + ', ' + self.object_id
+        return str(self.weld_object) + ' - ' + str(self.object_id)
 
 
 def _cartesian_product_indices(arrays, arrays_types, number_of_arrays):
@@ -172,7 +173,8 @@ def _cartesian_product_indices(arrays, arrays_types, number_of_arrays):
             array_var = arrays[i].obj_id
             weld_obj.dependencies[array_var] = arrays[i]
 
-        weld_obj.weld_code = array_var
+        if array_var is not None:
+            weld_obj.weld_code = array_var
 
         weld_objects.append(_WeldObjectIdPair(weld_obj, array_var))
 
@@ -180,10 +182,12 @@ def _cartesian_product_indices(arrays, arrays_types, number_of_arrays):
     for i in xrange(number_of_arrays):
         for j in xrange(0, i):
             array_var = weld_objects[i].weld_object.update(weld_objects[j].weld_object)
-            weld_objects[i].weld_object.dependencies[array_var] = weld_objects[j].weld_object
+            assert array_var is None
+            weld_objects[i].weld_object.dependencies[weld_objects[j].object_id] = weld_objects[j].weld_object
         for j in xrange(i + 1, number_of_arrays):
             array_var = weld_objects[i].weld_object.update(weld_objects[j].weld_object)
-            weld_objects[i].weld_object.dependencies[array_var] = weld_objects[j].weld_object
+            assert array_var is None
+            weld_objects[i].weld_object.dependencies[weld_objects[j].object_id] = weld_objects[j].weld_object
 
     # first 2 arrays are cartesian-produced by default
     weld_objects[0].weld_object = \

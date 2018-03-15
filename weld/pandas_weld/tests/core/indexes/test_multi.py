@@ -18,8 +18,11 @@ def test_equal_multiindex(expected_index, result_index):
     result_index = evaluate_multiindex_if_necessary(result_index)
 
     np.testing.assert_array_equal(expected_index.names, result_index.names)
-    np.testing.assert_array_equal(expected_index.levels, result_index.levels)
-    np.testing.assert_array_equal(expected_index.labels, result_index.labels)
+    assert len(expected_index.levels) == len(result_index.levels)
+    assert len(expected_index.labels) == len(result_index.labels)
+    for i in xrange(len(expected_index.levels)):
+        np.testing.assert_array_equal(expected_index.levels[i], result_index.levels[i])
+        np.testing.assert_array_equal(expected_index.labels[i], result_index.labels[i])
 
 
 class MultiIndexTests(unittest.TestCase):

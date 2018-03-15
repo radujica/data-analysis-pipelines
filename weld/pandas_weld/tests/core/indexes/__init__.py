@@ -1,1 +1,1 @@
-from test_multi import MultiIndexTests
+from test_multi import MultiIndexTests, test_equal_multiindex

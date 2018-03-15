@@ -5,6 +5,7 @@ import pandas_weld
 import numpy as np
 import os
 from datetime import date
+from pandas_weld.tests import test_equal_multiindex
 
 
 class DatasetTests(unittest.TestCase):
@@ -45,12 +46,7 @@ dimensions: [u'longitude', u'latitude']"""
         self.assertListEqual(expected_result.data.keys(), result.data.keys())
         np.testing.assert_array_equal(expected_result.data['tg'], result.data['tg'].evaluate(verbose=False))
 
-        self.assertListEqual(expected_result.index.names, result.index.names)
-        for i in xrange(2):
-            np.testing.assert_array_equal(expected_result.index.levels[i],
-                                          result.index.levels[i].evaluate(verbose=False))
-            np.testing.assert_array_equal(expected_result.index.labels[i].evaluate(verbose=False),
-                                          result.index.labels[i].evaluate(verbose=False))
+        test_equal_multiindex(expected_result.index, result.index)
 
     def test_to_dataframe_3_indexes(self):
         data = {'tg': np.array([-99.99, 10., 10.099999, -99.99, -99.99, 10.2, -99.99, -99.99, -99.99, 10.3, 10.4, 10.5,
@@ -63,9 +59,9 @@ dimensions: [u'longitude', u'latitude']"""
                                    dtype=np.float32)}
         index = pandas_weld.MultiIndex.from_product([np.array([25.5, 26.], dtype=np.float32),
                                                      np.array([10., 11., 12.], dtype=np.float32),
-                                                     np.array([date(1950, 1, 1), date(1950, 1, 2),
-                                                               date(1950, 1, 3), date(1950, 1, 4),
-                                                               date(1950, 1, 5)])],
+                                                     np.array([str(date(1950, 1, 1)), str(date(1950, 1, 2)),
+                                                               str(date(1950, 1, 3)), str(date(1950, 1, 4)),
+                                                               str(date(1950, 1, 5))])],
                                                     ['longitude', 'latitude', 'time'])
         expected_result = pandas_weld.DataFrame(data, index)
 
@@ -75,12 +71,7 @@ dimensions: [u'longitude', u'latitude']"""
         np.testing.assert_array_equal(expected_result.data['tg'], result.data['tg'].evaluate(verbose=False))
         np.testing.assert_array_equal(expected_result.data['tg_ext'], result.data['tg_ext'].evaluate(verbose=False))
 
-        self.assertListEqual(expected_result.index.names, result.index.names)
-        for i in xrange(3):
-            np.testing.assert_array_equal(expected_result.index.levels[i],
-                                          result.index.levels[i].evaluate(verbose=False))
-            np.testing.assert_array_equal(expected_result.index.labels[i].evaluate(verbose=False),
-                                          result.index.labels[i].evaluate(verbose=False))
+        test_equal_multiindex(expected_result.index, result.index)
 
 
 def main():

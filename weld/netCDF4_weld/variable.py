@@ -16,8 +16,6 @@ class Variable(LazyData):
     ----------
     read_file_func : netCDF4.Dataset
         the Dataset from which this variable originates
-    ds_id : int
-        links this variable to a specific Dataset based on the Dataset's id
     column_name : str
         the variable name in the dataset
     dimensions : tuple
@@ -35,29 +33,22 @@ class Variable(LazyData):
     netCDF4.Variable
 
     """
-    _encoder = NumPyEncoder()
-    _decoder = NumPyDecoder()
+    encoder = NumPyEncoder()
+    decoder = NumPyDecoder()
 
-    def __init__(self, read_file_func, ds_id, column_name, dimensions, attributes, expression, dtype):
+    def __init__(self, read_file_func, column_name, data_id, dimensions, attributes, expression, dtype):
         inferred_dtype = self._infer_dtype(dtype, attributes)
         weld_type = numpy_to_weld_type_mapping[str(inferred_dtype)]
-        data_id = self._create_data_id(ds_id, column_name)
         LazyData.__init__(self, expression, weld_type, 1, data_id,
                           self.read_data, (read_file_func, column_name))
 
         self.read_file_func = read_file_func
-        self.ds_id = ds_id
         self.column_name = column_name
         self.dimensions = dimensions
         self.attributes = attributes
         # when reading data with netCDF4, the values are multiplied by the scale_factor if it exists,
         # which means that even if data is of type int, the scale factor is often float making the result a float
         self.dtype = inferred_dtype
-
-    # TODO: see LazyData TODO about moving id generation
-    @staticmethod
-    def _create_data_id(ds_id, column_name):
-        return ds_id + '_' + column_name
 
     @staticmethod
     def _infer_dtype(dtype, attributes):
@@ -66,7 +57,7 @@ class Variable(LazyData):
             return np.dtype(np.float32)
         # calendar is stored as int in netCDF4, but we want the datetime format later which is encoded as a str(?)
         if 'calendar' in attributes:
-            return np.dtype(np.object)
+            return np.dtype(np.str)
         else:
             return dtype
 
@@ -129,8 +120,9 @@ class Variable(LazyData):
         # a shortcut is taken to convert netCDF4 python date -> pandas timestamp -> py datetime
         # TODO: weld pandas DatetimeIndex & Timestamp
         if 'calendar' in attributes:
-            data = np.array([pd.Timestamp(k).date() for k in netCDF4.num2date(data, attributes['units'],
-                                                                              calendar=attributes['calendar'])])
+            data = np.array([str(pd.Timestamp(k).date()) for k in netCDF4.num2date(data, attributes['units'],
+                                                                                   calendar=attributes['calendar'])],
+                            dtype=np.str)
 
         return data
 
@@ -168,7 +160,7 @@ class Variable(LazyData):
 
     # this and add are for learning/testing purposes
     def _element_wise_op(self, array, value, operation):
-        weld_obj = WeldObject(self._encoder, self._decoder)
+        weld_obj = WeldObject(Variable.encoder, Variable.decoder)
 
         array_var = weld_obj.update(array)
 
@@ -194,8 +186,8 @@ class Variable(LazyData):
 
     def add(self, value):
         return Variable(self.read_file_func,
-                        self.ds_id,
                         self.column_name,
+                        self.data_id,
                         self.dimensions,
                         self.attributes,
                         self._element_wise_op(self.expr, value, '+'),
