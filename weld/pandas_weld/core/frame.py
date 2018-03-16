@@ -31,9 +31,20 @@ class DataFrame(object):
         return string_representation % {'columns': self.data.keys(),
                                         'indexes': self.index.names}
 
-    # this materializes everything right now
+    # TODO: prettify
     def evaluate(self, verbose=True, decode=True, passes=None, num_threads=1,
                  apply_experimental_transforms=False):
+        """ Evaluates by creating a str representation of the DataFrame
+
+        Parameters
+        ----------
+        see LazyData
+
+        Returns
+        -------
+        str
+
+        """
         materialized_columns = {}
         for column in self.data.items():
             materialized_columns[column[0]] = column[1].evaluate(verbose=verbose)
@@ -50,16 +61,19 @@ class DataFrame(object):
             yield column_name
 
     def __getitem__(self, item):
-        """ Retrieve either column or slice of data
+        """ Retrieve a portion of the DataFrame
 
-        Has consequences! Any previous and/or following operations on
+        Has consequences! When slicing, any previous and/or following operations on
         the data within will be done only on this subset of the data
 
         Parameters
         ----------
-        item : str, slice, or list of str
-            if str, returns a column as a Series; if slice, returns a sliced DataFrame; if list, returns a DataFrame
-            with only the columns from the list
+        item : str, slice, or list of str, Series of bool
+            if str, returns a column as a Series;
+            if slice, returns a sliced DataFrame;
+            if list, returns a DataFrame with only the columns from the list;
+            if Series, returns a filtered DataFrame only with the rows corresponding to
+            True in the Series
 
         Returns
         -------

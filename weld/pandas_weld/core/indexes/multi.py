@@ -57,6 +57,20 @@ class MultiIndex(object):
         return "index names:\n\t%s" % str(self.names)
 
     def __getitem__(self, item):
+        """ Retrieve a portion of the MultiIndex
+
+        Parameters
+        ----------
+        item : slice or Series
+            if slice, returns a sliced MultiIndex;
+            if Series, returns a filtered MultiIndex only with the labels corresponding to
+            True in the Series
+
+        Returns
+        -------
+        MultiIndex
+
+        """
         if isinstance(item, slice):
             # TODO: figure out a way to slice the index; each data variable might have different dimensions order (?)
             # so it seems more complicated than just adding a parameter to the variable read_data
@@ -99,8 +113,20 @@ class MultiIndex(object):
         else:
             raise TypeError('expected LazyData or np.ndarray')
 
+    # TODO: prettify
     def evaluate(self, verbose=True, decode=True, passes=None, num_threads=1,
                  apply_experimental_transforms=False):
+        """ Evaluates by creating a str representation of the MultiIndex
+
+        Parameters
+        ----------
+        see LazyData
+
+        Returns
+        -------
+        str
+
+        """
         materialized_levels = OrderedDict()
         materialized_labels = OrderedDict()
 

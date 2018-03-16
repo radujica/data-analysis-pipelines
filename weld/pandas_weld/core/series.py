@@ -103,7 +103,7 @@ class Series(LazyData):
 
         return data
 
-    # all comparisons are assumed to be on scalars
+    # comparisons are limited to scalars
     def _comparison(self, other, comparison):
         if not isinstance(other, (str, unicode, int, long, float, bool)):
             raise TypeError('can only compare with scalars')
