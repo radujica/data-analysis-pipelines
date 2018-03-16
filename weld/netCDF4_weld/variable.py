@@ -1,4 +1,4 @@
-from grizzly.encoders import NumPyEncoder, NumPyDecoder, numpy_to_weld_type_mapping
+from grizzly.encoders import NumPyEncoder, NumPyDecoder, numpy_to_weld_type
 from lazy_data import LazyData
 from weld.weldobject import WeldObject
 from netCDF4_weld.utils import convert_row_to_nd_slices
@@ -38,7 +38,7 @@ class Variable(LazyData):
 
     def __init__(self, read_file_func, column_name, data_id, dimensions, attributes, expression, dtype):
         inferred_dtype = self._infer_dtype(dtype, attributes)
-        weld_type = numpy_to_weld_type_mapping[str(inferred_dtype)]
+        weld_type = numpy_to_weld_type(inferred_dtype)
         LazyData.__init__(self, expression, weld_type, 1, data_id,
                           self.read_data, (read_file_func, column_name))
 

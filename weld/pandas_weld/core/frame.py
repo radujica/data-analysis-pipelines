@@ -1,4 +1,4 @@
-from grizzly.encoders import numpy_to_weld_type_mapping
+from grizzly.encoders import numpy_to_weld_type
 from lazy_data import LazyData
 from pandas_weld.weld import weld_filter
 from series import Series
@@ -74,7 +74,7 @@ class DataFrame(object):
                               element.data_id)
             elif isinstance(element, np.ndarray):
                 return Series(element,
-                              numpy_to_weld_type_mapping[str(element.dtype)])
+                              numpy_to_weld_type(element.dtype))
             else:
                 raise TypeError('column is neither LazyData nor np.ndarray')
         elif isinstance(item, slice):
@@ -102,7 +102,7 @@ class DataFrame(object):
 
             return DataFrame(new_data, self.index)
         elif isinstance(item, Series):
-            if not item.weld_type == numpy_to_weld_type_mapping['bool']:
+            if not item.weld_type == numpy_to_weld_type('bool'):
                 raise ValueError('expected series of bool to filter DataFrame rows')
 
             new_data = {}
@@ -114,7 +114,7 @@ class DataFrame(object):
                     data_id = data.data_id
                     data = data.expr
                 elif isinstance(data, np.ndarray):
-                    weld_type = numpy_to_weld_type_mapping[str(data.dtype)]
+                    weld_type = numpy_to_weld_type(data.dtype)
                     data_id = None
                 else:
                     raise TypeError('expected data in column to be of type LazyData or np.ndarray')

@@ -1,5 +1,5 @@
 import numpy as np
-from grizzly.encoders import NumPyEncoder, NumPyDecoder, numpy_to_weld_type_mapping
+from grizzly.encoders import NumPyEncoder, NumPyDecoder, numpy_to_weld_type
 from weld.types import WeldLong
 from weld.weldobject import WeldObject
 from lazy_data import LazyData
@@ -71,7 +71,7 @@ def duplicate_elements_indices(array, n, cartesian=False):
         weld_type = array.weld_type
         array = array.expr
     elif isinstance(array, np.ndarray):
-        weld_type = numpy_to_weld_type_mapping[str(array.dtype)]
+        weld_type = numpy_to_weld_type(array.dtype)
     else:
         raise NotImplementedError
 
@@ -140,7 +140,7 @@ def duplicate_array_indices(array, n, cartesian=False):
         weld_type = array.weld_type
         array = array.expr
     elif isinstance(array, np.ndarray):
-        weld_type = numpy_to_weld_type_mapping[str(array.dtype)]
+        weld_type = numpy_to_weld_type(array.dtype)
     else:
         raise NotImplementedError
 
@@ -262,7 +262,7 @@ def cartesian_product_indices(arrays):
             weld_type = arrays_copied[i].weld_type
             arrays_copied[i] = arrays_copied[i].expr
         elif isinstance(arrays_copied[i], np.ndarray):
-            weld_type = numpy_to_weld_type_mapping[str(arrays_copied[i].dtype)]
+            weld_type = numpy_to_weld_type(arrays_copied[i].dtype)
         else:
             raise NotImplementedError
 

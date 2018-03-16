@@ -1,7 +1,7 @@
 import unittest
 import pandas_weld as pdw
 import numpy as np
-from grizzly.encoders import numpy_to_weld_type_mapping
+from grizzly.encoders import numpy_to_weld_type
 from indexes.test_multi import test_equal_multiindex
 from pandas_weld.tests.utils import evaluate_if_necessary
 
@@ -75,7 +75,7 @@ class DataFrameTests(unittest.TestCase):
     def test_setitem_series(self):
         new_column = np.array([11, 12, 13, 14])
 
-        self.df['col3'] = pdw.Series(new_column, numpy_to_weld_type_mapping[str(new_column.dtype)])
+        self.df['col3'] = pdw.Series(new_column, numpy_to_weld_type(new_column.dtype))
 
         np.testing.assert_array_equal(new_column, evaluate_if_necessary(self.df['col3']))
 

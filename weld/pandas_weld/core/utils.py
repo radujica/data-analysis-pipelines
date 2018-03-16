@@ -1,4 +1,4 @@
-from grizzly.encoders import numpy_to_weld_type_mapping
+from grizzly.encoders import numpy_to_weld_type
 from lazy_data import LazyData
 from pandas_weld.weld import weld_subset
 import numpy as np
@@ -26,7 +26,7 @@ def subset(array, slice_):
         weld_type = array.weld_type
         array = array.expr
     elif isinstance(array, np.ndarray):
-        weld_type = numpy_to_weld_type_mapping[str(array.dtype)]
+        weld_type = numpy_to_weld_type(array.dtype)
     else:
         raise TypeError('expected array as LazyData or np.ndarray')
 

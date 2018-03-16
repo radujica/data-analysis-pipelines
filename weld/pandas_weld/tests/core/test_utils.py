@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 import pandas_weld as pdw
-from grizzly.encoders import numpy_to_weld_type_mapping
+from grizzly.encoders import numpy_to_weld_type
 from lazy_data import LazyData
 from pandas_weld.tests.utils import evaluate_if_necessary
 
@@ -19,7 +19,7 @@ class SubsetTests(unittest.TestCase):
 
     @staticmethod
     def test_subset_lazy_data():
-        array = LazyData(np.array([1, 2, 3, 4, 5, 6]), numpy_to_weld_type_mapping['int64'], 1)
+        array = LazyData(np.array([1, 2, 3, 4, 5, 6]), numpy_to_weld_type('int64'), 1)
         slice_ = slice(0, 3, 1)
 
         expected_result = np.array([1, 2, 3])
