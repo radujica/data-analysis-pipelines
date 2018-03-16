@@ -125,8 +125,9 @@ class DataFrame(object):
                                                weld_type,
                                                data_id)
 
-            # TODO: also filter index.levels
-            return DataFrame(new_data, self.index)
+            new_index = self.index[item]
+
+            return DataFrame(new_data, new_index)
         else:
             raise TypeError('expected a str, slice, or list in DataFrame.__getitem__')
 

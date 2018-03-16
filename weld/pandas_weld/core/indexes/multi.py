@@ -2,6 +2,9 @@ import numpy as np
 import numpy_weld as npw
 from lazy_data import LazyData
 from collections import OrderedDict
+from grizzly.encoders import numpy_to_weld_type
+from pandas_weld.core.series import Series
+from pandas_weld.weld import weld_filter
 
 
 class MultiIndex(object):
@@ -54,12 +57,36 @@ class MultiIndex(object):
         return "index names:\n\t%s" % str(self.names)
 
     def __getitem__(self, item):
-        if not isinstance(item, slice):
-            raise TypeError('expected a slice in MultiIndex.__getitem__')
+        if isinstance(item, slice):
+            # TODO: figure out a way to slice the index; each data variable might have different dimensions order (?)
+            # so it seems more complicated than just adding a parameter to the variable read_data
+            return MultiIndex(self.levels, self.labels, self.names)
+        elif isinstance(item, Series):
+            if not item.weld_type == numpy_to_weld_type('bool'):
+                raise ValueError('expected series of bool to filter DataFrame rows')
 
-        # TODO: figure out a way to slice the index; each data variable might have different dimensions order (?)
-        # so it seems more complicated than just adding a parameter to the variable read_data
-        return MultiIndex(self.levels, self.labels, self.names)
+            new_labels = []
+            for label in self.labels:
+                if isinstance(label, LazyData):
+                    weld_type = label.weld_type
+                    data_id = label.data_id
+                    label = label.expr
+                elif isinstance(label, np.ndarray):
+                    weld_type = numpy_to_weld_type(label.dtype)
+                    data_id = None
+                else:
+                    raise TypeError('expected data in column to be of type LazyData or np.ndarray')
+
+                new_labels.append(LazyData(weld_filter(label,
+                                                       item.expr,
+                                                       weld_type),
+                                           weld_type,
+                                           1,
+                                           data_id))
+
+            return MultiIndex(self.levels, new_labels, self.names)
+        else:
+            raise TypeError('expected slice or Series of bool in MultiIndex.__getitem__')
 
     @staticmethod
     def _evaluate_or_raw(array, verbose, decode, passes,
