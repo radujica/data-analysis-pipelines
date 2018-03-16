@@ -1,7 +1,8 @@
+from grizzly.encoders import numpy_to_weld_type
 from weld.types import WeldBit
 from weld.weldobject import WeldObject
 from lazy_data import LazyData
-from pandas_weld.weld import weld_aggregate, weld_compare
+from pandas_weld.weld import weld_aggregate, weld_compare, weld_filter
 from utils import subset, replace_slice_defaults
 import numpy as np
 
@@ -26,6 +27,8 @@ class Series(LazyData):
     """
 
     # TODO: should accept and store dtype instead; also see TODO @LazyData
+    # TODO: Series does not store any index currently so e.g. when filtering
+    # the elements lose their pairing with the index
     def __init__(self, data, weld_type, data_id=None):
         if not isinstance(data, (np.ndarray, WeldObject)):
             raise TypeError('expected np.ndarray or WeldObject in Series.__init__')
@@ -34,39 +37,55 @@ class Series(LazyData):
     def __getitem__(self, item):
         """ Lazy operation to select a subset of the series
 
-        Has consequences! Any previous and/or following operations on
+        Has consequences! When slicing, any previous and/or following operations on
         the data within will be done only on this subset of the data
 
         Parameters
         ----------
-        item : slice
-            a slice of the data for the number of desired rows; currently
+        item : slice or Series
+            if slice, a slice of the data for the number of desired rows; currently
             must contain a stop value and will not work as expected for
-            start != 0 and stride != 1
+            start != 0 and stride != 1;
+            if Series, returns a filtered Series only with the elements corresponding to
+            True in the item Series
 
         Returns
         -------
         Series
 
         """
-        if not isinstance(item, slice):
-            raise TypeError('expected a slice in Series.__getitem__')
+        if isinstance(item, slice):
+            item = replace_slice_defaults(item)
 
-        # TODO: add functionality for series, e.g. series[series < 10]
+            # update func_args so that less data is read from file
+            if isinstance(self, LazyData) and self.data_id is not None:
+                index = self.input_mapping.data_ids.index(self.data_id)
+                old_args = self.input_mapping.input_function_args[index]
+                slice_as_tuple = (slice(item.start, item.stop, item.step),)
+                new_args = old_args + (slice_as_tuple,)
+                self.input_mapping.update_input_function_args(index, new_args)
 
-        item = replace_slice_defaults(item)
+            return Series(subset(self, item).expr,
+                          self.weld_type,
+                          self.data_id)
 
-        # update func_args so that less data is read from file
-        if isinstance(self, LazyData) and self.data_id is not None:
-            index = self.input_mapping.data_ids.index(self.data_id)
-            old_args = self.input_mapping.input_function_args[index]
-            slice_as_tuple = (slice(item.start, item.stop, item.step),)
-            new_args = old_args + (slice_as_tuple,)
-            self.input_mapping.update_input_function_args(index, new_args)
+        elif isinstance(item, Series):
+            if isinstance(self.expr, LazyData):
+                weld_type = self.expr.weld_type
+                data_id = self.expr.data_id
+            elif isinstance(self.expr, np.ndarray):
+                weld_type = numpy_to_weld_type(self.expr.dtype)
+                data_id = None
+            else:
+                raise TypeError('expected data in column to be of type LazyData or np.ndarray')
 
-        return Series(subset(self, item).expr,
-                      self.weld_type,
-                      self.data_id)
+            return Series(weld_filter(self.expr,
+                                      item.expr,
+                                      weld_type),
+                          weld_type,
+                          data_id)
+        else:
+            raise TypeError('expected a slice or a Series of bool in Series.__getitem__')
 
     def head(self, n=10):
         """ Eager operation to read first n rows

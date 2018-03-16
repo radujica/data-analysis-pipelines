@@ -8,7 +8,7 @@ from pandas_weld.tests.utils import evaluate_if_necessary
 
 class SeriesTests(unittest.TestCase):
     @staticmethod
-    def test_getitem_raw():
+    def test_getitem_slice_raw():
         data = np.array([1, 2, 3])
         series = Series(data, numpy_to_weld_type('int64'))
 
@@ -18,13 +18,23 @@ class SeriesTests(unittest.TestCase):
         np.testing.assert_array_equal(expected_result, result)
 
     @staticmethod
-    def test_getitem():
+    def test_getitem_slice():
         weld_type = numpy_to_weld_type('int64')
         data = LazyData(np.array([1, 2, 3]), weld_type, 1)
         series = Series(data.expr, weld_type)
 
         expected_result = np.array([1, 2])
         result = evaluate_if_necessary(series[:2])
+
+        np.testing.assert_array_equal(expected_result, result)
+
+    @staticmethod
+    def test_getitem_series():
+        data = np.array([1, 2, 3])
+        series = Series(data, numpy_to_weld_type('int64'))
+
+        expected_result = np.array([1, 3])
+        result = evaluate_if_necessary(series[series != 2])
 
         np.testing.assert_array_equal(expected_result, result)
 
