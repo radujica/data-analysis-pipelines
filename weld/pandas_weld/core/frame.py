@@ -99,7 +99,7 @@ class DataFrame(object):
             item = replace_slice_defaults(item)
 
             new_data = {}
-            for column_name in self.data:
+            for column_name in self:
                 # making series because Series has the proper method to slice something; re-use the code above
                 series = self[str(column_name)]
                 # the actual slice handled by Series getitem
@@ -124,7 +124,7 @@ class DataFrame(object):
                 raise ValueError('expected series of bool to filter DataFrame rows')
 
             new_data = {}
-            for column_name in self.data:
+            for column_name in self:
                 data = self.data[column_name]
 
                 if isinstance(data, LazyData):
@@ -172,7 +172,7 @@ class DataFrame(object):
         slice_ = replace_slice_defaults(slice(n))
 
         new_data = {}
-        for column_name in self.data:
+        for column_name in self:
             # making series because Series has the proper method to slice something; re-use the code above
             series = self[str(column_name)]
 
@@ -205,6 +205,31 @@ class DataFrame(object):
 
         self.data[key] = value
 
+    def rename(self, columns):
+        """ Rename columns
+
+        Currently a simplified version of pandas' rename
+
+        Parameters
+        ----------
+        columns : dict
+            of old name -> new name
+
+        Returns
+        -------
+        DataFrame
+            with the given columns renamed
+
+        """
+        new_data = {}
+        for column_name in self:
+            if column_name in columns.keys():
+                new_data[columns[column_name]] = self.data[column_name]
+            else:
+                new_data[column_name] = self.data[column_name]
+
+        return DataFrame(new_data, self.index)
+
     def drop(self, columns):
         """ Drop 1 or more columns
 
@@ -223,14 +248,14 @@ class DataFrame(object):
         """
         if isinstance(columns, str):
             new_data = {}
-            for column_name in self.data:
+            for column_name in self:
                 if column_name != columns:
                     new_data[column_name] = self.data[column_name]
 
             return DataFrame(new_data, self.index)
         elif isinstance(columns, list):
             new_data = {}
-            for column_name in self.data:
+            for column_name in self:
                 if column_name not in columns:
                     new_data[column_name] = self.data[column_name]
 
@@ -246,7 +271,7 @@ class DataFrame(object):
         assert isinstance(operation, (str, unicode))
 
         new_data = {}
-        for column_name in self.data:
+        for column_name in self:
             # get as series
             series = self[str(column_name)]
             # apply the operation
@@ -279,7 +304,7 @@ class DataFrame(object):
 
         index = []
         data = []
-        for column_name in self.data:
+        for column_name in self:
             index.append(column_name)
             # get as series
             series = self[str(column_name)]

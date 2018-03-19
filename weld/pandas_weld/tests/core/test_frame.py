@@ -139,6 +139,22 @@ class DataFrameTests(unittest.TestCase):
 
         test_equal_series(expected_result, result)
 
+    def test_rename(self):
+        data = {'col3': np.array([1, 2, 3, 4]),
+                'col2': np.array([5., 6., 7., 8.])}
+        index = pdw.MultiIndex.from_product([np.array([1, 2]), np.array([3, 4])], ['a', 'b'])
+        expected_result = pdw.DataFrame(data, index)
+
+        result = self.df.rename(columns={'col1': 'col3'})
+
+        self.assertListEqual(expected_result.data.keys(), result.data.keys())
+        np.testing.assert_array_equal(evaluate_if_necessary(expected_result['col3']),
+                                      evaluate_if_necessary(result['col3']))
+        np.testing.assert_array_equal(evaluate_if_necessary(expected_result['col2']),
+                                      evaluate_if_necessary(result['col2']))
+
+        test_equal_multiindex(expected_result.index, result.index)
+
 
 def main():
     unittest.main()
