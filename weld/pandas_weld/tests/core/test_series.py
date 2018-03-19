@@ -102,6 +102,16 @@ class SeriesTests(unittest.TestCase):
 
         test_equal_series(expected_result, result)
 
+    @staticmethod
+    def test_aggregate():
+        data = np.array([1, 2, 3])
+        series = Series(data, np.dtype(np.int64), RangeIndex(0, 3, 1))
+
+        expected_result = 6
+        result = series.sum()
+
+        np.testing.assert_equal(expected_result, evaluate_if_necessary(result))
+
 
 def main():
     unittest.main()

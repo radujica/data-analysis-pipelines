@@ -204,16 +204,17 @@ class Series(LazyData):
     def __div__(self, other):
         return self._element_wise_operation(other, '/')
 
-    def sum(self):
-        """ Sums all the elements
+    def _aggregate(self, operation):
+        assert isinstance(operation, (str, unicode))
 
-        Returns
-        -------
-        Series
-
-        """
         return LazyData(weld_aggregate(self.expr,
-                                       "+",
+                                       operation,
                                        self.weld_type),
                         self.weld_type,
                         0)
+
+    def sum(self):
+        return self._aggregate('+')
+
+    def prod(self):
+        return self._aggregate('*')

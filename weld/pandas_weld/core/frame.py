@@ -1,6 +1,7 @@
 from grizzly.encoders import numpy_to_weld_type
 from lazy_data import LazyData
-from pandas_weld.weld import weld_filter, weld_element_wise_op
+from indexes import Index
+from pandas_weld.weld import weld_filter, weld_element_wise_op, weld_aggregate
 from series import Series
 from utils import replace_slice_defaults, weld_to_numpy_type
 import numpy as np
@@ -270,3 +271,46 @@ class DataFrame(object):
 
     def __div__(self, other):
         return self._element_wise_operation(other, '/')
+
+    # TODO: currently converts everything to float64; should act according to the input types
+    # TODO: if there are strings it will fail, while in pandas for sum they are concatenated and prod are ignored
+    def _aggregate(self, operation):
+        assert isinstance(operation, (str, unicode))
+
+        index = []
+        data = []
+        for column_name in self.data:
+            index.append(column_name)
+            # get as series
+            series = self[str(column_name)]
+            # apply the operation
+            data.append(LazyData(weld_aggregate(series.expr,
+                                                operation,
+                                                series.weld_type),
+                                 series.weld_type,
+                                 0).evaluate(verbose=False))
+
+        return Series(np.array(data), np.dtype(np.float64),
+                      Index(np.array(index).astype(np.str), np.dtype(np.str)))
+
+    def sum(self):
+        """ Eager operation to sum all elements in their respective columns
+
+        Returns
+        -------
+        Series
+            results are currently converted to float64
+
+        """
+        return self._aggregate('+')
+
+    def prod(self):
+        """ Eager operation to multiply all elements in their respective columns
+
+        Returns
+        -------
+        Series
+            results are currently converted to float64
+
+        """
+        return self._aggregate('*')

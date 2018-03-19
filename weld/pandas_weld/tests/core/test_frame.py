@@ -2,6 +2,7 @@ import unittest
 import pandas_weld as pdw
 import numpy as np
 from indexes.test_multi import test_equal_multiindex
+from pandas_weld.tests.core.test_series import test_equal_series
 from pandas_weld.tests.utils import evaluate_if_necessary
 
 
@@ -127,6 +128,16 @@ class DataFrameTests(unittest.TestCase):
                                       evaluate_if_necessary(result['col2']))
 
         test_equal_multiindex(expected_result.index, result.index)
+
+    def test_aggregate(self):
+        # reversed because of dict and not OrderedDict
+        expected_result = pdw.Series(np.array([26., 10.], dtype=np.float64),
+                                     np.dtype(np.float64),
+                                     np.array(['col2', 'col1'], dtype=np.str))
+
+        result = self.df.sum()
+
+        test_equal_series(expected_result, result)
 
 
 def main():
