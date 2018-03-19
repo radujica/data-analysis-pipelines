@@ -88,13 +88,12 @@ class Dataset(object):
                        {k: v.add(value) for k, v in self.variables.iteritems()},
                        self.dimensions)
 
-    def _process_column(self, column_name):
+    def process_column(self, column_name):
         return self.variables[column_name]
 
-    def _process_dimension(self, name):
+    def process_dimension(self, name):
         return self.variables[name]
 
-    # TODO: move to pandas_weld; conceptually, makes more sense there
     def to_dataframe(self):
         """ Convert Dataset to pandas_weld DataFrame
 
@@ -108,9 +107,9 @@ class Dataset(object):
                                      OrderedDict(self.dimensions.items()).items()))
 
         # columns data, either LazyData or raw
-        data = [self._process_column(k) for k in columns]
+        data = [self.process_column(k) for k in columns]
         # the dimensions
-        indexes = [self._process_dimension(k) for k in dimensions]
+        indexes = [self.process_dimension(k) for k in dimensions]
 
         index = pdw.MultiIndex.from_product(indexes, list(dimensions.keys()))
 

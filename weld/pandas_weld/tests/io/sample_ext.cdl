@@ -1,0 +1,48 @@
+netcdf sample_ext {
+dimensions:
+	longitude = 2 ;
+	latitude = 3 ;
+	time = 5 ;
+variables:
+	float longitude(longitude) ;
+		longitude:_FillValue = NaNf ;
+		longitude:long_name = "Longitude values" ;
+		longitude:units = "degrees_east" ;
+		longitude:standard_name = "longitude" ;
+	float latitude(latitude) ;
+		latitude:_FillValue = NaNf ;
+		latitude:long_name = "Latitude values" ;
+		latitude:units = "degrees_north" ;
+		latitude:standard_name = "latitude" ;
+	int time(time) ;
+        time:long_name = "Time in days" ;
+        time:standard_name = "time" ;
+        time:units = "days since 1950-01-01" ;
+        time:calendar = "proleptic_gregorian" ;
+	short tg(time, latitude, longitude) ;
+		tg:_FillValue = -9999s ;
+		tg:long_name = "mean temperature" ;
+		tg:units = "Celsius" ;
+		tg:standard_name = "air_temperature" ;
+		tg:scale_factor = 0.01f ;
+    int tg_ext(time, latitude, longitude) ;
+        tg_ext:_FillValue = -9999 ;
+        tg_ext:long_name = "mean temperature" ;
+        tg_ext:units = "Kelvin" ;
+        tg_ext:standard_name = "air_temperature" ;
+
+// global
+		:Ensembles_ECAD = "16.0" ;
+		:Conventions = "CF-1.4" ;
+
+data:
+ longitude = 25.5, 26 ;
+ latitude = 10, 11, 12 ;
+ time = 0, 1, 2, 3, 4 ;
+ tg = _, 1000, 1010, _, _, 1020, _, _, _, 1030,
+    1040, 1050, 1060, 1070, 1080, 1090, _, _, _, _,
+    1100, 1100, 1100, 1100, _, _, _, _, 1200, 1300 ;
+ tg_ext = _, 1000, 1010, _, _, 1020, _, _, _, 1030,
+    10401, 10502, 10603, 10704, 10805, 10906, _, _, _, _,
+    11001, 11002, 11003, 11004, _, _, _, _, 12005, 13006;
+}
