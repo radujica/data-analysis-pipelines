@@ -3,7 +3,6 @@ import numpy_weld as npw
 from lazy_data import LazyData
 from collections import OrderedDict
 from grizzly.encoders import numpy_to_weld_type
-from pandas_weld.core.series import Series
 from pandas_weld.weld import weld_filter
 
 
@@ -21,6 +20,10 @@ class MultiIndex(object):
         np.arrays or LazyData
     names : list
         str
+
+    Returns
+    -------
+    MultiIndex
 
     See also
     --------
@@ -61,10 +64,10 @@ class MultiIndex(object):
 
         Parameters
         ----------
-        item : slice or Series
+        item : slice or LazyData of bool
             if slice, returns a sliced MultiIndex;
-            if Series, returns a filtered MultiIndex only with the labels corresponding to
-            True in the Series
+            if LazyData, returns a filtered MultiIndex only with the labels corresponding to
+            True in the LazyData
 
         Returns
         -------
@@ -75,7 +78,7 @@ class MultiIndex(object):
             # TODO: figure out a way to slice the index; each data variable might have different dimensions order (?)
             # so it seems more complicated than just adding a parameter to the variable read_data
             return MultiIndex(self.levels, self.labels, self.names)
-        elif isinstance(item, Series):
+        elif isinstance(item, LazyData):
             if not item.weld_type == numpy_to_weld_type('bool'):
                 raise ValueError('expected series of bool to filter DataFrame rows')
 
@@ -100,7 +103,7 @@ class MultiIndex(object):
 
             return MultiIndex(self.levels, new_labels, self.names)
         else:
-            raise TypeError('expected slice or Series of bool in MultiIndex.__getitem__')
+            raise TypeError('expected slice or LazyData of bool in MultiIndex.__getitem__')
 
     @staticmethod
     def _evaluate_or_raw(array, verbose, decode, passes,
@@ -138,6 +141,6 @@ class MultiIndex(object):
 
         string_representation = """%(repr)s\nlevels:\n\t%(levels)s\nlabels:\n\t%(labels)s"""
 
-        return string_representation % {'repr': self.__repr__(),
+        return string_representation % {'repr': repr(self),
                                         'levels': materialized_levels,
                                         'labels': materialized_labels}

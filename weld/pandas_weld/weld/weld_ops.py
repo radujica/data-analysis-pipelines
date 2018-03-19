@@ -40,9 +40,9 @@ def weld_aggregate(array, operation, weld_type):
         )
     )"""
 
-    weld_obj.weld_code = weld_template % {"array": array_var,
-                                          "type": weld_type,
-                                          "operation": operation}
+    weld_obj.weld_code = weld_template % {'array': array_var,
+                                          'type': weld_type,
+                                          'operation': operation}
 
     return weld_obj
 
@@ -136,9 +136,9 @@ def weld_filter(array, bool_array, weld_type):
         )
     )"""
 
-    weld_obj.weld_code = weld_template % {"array": array_var,
-                                          "bool_array": bool_array_var,
-                                          "type": weld_type}
+    weld_obj.weld_code = weld_template % {'array': array_var,
+                                          'bool_array': bool_array_var,
+                                          'type': weld_type}
 
     return weld_obj
 
@@ -182,9 +182,42 @@ def weld_compare(array, scalar, operation, weld_type):
             a %(operation)s %(scalar)s
     )"""
 
-    weld_obj.weld_code = weld_template % {"array": array_var,
-                                          "scalar": scalar,
-                                          "operation": operation,
-                                          "type": weld_type}
+    weld_obj.weld_code = weld_template % {'array': array_var,
+                                          'scalar': scalar,
+                                          'operation': operation,
+                                          'type': weld_type}
+
+    return weld_obj
+
+
+# only long/int64 supported atm
+def weld_range(start, stop, step):
+    """ Applies comparison operation between each element in the array with scalar
+
+    Parameters
+    ----------
+
+
+    Returns
+    -------
+    WeldObject
+        representation of this computation
+
+    """
+    weld_obj = WeldObject(_encoder, _decoder)
+
+    weld_template = """
+    result(
+        for(
+            rangeiter(%(start)s, %(stop)s, %(step)s),
+            appender[i64],
+            |b: appender[i64], i: i64, e: i64| 
+                merge(b, e)
+        )
+    )"""
+
+    weld_obj.weld_code = weld_template % {'start': 'i64(%s)' % start,
+                                          'stop': 'i64(%s)' % stop,
+                                          'step': 'i64(%s)' % step}
 
     return weld_obj
