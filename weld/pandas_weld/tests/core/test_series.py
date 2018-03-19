@@ -92,6 +92,16 @@ class SeriesTests(unittest.TestCase):
 
         test_equal_series(expected_result, result)
 
+    @staticmethod
+    def test_element_wise_operation():
+        data = np.array([1, 2, 3])
+        series = Series(data, np.dtype(np.int64), RangeIndex(0, 3, 1))
+
+        expected_result = Series(np.array([2, 4, 6]), np.dtype(np.int64), RangeIndex(0, 3, 1))
+        result = series * 2
+
+        test_equal_series(expected_result, result)
+
 
 def main():
     unittest.main()

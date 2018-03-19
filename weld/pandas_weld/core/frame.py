@@ -1,6 +1,6 @@
 from grizzly.encoders import numpy_to_weld_type
 from lazy_data import LazyData
-from pandas_weld.weld import weld_filter
+from pandas_weld.weld import weld_filter, weld_element_wise_op
 from series import Series
 from utils import replace_slice_defaults, weld_to_numpy_type
 import numpy as np
@@ -236,3 +236,37 @@ class DataFrame(object):
             return DataFrame(new_data, self.index)
         else:
             raise TypeError('expected columns as a str or a list of str')
+
+    # TODO: add type conversion(?); pandas works when e.g. column_of_ints - 2.0 => float result
+    def _element_wise_operation(self, other, operation):
+        if not isinstance(other, (str, unicode, int, long, float, bool)):
+            raise TypeError('can only compare with scalars')
+
+        assert isinstance(operation, (str, unicode))
+
+        new_data = {}
+        for column_name in self.data:
+            # get as series
+            series = self[str(column_name)]
+            # apply the operation
+            new_data[column_name] = Series(weld_element_wise_op(series.expr,
+                                                                other,
+                                                                operation,
+                                                                series.weld_type),
+                                           series.dtype,
+                                           self.index,
+                                           series.name)
+
+        return DataFrame(new_data, self.index)
+
+    def __add__(self, other):
+        return self._element_wise_operation(other, '+')
+
+    def __sub__(self, other):
+        return self._element_wise_operation(other, '-')
+
+    def __mul__(self, other):
+        return self._element_wise_operation(other, '*')
+
+    def __div__(self, other):
+        return self._element_wise_operation(other, '/')

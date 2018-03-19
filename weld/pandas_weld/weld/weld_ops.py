@@ -154,7 +154,6 @@ def weld_compare(array, scalar, operation, weld_type):
         value to compare with; must be same type as the values in the array. If not a str,
         it is casted to weld_type (allowing one to write e.g. native Python int)
     operation : {<, <=, ==, !=, >=, >}
-        array of bool with True for elements in array desired in the result array
     weld_type : WeldType
         type of each element in the input array
 
@@ -221,5 +220,54 @@ def weld_range(start, stop, step):
     weld_obj.weld_code = weld_template % {'start': 'i64(%s)' % start,
                                           'stop': 'i64(%s)' % stop,
                                           'step': 'i64(%s)' % step}
+
+    return weld_obj
+
+
+def weld_element_wise_op(array, scalar, operation, weld_type):
+    """ Applies operation to each element in the array with scalar
+
+    Parameters
+    ----------
+    array : np.ndarray / WeldObject
+        input array
+    scalar : str or scalar type
+        value to compare with; must be same type as the values in the array. If not a str,
+        it is casted to weld_type (allowing one to write e.g. native Python int)
+    operation : {+, -, *, /}
+    weld_type : WeldType
+        type of each element in the input array
+
+    Returns
+    -------
+    WeldObject
+        representation of this computation
+
+    """
+    weld_obj = WeldObject(_encoder, _decoder)
+
+    array_var = weld_obj.update(array)
+
+    if isinstance(array, WeldObject):
+        array_var = array.obj_id
+        weld_obj.dependencies[array_var] = array
+
+    # this means input is a native python literal, therefore need to cast to weld one
+    if not isinstance(scalar, str):
+        scalar = "%s(%s)" % (weld_type, str(scalar))
+
+    weld_template = """
+        result(
+            for(%(array)s, 
+                appender[%(type)s], 
+                |b: appender[%(type)s], i: i64, n: %(type)s| 
+                    merge(b, n %(operation)s %(value)s)
+            )
+        )"""
+
+    weld_obj.weld_code = weld_template % {'array': array_var,
+                                          'value': scalar,
+                                          'operation': operation,
+                                          'type': weld_type}
 
     return weld_obj

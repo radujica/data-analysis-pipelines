@@ -109,6 +109,25 @@ class DataFrameTests(unittest.TestCase):
 
         test_equal_multiindex(expected_result.index, result.index)
 
+    @staticmethod
+    def test_element_wise_operation():
+        expected_data = {'col1': np.array([2, 4, 6, 8]),
+                         'col2': np.array([10, 12, 14, 16])}
+        expected_index = pdw.MultiIndex.from_product([np.array([1, 2]), np.array([3, 4])], ['a', 'b'])
+        expected_result = pdw.DataFrame(expected_data, expected_index)
+
+        data = {'col1': np.array([1, 2, 3, 4]),
+                'col2': np.array([5, 6, 7, 8])}
+        index = pdw.MultiIndex.from_product([np.array([1, 2]), np.array([3, 4])], ['a', 'b'])
+        result = pdw.DataFrame(data, index) * 2
+
+        np.testing.assert_array_equal(evaluate_if_necessary(expected_result['col1']),
+                                      evaluate_if_necessary(result['col1']))
+        np.testing.assert_array_equal(evaluate_if_necessary(expected_result['col2']),
+                                      evaluate_if_necessary(result['col2']))
+
+        test_equal_multiindex(expected_result.index, result.index)
+
 
 def main():
     unittest.main()

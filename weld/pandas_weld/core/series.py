@@ -1,7 +1,7 @@
 from grizzly.encoders import numpy_to_weld_type
 from weld.weldobject import WeldObject
 from lazy_data import LazyData
-from pandas_weld.weld import weld_aggregate, weld_compare, weld_filter
+from pandas_weld.weld import weld_aggregate, weld_compare, weld_filter, weld_element_wise_op
 from utils import subset, replace_slice_defaults
 import numpy as np
 
@@ -176,6 +176,33 @@ class Series(LazyData):
 
     def __gt__(self, other):
         return self._comparison(other, '>')
+
+    # TODO: add type conversion(?); pandas works when e.g. column_of_ints - 2.0 => float result
+    def _element_wise_operation(self, other, operation):
+        if not isinstance(other, (str, unicode, int, long, float, bool)):
+            raise TypeError('can only compare with scalars')
+
+        assert isinstance(operation, (str, unicode))
+
+        return Series(weld_element_wise_op(self.expr,
+                                           other,
+                                           operation,
+                                           self.weld_type),
+                      self.dtype,
+                      self.index,
+                      self.name)
+
+    def __add__(self, other):
+        return self._element_wise_operation(other, '+')
+
+    def __sub__(self, other):
+        return self._element_wise_operation(other, '-')
+
+    def __mul__(self, other):
+        return self._element_wise_operation(other, '*')
+
+    def __div__(self, other):
+        return self._element_wise_operation(other, '/')
 
     def sum(self):
         """ Sums all the elements
