@@ -112,6 +112,26 @@ class SeriesTests(unittest.TestCase):
 
         np.testing.assert_equal(expected_result, evaluate_if_necessary(result))
 
+    @staticmethod
+    def test_aggregate_min():
+        data = np.array([1, 2, 3])
+        series = Series(data, np.dtype(np.int64), RangeIndex(0, 3, 1))
+
+        expected_result = 1
+        result = series.min()
+
+        np.testing.assert_equal(expected_result, evaluate_if_necessary(result))
+
+    @staticmethod
+    def test_count():
+        data = np.array([1, 2, 3])
+        series = Series(data, np.dtype(np.int64), RangeIndex(0, 3, 1))
+
+        expected_result = 3
+        result = series.count()
+
+        np.testing.assert_equal(expected_result, evaluate_if_necessary(result))
+
 
 def main():
     unittest.main()

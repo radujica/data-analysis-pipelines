@@ -315,7 +315,7 @@ class DataFrame(object):
                                  series.weld_type,
                                  0).evaluate(verbose=False))
 
-        return Series(np.array(data), np.dtype(np.float64),
+        return Series(np.array(data).astype(np.float64), np.dtype(np.float64),
                       Index(np.array(index).astype(np.str), np.dtype(np.str)))
 
     def sum(self):
@@ -339,3 +339,45 @@ class DataFrame(object):
 
         """
         return self._aggregate('*')
+
+    def min(self):
+        """ Eager operation to find the min value in each column
+
+        Returns
+        -------
+        Series
+            results are currently converted to float64
+
+        """
+        return self._aggregate('min')
+
+    def max(self):
+        """ Eager operation to find the max value in each column
+
+        Returns
+        -------
+        Series
+            results are currently converted to float64
+
+        """
+        return self._aggregate('max')
+
+    def count(self):
+        """ Eager operation to count the number of values in each column
+
+        Returns
+        -------
+        Series
+
+        """
+        index = []
+        data = []
+        for column_name in self:
+            index.append(column_name)
+            # get as series
+            series = self[str(column_name)]
+            # apply the operation
+            data.append(series.count().evaluate(verbose=False))
+
+        return Series(np.array(data), np.dtype(np.int64),
+                      Index(np.array(index).astype(np.str), np.dtype(np.str)))

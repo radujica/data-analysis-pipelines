@@ -12,7 +12,7 @@ def weld_aggregate(array, operation, weld_type):
     ---------
     array : WeldObject / np.ndarray
         input array
-    operation : {'+'}
+    operation : {'+', '*', 'min', 'max'}
         operation to apply
     weld_type : WeldType
         type of each element in the input array
@@ -269,5 +269,34 @@ def weld_element_wise_op(array, scalar, operation, weld_type):
                                           'value': scalar,
                                           'operation': operation,
                                           'type': weld_type}
+
+    return weld_obj
+
+
+def weld_count(array):
+    """ Returns the length of the array
+
+    Parameters
+    ----------
+    array : np.ndarray / WeldObject
+        input array
+
+    Returns
+    -------
+        representation of this computation
+    """
+    weld_obj = WeldObject(_encoder, _decoder)
+
+    array_var = weld_obj.update(array)
+    if isinstance(array, WeldObject):
+        array_var = array.obj_id
+        weld_obj.dependencies[array_var] = array
+
+    weld_template = """
+    len(
+        %(array)s
+    )"""
+
+    weld_obj.weld_code = weld_template % {"array": array_var}
 
     return weld_obj

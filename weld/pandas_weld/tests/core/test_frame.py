@@ -139,6 +139,16 @@ class DataFrameTests(unittest.TestCase):
 
         test_equal_series(expected_result, result)
 
+    def test_aggregate_min(self):
+        # reversed because of dict and not OrderedDict
+        expected_result = pdw.Series(np.array([5., 1.], dtype=np.float64),
+                                     np.dtype(np.float64),
+                                     np.array(['col2', 'col1'], dtype=np.str))
+
+        result = self.df.min()
+
+        test_equal_series(expected_result, result)
+
     def test_rename(self):
         data = {'col3': np.array([1, 2, 3, 4]),
                 'col2': np.array([5., 6., 7., 8.])}
@@ -154,6 +164,16 @@ class DataFrameTests(unittest.TestCase):
                                       evaluate_if_necessary(result['col2']))
 
         test_equal_multiindex(expected_result.index, result.index)
+
+    def test_count(self):
+        # reversed because of dict and not OrderedDict
+        expected_result = pdw.Series(np.array([4, 4], dtype=np.int64),
+                                     np.dtype(np.int64),
+                                     np.array(['col2', 'col1'], dtype=np.str))
+
+        result = self.df.count()
+
+        test_equal_series(expected_result, result)
 
 
 def main():

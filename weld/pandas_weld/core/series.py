@@ -1,7 +1,8 @@
 from grizzly.encoders import numpy_to_weld_type
+from weld.types import WeldLong
 from weld.weldobject import WeldObject
 from lazy_data import LazyData
-from pandas_weld.weld import weld_aggregate, weld_compare, weld_filter, weld_element_wise_op
+from pandas_weld.weld import weld_aggregate, weld_compare, weld_filter, weld_element_wise_op, weld_count
 from utils import subset, replace_slice_defaults
 import numpy as np
 
@@ -218,3 +219,14 @@ class Series(LazyData):
 
     def prod(self):
         return self._aggregate('*')
+
+    def min(self):
+        return self._aggregate('min')
+
+    def max(self):
+        return self._aggregate('max')
+
+    def count(self):
+        return LazyData(weld_count(self.expr),
+                        WeldLong(),
+                        0)
