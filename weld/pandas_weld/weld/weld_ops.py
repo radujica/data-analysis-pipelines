@@ -153,7 +153,7 @@ def weld_compare(array, scalar, operation, weld_type):
     scalar : str or scalar type
         value to compare with; must be same type as the values in the array. If not a str,
         it is casted to weld_type (allowing one to write e.g. native Python int)
-    operation : {<, ==, >, <=, >=}
+    operation : {<, <=, ==, !=, >=, >}
         array of bool with True for elements in array desired in the result array
     weld_type : WeldType
         type of each element in the input array
@@ -190,13 +190,15 @@ def weld_compare(array, scalar, operation, weld_type):
     return weld_obj
 
 
-# only long/int64 supported atm
+# only int64 supported atm
 def weld_range(start, stop, step):
-    """ Applies comparison operation between each element in the array with scalar
+    """ Create a vector for the range parameters above
 
     Parameters
     ----------
-
+    start : int
+    stop : int
+    step : int
 
     Returns
     -------

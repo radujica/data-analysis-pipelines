@@ -1,7 +1,24 @@
 from grizzly.encoders import numpy_to_weld_type
+from weld.types import *
 from lazy_data import LazyData
 from pandas_weld.weld import weld_subset
 import numpy as np
+
+
+# assuming the keys are cached; could just replace with i32, etc
+_weld_to_numpy_str_type_mapping = {
+    str(WeldBit()): '?',
+    str(WeldInt16()): 'h',
+    str(WeldInt()): 'i',
+    str(WeldLong()): 'l',
+    str(WeldFloat()): 'f',
+    str(WeldDouble()): 'd',
+    str(WeldChar()): 'S'
+}
+
+
+def weld_to_numpy_type(weld_type):
+    return np.dtype(_weld_to_numpy_str_type_mapping[str(weld_type)])
 
 
 def subset(array, slice_):

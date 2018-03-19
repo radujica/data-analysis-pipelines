@@ -31,6 +31,10 @@ class Index(LazyData):
 
         self.dtype = dtype
 
+    @property
+    def data(self):
+        return self.expr
+
     def __repr__(self):
         return "Index of type %s" % str(self.dtype)
 

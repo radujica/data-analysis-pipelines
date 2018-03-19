@@ -8,7 +8,6 @@ from grizzly.lazy_op import LazyOpResult, WeldObject
 # better fit to WeldObject too
 # TODO: (better) decouple netCDF4_weld and pandas_weld hence making pandas_weld getitem more generic;
 # need an interface between parser and pandas; maybe store in lazydata which from parser the data came from?
-# TODO: just remove dependency on grizzly, so also remove lazyOpResult ^
 class InputMapping(object):
     """ Maps lazy data from file
 
@@ -145,9 +144,6 @@ class LazyData(LazyOpResult):
 
         return data_id
 
-    # TODO: maybe just store dtype too? not sure if there are any other than np.dtype and even if there are,
-    # they could also be stored; if there are, all operations (e.g. cartesian product) would need to be updated anyway
-    # TODO: storing the length could also be useful, e.g. like in cartesian
     def __init__(self, expr, weld_type, dim, data_id=None, read_func=None, read_func_args=None):
         super(LazyData, self).__init__(expr, weld_type, dim)
         self.data_id = data_id
@@ -161,6 +157,9 @@ class LazyData(LazyOpResult):
             if not isinstance(expr, WeldObject):
                 raise TypeError('LazyData from file must always have a WeldObject as expr')
             self.input_mapping.append(data_id, expr.weld_code, read_func, read_func_args)
+
+    def __repr__(self):
+        return repr(self.expr)
 
     def evaluate(self, verbose=True, decode=True, passes=None, num_threads=1,
                  apply_experimental_transforms=False):

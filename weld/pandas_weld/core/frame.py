@@ -2,7 +2,7 @@ from grizzly.encoders import numpy_to_weld_type
 from lazy_data import LazyData
 from pandas_weld.weld import weld_filter
 from series import Series
-from utils import replace_slice_defaults
+from utils import replace_slice_defaults, weld_to_numpy_type
 import numpy as np
 
 
@@ -13,8 +13,7 @@ class DataFrame(object):
     ----------
     data : dict
         column names -> data array or LazyData
-    index : pandas_weld.MultiIndex
-        index
+    index : Index, MultiIndex, or RangeIndex
 
     See also
     --------
@@ -84,11 +83,15 @@ class DataFrame(object):
             element = self.data[item]
             if isinstance(element, LazyData):
                 return Series(element.expr,
-                              element.weld_type,
+                              weld_to_numpy_type(element.weld_type),
+                              self.index,
+                              item,
                               element.data_id)
             elif isinstance(element, np.ndarray):
                 return Series(element,
-                              numpy_to_weld_type(element.dtype))
+                              element.dtype,
+                              self.index,
+                              item)
             else:
                 raise TypeError('column is neither LazyData nor np.ndarray')
         elif isinstance(item, slice):
@@ -98,12 +101,12 @@ class DataFrame(object):
             for column_name in self.data:
                 # making series because Series has the proper method to slice something; re-use the code above
                 series = self[str(column_name)]
-
+                # the actual slice handled by Series getitem
                 new_data[column_name] = series[item]
 
+            # index slice handled by index
             new_index = self.index[item]
 
-            # making a new dataframe here seems kinda pointless atm due to func_args being updated
             return DataFrame(new_data, new_index)
         elif isinstance(item, list):
             new_data = {}
@@ -116,7 +119,7 @@ class DataFrame(object):
 
             return DataFrame(new_data, self.index)
         elif isinstance(item, Series):
-            if not item.weld_type == numpy_to_weld_type('bool'):
+            if item.weld_type != numpy_to_weld_type(np.dtype(np.bool)):
                 raise ValueError('expected series of bool to filter DataFrame rows')
 
             new_data = {}
@@ -126,9 +129,11 @@ class DataFrame(object):
                 if isinstance(data, LazyData):
                     weld_type = data.weld_type
                     data_id = data.data_id
+                    dtype = weld_to_numpy_type(weld_type)
                     data = data.expr
                 elif isinstance(data, np.ndarray):
                     weld_type = numpy_to_weld_type(data.dtype)
+                    dtype = data.dtype
                     data_id = None
                 else:
                     raise TypeError('expected data in column to be of type LazyData or np.ndarray')
@@ -136,14 +141,16 @@ class DataFrame(object):
                 new_data[column_name] = Series(weld_filter(data,
                                                            item.expr,
                                                            weld_type),
-                                               weld_type,
+                                               dtype,
+                                               self.index,
+                                               column_name,
                                                data_id)
-
+            # slice the index
             new_index = self.index[item]
 
             return DataFrame(new_data, new_index)
         else:
-            raise TypeError('expected a str, slice, or list in DataFrame.__getitem__')
+            raise TypeError('expected a str, slice, list, or Series in DataFrame.__getitem__')
 
     def head(self, n=10):
         """ Eagerly evaluates the DataFrame
@@ -169,7 +176,11 @@ class DataFrame(object):
             series = self[str(column_name)]
 
             # by not passing a data_id, the data is not linked to the input_mapping read
-            new_data[column_name] = Series(series.head(n), series.weld_type)
+            new_data[column_name] = Series(series.head(n),
+                                           series.dtype,
+                                           series.index,
+                                           series.name,
+                                           series.data_id)
 
         new_index = self.index[slice_]
 

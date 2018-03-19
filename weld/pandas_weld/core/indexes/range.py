@@ -28,6 +28,10 @@ class RangeIndex(LazyData):
         self.stop = stop
         self.step = step
 
+    @property
+    def data(self):
+        return self.expr
+
     def __repr__(self):
         return "RangeIndex with start=%d, stop=%d, step=%d" % (self.start, self.stop, self.step)
 

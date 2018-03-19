@@ -180,7 +180,7 @@ class Variable(LazyData):
         weld_obj.weld_code = weld_template % {'array': array_var,
                                               'value': value,
                                               'operation': operation,
-                                              'type': numpy_to_weld_type_mapping[str(self.dtype)]}
+                                              'type': numpy_to_weld_type(self.dtype)}
 
         return weld_obj
 
