@@ -381,3 +381,45 @@ class DataFrame(object):
 
         return Series(np.array(data), np.dtype(np.int64),
                       Index(np.array(index).astype(np.str), np.dtype(np.str)))
+
+    # see TODO at Series.mean()
+    def mean(self):
+        """ Eager operation to compute the mean of the values in each column
+
+        Returns
+        -------
+        Series
+
+        """
+        index = []
+        data = []
+        for column_name in self:
+            index.append(column_name)
+            # get as series
+            series = self[str(column_name)]
+            # apply the operation
+            data.append(series.mean().evaluate(verbose=False))
+
+        return Series(np.array(data), np.dtype(np.float64),
+                      Index(np.array(index).astype(np.str), np.dtype(np.str)))
+
+    # see TODO at Series.std()
+    def std(self):
+        """ Eager operation to compute the standard deviation of the values in each column
+
+        Returns
+        -------
+        Series
+
+        """
+        index = []
+        data = []
+        for column_name in self:
+            index.append(column_name)
+            # get as series
+            series = self[str(column_name)]
+            # apply the operation
+            data.append(series.std().evaluate(verbose=False))
+
+        return Series(np.array(data), np.dtype(np.float64),
+                      Index(np.array(index).astype(np.str), np.dtype(np.str)))

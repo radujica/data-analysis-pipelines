@@ -1,8 +1,9 @@
 from grizzly.encoders import numpy_to_weld_type
-from weld.types import WeldLong
+from weld.types import WeldLong, WeldDouble
 from weld.weldobject import WeldObject
 from lazy_data import LazyData
-from pandas_weld.weld import weld_aggregate, weld_compare, weld_filter, weld_element_wise_op, weld_count
+from pandas_weld.weld import weld_aggregate, weld_compare, weld_filter, weld_element_wise_op, weld_count, weld_mean, \
+    weld_standard_deviation
 from utils import subset, replace_slice_defaults
 import numpy as np
 
@@ -229,4 +230,18 @@ class Series(LazyData):
     def count(self):
         return LazyData(weld_count(self.expr),
                         WeldLong(),
+                        0)
+
+    # TODO: not safe against overflows, i.e. the sum in sum/length
+    def mean(self):
+        return LazyData(weld_mean(self.expr,
+                                  self.weld_type),
+                        WeldDouble(),
+                        0)
+
+    # TODO: same as mean
+    def std(self):
+        return LazyData(weld_standard_deviation(self.expr,
+                                                self.weld_type),
+                        WeldDouble(),
                         0)

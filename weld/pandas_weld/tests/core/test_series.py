@@ -7,6 +7,7 @@ from indexes import test_equal_multiindex
 from ..utils import evaluate_if_necessary
 
 
+# TODO all: reverse expected and actual; apparently numpy does actual first...
 def test_equal_series(series1, series2):
     """ Assert if 2 series are equal
 
@@ -129,6 +130,26 @@ class SeriesTests(unittest.TestCase):
 
         expected_result = 3
         result = series.count()
+
+        np.testing.assert_equal(expected_result, evaluate_if_necessary(result))
+
+    @staticmethod
+    def test_mean():
+        data = np.array([1, 2, 3, 4])
+        series = Series(data, np.dtype(np.int64), RangeIndex(0, 4, 1))
+
+        expected_result = 2.5
+        result = series.mean()
+
+        np.testing.assert_equal(expected_result, evaluate_if_necessary(result))
+
+    @staticmethod
+    def test_std():
+        data = np.array([1, 2, 3, 4])
+        series = Series(data, np.dtype(np.int64), RangeIndex(0, 4, 1))
+
+        expected_result = 1.2909944487358056
+        result = series.std()
 
         np.testing.assert_equal(expected_result, evaluate_if_necessary(result))
 

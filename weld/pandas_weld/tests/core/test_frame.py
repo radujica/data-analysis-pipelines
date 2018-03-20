@@ -175,6 +175,26 @@ class DataFrameTests(unittest.TestCase):
 
         test_equal_series(expected_result, result)
 
+    def test_mean(self):
+        # reversed because of dict and not OrderedDict
+        expected_result = pdw.Series(np.array([6.5, 2.5], dtype=np.float64),
+                                     np.dtype(np.float64),
+                                     np.array(['col2', 'col1'], dtype=np.str))
+
+        result = self.df.mean()
+
+        test_equal_series(expected_result, result)
+
+    def test_std(self):
+        # reversed because of dict and not OrderedDict
+        expected_result = pdw.Series(np.array([1.2909944487358056, 1.2909944487358056], dtype=np.float64),
+                                     np.dtype(np.float64),
+                                     np.array(['col2', 'col1'], dtype=np.str))
+
+        result = self.df.std()
+
+        test_equal_series(expected_result, result)
+
 
 def main():
     unittest.main()

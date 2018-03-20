@@ -5,6 +5,7 @@ _encoder = NumPyEncoder()
 _decoder = NumPyDecoder()
 
 
+# TODO all: types can be inferred with '?'; is the cost of doing it high?
 def weld_aggregate(array, operation, weld_type):
     """ Returns operation on the elements in the array.
 
@@ -257,13 +258,13 @@ def weld_element_wise_op(array, scalar, operation, weld_type):
         scalar = "%s(%s)" % (weld_type, str(scalar))
 
     weld_template = """
-        result(
-            for(%(array)s, 
-                appender[%(type)s], 
-                |b: appender[%(type)s], i: i64, n: %(type)s| 
-                    merge(b, n %(operation)s %(value)s)
-            )
-        )"""
+    result(
+        for(%(array)s, 
+            appender[%(type)s], 
+            |b: appender[%(type)s], i: i64, n: %(type)s| 
+                merge(b, n %(operation)s %(value)s)
+        )
+    )"""
 
     weld_obj.weld_code = weld_template % {'array': array_var,
                                           'value': scalar,
@@ -283,7 +284,9 @@ def weld_count(array):
 
     Returns
     -------
+    WeldObject
         representation of this computation
+
     """
     weld_obj = WeldObject(_encoder, _decoder)
 
@@ -297,6 +300,93 @@ def weld_count(array):
         %(array)s
     )"""
 
-    weld_obj.weld_code = weld_template % {"array": array_var}
+    weld_obj.weld_code = weld_template % {'array': array_var}
+
+    return weld_obj
+
+
+def weld_mean(array, weld_type):
+    """ Returns the mean of the array
+
+    Parameters
+    ----------
+    array : np.ndarray / WeldObject
+        input array
+    weld_type : WeldType
+        type of each element in the input array
+
+    Returns
+    -------
+    WeldObject
+        representation of this computation
+
+    """
+    weld_obj = WeldObject(_encoder, _decoder)
+
+    array_var = weld_obj.update(array)
+    if isinstance(array, WeldObject):
+        array_var = array.obj_id
+        weld_obj.dependencies[array_var] = array
+
+    weld_template = """
+    let sum = 
+        for(
+            %(array)s,
+            merger[%(type)s, +],
+            |b, i: i64, n: %(type)s|
+                merge(b, n)
+        );
+    f64(result(sum)) / f64(len(%(array)s))"""
+
+    weld_obj.weld_code = weld_template % {'array': array_var,
+                                          'type': weld_type}
+
+    return weld_obj
+
+
+def weld_standard_deviation(array, weld_type):
+    """ Returns the standard deviation of the array
+
+    Parameters
+    ----------
+    array : np.ndarray / WeldObject
+        input array
+    weld_type : WeldType
+        type of each element in the input array
+
+    Returns
+    -------
+    WeldObject
+        representation of this computation
+
+    """
+    weld_obj = WeldObject(_encoder, _decoder)
+
+    array_var = weld_obj.update(array)
+    if isinstance(array, WeldObject):
+        array_var = array.obj_id
+        weld_obj.dependencies[array_var] = array
+
+    # obtain the mean
+    mean_obj = weld_mean(array, weld_type)
+    # we know it's a registered WeldObject, no need to check
+    weld_obj.update(mean_obj)
+    mean_var = mean_obj.obj_id
+    weld_obj.dependencies[mean_var] = mean_obj
+
+    weld_template = """
+    let numer = 
+        for(
+            %(array)s,
+            merger[f64, +],
+            |b, i, n|
+                merge(b, pow(f64(n) - %(mean)s, 2.0))
+        );
+    let denom = len(%(array)s) - 1L;
+    sqrt(result(numer) / f64(denom))"""
+
+    weld_obj.weld_code = weld_template % {'array': array_var,
+                                          'type': weld_type,
+                                          'mean': mean_var}
 
     return weld_obj
