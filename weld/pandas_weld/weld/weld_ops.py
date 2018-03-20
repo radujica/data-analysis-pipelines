@@ -390,3 +390,94 @@ def weld_standard_deviation(array, weld_type):
                                           'mean': mean_var}
 
     return weld_obj
+
+
+# does NOT work correctly with duplicate elements; indexes MUST be sorted
+def weld_merge_single_index(indexes):
+    """ Returns bool arrays for which indexes shall be kept
+
+    Parameters
+    ----------
+    indexes : list of np.array / WeldObject
+        input array
+
+    Returns
+    -------
+    [WeldObject]
+        representation of the computations
+
+    Examples
+    -------
+    >>> index1 = np.array([1, 3, 4, 5, 6])
+    >>> index2 = np.array([2, 3, 5])
+    >>> result = weld_merge_single_index([index1, index2])
+    >>> LazyData(result[0], WeldBit(), 1).evaluate(verbose=False)
+    [False True False True False]
+    >>> LazyData(result[1], WeldBit(), 1).evaluate(verbose=False)
+    [False True True]
+
+    """
+    weld_objects = []
+    weld_ids = []
+
+    for i in xrange(len(indexes)):
+        weld_obj = WeldObject(_encoder, _decoder)
+
+        array_var = weld_obj.update(indexes[i])
+        if isinstance(indexes[i], WeldObject):
+            array_var = indexes[i].obj_id
+            weld_obj.dependencies[array_var] = indexes[i]
+
+        weld_objects.append(weld_obj)
+        weld_ids.append(array_var)
+
+    weld_objects[0].update(weld_objects[1])
+    weld_objects[0].dependencies[weld_ids[1]] = weld_objects[1]
+    weld_objects[1].update(weld_objects[0])
+    weld_objects[1].dependencies[weld_ids[0]] = weld_objects[0]
+
+    weld_template = """
+    let len1 = len(%(array1)s);
+    let len2 = len(%(array2)s);
+    let res = iterate({0L, 0L, appender[bool], appender[bool]},
+            |p|
+                let val1 = lookup(%(array1)s, p.$0);
+                let val2 = lookup(%(array2)s, p.$1);
+                {
+                    if(val1 == val2,
+                 
+                        {p.$0 + 1L, p.$1 + 1L, merge(p.$2, true), merge(p.$3, true)},
+                        
+                        if(val1 < val2,  
+                            {p.$0 + 1L, p.$1, merge(p.$2, false), p.$3},
+                            {p.$0, p.$1 + 1L, p.$2, merge(p.$3, false)}
+                        )
+                    ),
+                    if(val1 == val2, p.$0 + 1L, if(val1 < val2, p.$0 + 1L, p.$0)) < len1 && 
+                    if(val1 == val2, p.$1 + 1L, if(val1 < val2, p.$1, p.$1 + 1L)) < len2
+                }
+    );
+    # iterate over remaining un-checked elements in both arrays
+    let res = if (res.$0 < len1, iterate(res,
+            |p|
+                {
+                    {p.$0 + 1L, p.$1, merge(p.$2, false), p.$3},
+                    p.$0 + 1L < len1
+                }
+    ), res);
+    let res = if (res.$1 < len2, iterate(res,
+            |p|
+                {
+                    {p.$0, p.$1 + 1L, p.$2, merge(p.$3, false)},
+                    p.$1 + 1L < len2
+                }
+    ), res);
+    res"""
+
+    weld_objects[0].weld_code = 'result(' + weld_template % {'array1': weld_ids[0],
+                                                             'array2': weld_ids[1]} + '.$2)'
+
+    weld_objects[1].weld_code = 'result(' + weld_template % {'array1': weld_ids[0],
+                                                             'array2': weld_ids[1]} + '.$3)'
+
+    return weld_objects
