@@ -65,7 +65,7 @@ class RangeIndex(LazyData):
             return Index(subset(self, item).expr,
                          np.dtype(np.int64))
         elif isinstance(item, LazyData):
-            if item.weld_type != numpy_to_weld_type('bool'):
+            if str(item.weld_type) != str(numpy_to_weld_type('bool')):
                 raise ValueError('expected series of bool to filter Index elements')
 
             return Index(weld_filter(self.expr,

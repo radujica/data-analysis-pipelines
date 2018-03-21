@@ -6,6 +6,7 @@ from pandas_weld.tests.core.test_series import test_equal_series
 from pandas_weld.tests.utils import evaluate_if_necessary
 
 
+# TODO: add method to check equal DataFrame
 class DataFrameTests(unittest.TestCase):
     def setUp(self):
         data = {'col1': np.array([1, 2, 3, 4]),
@@ -194,6 +195,25 @@ class DataFrameTests(unittest.TestCase):
         result = self.df.std()
 
         test_equal_series(expected_result, result)
+
+    @staticmethod
+    def test_join_1d_index():
+        df1 = pdw.DataFrame({'col1': np.array([1, 2, 3, 4, 5])},
+                            pdw.Index(np.array([1, 3, 4, 5, 6]), np.dtype(np.int64)))
+        df2 = pdw.DataFrame({'col2': np.array([1, 2, 3])},
+                            pdw.Index(np.array([2, 3, 5]), np.dtype(np.int64)))
+
+        result = df1.merge(df2)
+
+        expected_result = pdw.DataFrame({'col1': np.array([2, 4]), 'col2': np.array([2, 3])},
+                                        pdw.Index(np.array([3, 5]), np.dtype(np.int64)))
+
+        np.testing.assert_array_equal(evaluate_if_necessary(expected_result.index),
+                                      evaluate_if_necessary(result.index))
+        np.testing.assert_array_equal(evaluate_if_necessary(expected_result['col1']),
+                                      evaluate_if_necessary(result['col1']))
+        np.testing.assert_array_equal(evaluate_if_necessary(expected_result['col2']),
+                                      evaluate_if_necessary(result['col2']))
 
 
 def main():

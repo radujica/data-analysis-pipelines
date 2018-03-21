@@ -67,7 +67,7 @@ class Index(LazyData):
             return Index(subset(self, item).expr,
                          self.dtype)
         elif isinstance(item, LazyData):
-            if item.weld_type != numpy_to_weld_type('bool'):
+            if str(item.weld_type) != str(numpy_to_weld_type('bool')):
                 raise ValueError('expected LazyData of bool to filter Index elements')
 
             if isinstance(self.expr, LazyData):

@@ -86,8 +86,8 @@ class Series(LazyData):
                           new_index,
                           self.name,
                           self.data_id)
-        elif isinstance(item, Series):
-            if item.weld_type != numpy_to_weld_type(np.dtype(np.bool)):
+        elif isinstance(item, LazyData):
+            if str(item.weld_type) != str(numpy_to_weld_type('bool')):
                 raise ValueError('expected series of bool to filter DataFrame rows')
 
             if isinstance(self.expr, LazyData):

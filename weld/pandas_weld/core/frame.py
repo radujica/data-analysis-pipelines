@@ -1,7 +1,9 @@
 from grizzly.encoders import numpy_to_weld_type
+from weld.types import WeldBit
 from lazy_data import LazyData
 from indexes import Index
-from pandas_weld.weld import weld_filter, weld_element_wise_op, weld_aggregate
+from indexes import MultiIndex
+from pandas_weld.weld import weld_filter, weld_element_wise_op, weld_aggregate, weld_merge_single_index
 from series import Series
 from utils import replace_slice_defaults, weld_to_numpy_type
 import numpy as np
@@ -119,8 +121,8 @@ class DataFrame(object):
                 new_data[column_name] = self.data[column_name]
 
             return DataFrame(new_data, self.index)
-        elif isinstance(item, Series):
-            if item.weld_type != numpy_to_weld_type(np.dtype(np.bool)):
+        elif isinstance(item, LazyData):
+            if str(item.weld_type) != str(numpy_to_weld_type('bool')):
                 raise ValueError('expected series of bool to filter DataFrame rows')
 
             new_data = {}
@@ -423,3 +425,59 @@ class DataFrame(object):
 
         return Series(np.array(data), np.dtype(np.float64),
                       Index(np.array(index).astype(np.str), np.dtype(np.str)))
+
+    def _merge(self, index1, index2):
+        data = []
+        data_ids = []
+        if isinstance(index1, LazyData):
+            data_ids.append(index1.data_id)
+            data.append(index1.expr)
+        elif isinstance(index1, np.ndarray):
+            data_ids.append(None)
+            data.append(index1)
+        else:
+            raise TypeError('expected data in index to be of type LazyData or np.ndarray')
+
+        if isinstance(index2, LazyData):
+            data_ids.append(index2.data_id)
+            data.append(index2.expr)
+        elif isinstance(index2, np.ndarray):
+            data_ids.append(None)
+            data.append(index2)
+        else:
+            raise TypeError('expected data in index to be of type LazyData or np.ndarray')
+
+        data = weld_merge_single_index(data)
+
+        return [LazyData(data[i], WeldBit(), 1, data_id=data_ids[i]) for i in xrange(2)]
+
+    def merge(self, right):
+        """ Join this DataFrame with another
+
+        Currently only inner join on 1-d index is supported
+
+        Parameters
+        ----------
+        right : DataFrame
+            to join with
+
+        Returns
+        -------
+        DataFrame
+
+        """
+        if isinstance(self.index, MultiIndex) or isinstance(right.index, MultiIndex):
+            raise NotImplementedError('MultiIndex merge is not yet supported')
+
+        bool_indexes = self._merge(self.index, right.index)
+        # can filter any of the two dataframes for the new index
+        new_index = self.index[bool_indexes[0]]
+
+        new_data = {}
+        for column_name in self:
+            new_data[column_name] = self[str(column_name)][bool_indexes[0]]
+
+        for column_name in right:
+            new_data[column_name] = right[str(column_name)][bool_indexes[1]]
+
+        return DataFrame(new_data, new_index)

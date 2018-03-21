@@ -79,7 +79,7 @@ class MultiIndex(object):
             # so it seems more complicated than just adding a parameter to the variable read_data
             return MultiIndex(self.levels, self.labels, self.names)
         elif isinstance(item, LazyData):
-            if not item.weld_type == numpy_to_weld_type('bool'):
+            if str(item.weld_type) != str(numpy_to_weld_type('bool')):
                 raise ValueError('expected series of bool to filter DataFrame rows')
 
             new_labels = []
