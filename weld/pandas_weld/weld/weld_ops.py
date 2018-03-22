@@ -481,3 +481,211 @@ def weld_merge_single_index(indexes):
                                                              'array2': weld_ids[1]} + '.$3)'
 
     return weld_objects
+
+
+def weld_index_to_values(levels, labels):
+    """ Construct the actual index from levels ('values') and labels ('indices')
+
+    Parameters
+    ----------
+    levels : np.array / WeldObject
+        the possible values
+    labels : np.array / WeldObject
+        the indices to the levels for the actual index values
+
+    Returns
+    -------
+    WeldObject
+        representation of the computation
+
+    Examples
+    --------
+    >>> levels = np.array([1.0, 2.5, 3.0])
+    >>> labels = np.array([0, 0, 1, 2])
+    >>> print(LazyData(weld_index_to_values(levels, labels), WeldDouble(), 1).evaluate(verbose=False))
+    [1. 1. 2.5 3.]
+
+    """
+    weld_obj = WeldObject(_encoder, _decoder)
+
+    levels_var = weld_obj.update(levels)
+    if isinstance(levels, WeldObject):
+        levels_var = levels.obj_id
+        weld_obj.dependencies[levels_var] = levels
+
+    labels_var = weld_obj.update(labels)
+    if isinstance(labels, WeldObject):
+        labels_var = labels.obj_id
+        weld_obj.dependencies[labels_var] = labels
+
+    weld_template = """
+    result(
+        for(
+            %(labels)s,
+            appender,
+            |b, i, n|
+                merge(b, lookup(%(levels)s, n))
+        )
+    )"""
+
+    weld_obj.weld_code = weld_template % {'labels': labels_var,
+                                          'levels': levels_var}
+
+    return weld_obj
+
+
+# does NOT work correctly with duplicate elements; indexes MUST be sorted
+# TODO: generify this
+def weld_merge_triple_index(indexes):
+    """ Returns bool arrays for which indexes shall be kept
+
+    Parameters
+    ----------
+    indexes : list of list of np.array / WeldObject
+        list of len 2 with first and second elements being the labels in a list
+        for the first and second DataFrame MultiIndex, respectively
+
+    Returns
+    -------
+    [WeldObject]
+        representation of the computations, one for each DataFrame
+
+    """
+    # TODO: 6 WeldObjects are not actually needed here; 2 is enough
+    weld_objects = []
+    weld_ids = []
+
+    assert len(indexes) == 2
+    assert len(indexes[0]) == len(indexes[1]) == 3
+
+    # make lists of len 6 with all input
+    for i in xrange(2):
+        for j in xrange(3):
+            weld_obj = WeldObject(_encoder, _decoder)
+
+            array_var = weld_obj.update(indexes[i][j])
+            if isinstance(indexes[i][j], WeldObject):
+                array_var = indexes[i][j].obj_id
+                weld_obj.dependencies[array_var] = indexes[i][j]
+
+            weld_objects.append(weld_obj)
+            weld_ids.append(array_var)
+
+    # only objects 0 and 3 are going to follow the large computation below, so update their context & dependencies
+    for i in xrange(1, 6):
+        array_var = weld_objects[0].update(weld_objects[i])
+        assert array_var is None
+        weld_objects[0].dependencies[weld_ids[i]] = weld_objects[i]
+
+    for i in [0, 1, 2, 4, 5]:
+        array_var = weld_objects[3].update(weld_objects[i])
+        assert array_var is None
+        weld_objects[3].dependencies[weld_ids[i]] = weld_objects[i]
+
+    # apart from objects 0 and 3, the others are only themselves
+    for i in [1, 2, 4, 5]:
+        weld_objects[i].weld_code = '%s' % weld_ids[i]
+
+    weld_template = """
+    let len1 = len(%(array1)s);
+    let len2 = len(%(array4)s);
+    let indexes1 = {%(array1)s, %(array2)s, %(array3)s};
+    let indexes2 = {%(array4)s, %(array5)s, %(array6)s};
+    let res = iterate({0L, 0L, appender[bool], appender[bool]},
+            |p|
+                let val1 = {lookup(indexes1.$0, p.$0), lookup(indexes1.$1, p.$0), lookup(indexes1.$2, p.$0)};
+                let val2 = {lookup(indexes2.$0, p.$1), lookup(indexes2.$1, p.$1), lookup(indexes2.$2, p.$1)};
+                {
+                    # TODO: improve this duplicated code??? 
+                    # can't update variable in outer block with value from inner block -_-
+                    if(val1.$0 == val2.$0,
+                        if(val1.$1 == val2.$1,
+                            if(val1.$2 == val2.$2,
+                                {p.$0 + 1L, p.$1 + 1L, merge(p.$2, true), merge(p.$3, true)},
+                                if(val1.$2 < val2.$2,
+                                    {p.$0 + 1L, p.$1, merge(p.$2, false), p.$3},
+                                    {p.$0, p.$1 + 1L, p.$2, merge(p.$3, false)}
+                                )
+                            ),
+                            if(val1.$1 < val2.$1,
+                                {p.$0 + 1L, p.$1, merge(p.$2, false), p.$3},
+                                {p.$0, p.$1 + 1L, p.$2, merge(p.$3, false)}
+                            )
+                        ),
+                        if(val1.$0 < val2.$0,
+                            {p.$0 + 1L, p.$1, merge(p.$2, false), p.$3},
+                            {p.$0, p.$1 + 1L, p.$2, merge(p.$3, false)}
+                        )
+                    ),
+                    if(val1.$0 == val2.$0, 
+                        if(val1.$1 == val2.$1,
+                            if(val2.$2 == val2.$2,
+                                p.$0 + 1L,
+                                if(val1.$2 < val2.$2,
+                                    p.$0 + 1L,
+                                    p.$0
+                                )
+                            ),
+                            if(val1.$1 < val2.$1,
+                                p.$0 + 1L,
+                                p.$0
+                            )
+                        ),
+                        if(val1.$0 < val2.$0,
+                            p.$0 + 1L,
+                            p.$0
+                        )
+                    ) < len1 && 
+                    if(val1.$0 == val2.$0, 
+                        if(val1.$1 == val2.$1,
+                            if(val2.$2 == val2.$2,
+                                p.$1 + 1L,
+                                if(val1.$2 < val2.$2,
+                                    p.$1 + 1L,
+                                    p.$1
+                                )
+                            ),
+                            if(val1.$1 < val2.$1,
+                                p.$1 + 1L,
+                                p.$1
+                            )
+                        ),
+                        if(val1.$0 < val2.$0,
+                            p.$1 + 1L,
+                            p.$1
+                        )
+                    ) < len2
+                }
+    );
+    # iterate over remaining un-checked elements in both arrays
+    let res = if(res.$0 < len1, iterate(res,
+            |p|
+                {
+                    {p.$0 + 1L, p.$1, merge(p.$2, false), p.$3},
+                    p.$0 + 1L < len1
+                }
+    ), res);
+    let res = if(res.$1 < len2, iterate(res,
+            |p|
+                {
+                    {p.$0, p.$1 + 1L, p.$2, merge(p.$3, false)},
+                    p.$1 + 1L < len2
+                }
+    ), res);
+    res"""
+
+    weld_objects[0].weld_code = 'result(' + weld_template % {'array1': weld_ids[0],
+                                                             'array2': weld_ids[1],
+                                                             'array3': weld_ids[2],
+                                                             'array4': weld_ids[3],
+                                                             'array5': weld_ids[4],
+                                                             'array6': weld_ids[5]} + '.$2)'
+
+    weld_objects[3].weld_code = 'result(' + weld_template % {'array1': weld_ids[0],
+                                                             'array2': weld_ids[1],
+                                                             'array3': weld_ids[2],
+                                                             'array4': weld_ids[3],
+                                                             'array5': weld_ids[4],
+                                                             'array6': weld_ids[5]} + '.$3)'
+
+    return [weld_objects[0], weld_objects[3]]

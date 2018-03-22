@@ -215,6 +215,36 @@ class DataFrameTests(unittest.TestCase):
         np.testing.assert_array_equal(evaluate_if_necessary(expected_result['col2']),
                                       evaluate_if_necessary(result['col2']))
 
+    @staticmethod
+    def test_join_multiindex():
+        df1 = pdw.DataFrame({'col1': np.arange(8)},
+                            pdw.MultiIndex.from_product([np.array([1, 2]),
+                                                         np.array([3, 4]),
+                                                         np.array([5, 6])],
+                                                        ['i1', 'i2', 'i3']))
+        df2 = pdw.DataFrame({'col2': np.arange(12)},
+                            pdw.MultiIndex.from_product([np.array([1, 2, 3]),
+                                                         np.array([3, 5]),
+                                                         np.array([5, 6])],
+                                                        ['i1', 'i2', 'i3']))
+
+        result = df1.merge(df2)
+
+        expected_result = pdw.DataFrame({'col1': np.array([0, 1, 4, 5]), 'col2': np.array([0, 1, 4, 5])},
+                                        pdw.MultiIndex([np.array([1, 2]),
+                                                        np.array([3, 4]),
+                                                        np.array([5, 6])],
+                                                       [np.array([0, 0, 1, 1]),
+                                                        np.array([0, 0, 0, 0]),
+                                                        np.array([0, 1, 0, 1])],
+                                                       ['i1', 'i2', 'i3']))
+
+        test_equal_multiindex(expected_result.index, result.index)
+        np.testing.assert_array_equal(evaluate_if_necessary(expected_result['col1']),
+                                      evaluate_if_necessary(result['col1']))
+        np.testing.assert_array_equal(evaluate_if_necessary(expected_result['col2']),
+                                      evaluate_if_necessary(result['col2']))
+
 
 def main():
     unittest.main()

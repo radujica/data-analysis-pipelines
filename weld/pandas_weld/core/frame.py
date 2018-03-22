@@ -3,7 +3,8 @@ from weld.types import WeldBit
 from lazy_data import LazyData
 from indexes import Index
 from indexes import MultiIndex
-from pandas_weld.weld import weld_filter, weld_element_wise_op, weld_aggregate, weld_merge_single_index
+from pandas_weld.weld import weld_filter, weld_element_wise_op, weld_aggregate, weld_merge_single_index, \
+    weld_merge_triple_index, weld_index_to_values
 from series import Series
 from utils import replace_slice_defaults, weld_to_numpy_type
 import numpy as np
@@ -48,6 +49,7 @@ class DataFrame(object):
 
         """
         materialized_columns = {}
+        # TODO: fix bug; what if not lazydata?
         for column in self.data.items():
             materialized_columns[column[0]] = column[1].evaluate(verbose=verbose)
 
@@ -426,9 +428,10 @@ class DataFrame(object):
         return Series(np.array(data), np.dtype(np.float64),
                       Index(np.array(index).astype(np.str), np.dtype(np.str)))
 
-    def _merge(self, index1, index2):
+    def _merge_single(self, index1, index2):
         data = []
         data_ids = []
+        # TODO: fix this duplicate code
         if isinstance(index1, LazyData):
             data_ids.append(index1.data_id)
             data.append(index1.expr)
@@ -451,10 +454,58 @@ class DataFrame(object):
 
         return [LazyData(data[i], WeldBit(), 1, data_id=data_ids[i]) for i in xrange(2)]
 
+    def _index_to_values(self, levels, labels):
+        if isinstance(levels, LazyData):
+            weld_type = levels.weld_type
+            levels = levels.expr
+        elif isinstance(levels, np.ndarray):
+            weld_type = numpy_to_weld_type(levels.dtype)
+        else:
+            raise TypeError('expected levels to be of type LazyData or np.ndarray')
+
+        if isinstance(labels, LazyData):
+            labels = labels.expr
+
+        return LazyData(weld_index_to_values(levels, labels), weld_type, 1)
+
+    def _merge_multi(self, index1, index2):
+        assert len(index1.levels) == len(index2.levels) == 3
+
+        index1 = [self._index_to_values(index1.levels[i], index1.labels[i]) for i in xrange(3)]
+        index2 = [self._index_to_values(index2.levels[i], index2.labels[i]) for i in xrange(3)]
+
+        data = []
+        data_ids = []
+        # TODO: fix this duplicate code
+        for i in xrange(3):
+            if isinstance(index1[i], LazyData):
+                data_ids.append(index1[i].data_id)
+                data.append(index1[i].expr)
+            elif isinstance(index1[i], np.ndarray):
+                data_ids.append(None)
+                data.append(index1[i])
+            else:
+                raise TypeError('expected data in index to be of type LazyData or np.ndarray')
+
+        for i in xrange(3):
+            if isinstance(index2[i], LazyData):
+                data_ids.append(index2[i].data_id)
+                data.append(index2[i].expr)
+            elif isinstance(index2[i], np.ndarray):
+                data_ids.append(None)
+                data.append(index2[i])
+            else:
+                raise TypeError('expected data in index to be of type LazyData or np.ndarray')
+
+        data = weld_merge_triple_index([data[:3], data[3:6]])
+
+        return [LazyData(data[i], WeldBit(), 1, data_id=data_ids[i]) for i in xrange(2)]
+
+    # TODO: check for same column_names in both DataFrames!
     def merge(self, right):
         """ Join this DataFrame with another
 
-        Currently only inner join on 1-d index is supported
+        Currently only inner join on 1-d or 3-d index is supported
 
         Parameters
         ----------
@@ -466,10 +517,14 @@ class DataFrame(object):
         DataFrame
 
         """
-        if isinstance(self.index, MultiIndex) or isinstance(right.index, MultiIndex):
-            raise NotImplementedError('MultiIndex merge is not yet supported')
-
-        bool_indexes = self._merge(self.index, right.index)
+        if isinstance(self.index, MultiIndex):
+            if not isinstance(right.index, MultiIndex):
+                raise TypeError('both indexes must be MultiIndex')
+            if len(self.index.levels) != 3 or len(right.index.levels) != 3:
+                raise ValueError('MultiIndexes must be of the same length + only length 3 is currently supported')
+            bool_indexes = self._merge_multi(self.index, right.index)
+        else:
+            bool_indexes = self._merge_single(self.index, right.index)
         # can filter any of the two dataframes for the new index
         new_index = self.index[bool_indexes[0]]
 

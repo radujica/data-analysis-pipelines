@@ -75,13 +75,13 @@ class MultiIndex(object):
 
         """
         if isinstance(item, slice):
-            # TODO: figure out a way to slice the index; each data variable might have different dimensions order (?)
-            # so it seems more complicated than just adding a parameter to the variable read_data
+            # TODO: figure out a way to lazily slice the index
             return MultiIndex(self.levels, self.labels, self.names)
         elif isinstance(item, LazyData):
             if str(item.weld_type) != str(numpy_to_weld_type('bool')):
                 raise ValueError('expected series of bool to filter DataFrame rows')
 
+            # TODO: filter unnecessary levels too
             new_labels = []
             for label in self.labels:
                 if isinstance(label, LazyData):
