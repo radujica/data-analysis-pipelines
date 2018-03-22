@@ -21,9 +21,6 @@ class Series(LazyData):
         index linked to the data; it is assumed to be of the same length
     name : str, optional
         name of the series
-    data_id : str, optional
-        generated only by parsers to record the existence of new data from file; needs to be passed on
-        to other LazyData children objects, e.g. when creating a pandas_weld.Series from netCDF4_weld.Variable
 
     See also
     --------
@@ -31,11 +28,11 @@ class Series(LazyData):
 
     """
 
-    def __init__(self, data, dtype, index, name=None, data_id=None):
+    def __init__(self, data, dtype, index, name=None):
         if not isinstance(data, (np.ndarray, WeldObject)):
             raise TypeError('expected np.ndarray or WeldObject in Series.__init__')
 
-        super(Series, self).__init__(data, numpy_to_weld_type(dtype), 1, data_id)
+        super(Series, self).__init__(data, numpy_to_weld_type(dtype), 1)
 
         self.dtype = dtype
         self.index = index
@@ -84,18 +81,15 @@ class Series(LazyData):
             return Series(subset(self, item).expr,
                           self.dtype,
                           new_index,
-                          self.name,
-                          self.data_id)
+                          self.name)
         elif isinstance(item, LazyData):
             if str(item.weld_type) != str(numpy_to_weld_type('bool')):
                 raise ValueError('expected series of bool to filter DataFrame rows')
 
             if isinstance(self.expr, LazyData):
                 weld_type = self.expr.weld_type
-                data_id = self.expr.data_id
             elif isinstance(self.expr, np.ndarray):
                 weld_type = numpy_to_weld_type(self.expr.dtype)
-                data_id = None
             else:
                 raise TypeError('expected data in column to be of type LazyData or np.ndarray')
 
@@ -106,8 +100,7 @@ class Series(LazyData):
                                       weld_type),
                           self.dtype,
                           new_index,
-                          self.name,
-                          data_id)
+                          self.name)
         else:
             raise TypeError('expected a slice or a Series of bool in Series.__getitem__')
 

@@ -90,8 +90,7 @@ class DataFrame(object):
                 return Series(element.expr,
                               weld_to_numpy_type(element.weld_type),
                               self.index,
-                              item,
-                              element.data_id)
+                              item)
             elif isinstance(element, np.ndarray):
                 return Series(element,
                               element.dtype,
@@ -133,13 +132,11 @@ class DataFrame(object):
 
                 if isinstance(data, LazyData):
                     weld_type = data.weld_type
-                    data_id = data.data_id
                     dtype = weld_to_numpy_type(weld_type)
                     data = data.expr
                 elif isinstance(data, np.ndarray):
                     weld_type = numpy_to_weld_type(data.dtype)
                     dtype = data.dtype
-                    data_id = None
                 else:
                     raise TypeError('expected data in column to be of type LazyData or np.ndarray')
 
@@ -148,8 +145,7 @@ class DataFrame(object):
                                                            weld_type),
                                                dtype,
                                                self.index,
-                                               column_name,
-                                               data_id)
+                                               column_name)
             # slice the index
             new_index = self.index[item]
 
@@ -180,12 +176,10 @@ class DataFrame(object):
             # making series because Series has the proper method to slice something; re-use the code above
             series = self[str(column_name)]
 
-            # by not passing a data_id, the data is not linked to the input_mapping read
             new_data[column_name] = Series(series.head(n),
                                            series.dtype,
                                            series.index,
-                                           series.name,
-                                           series.data_id)
+                                           series.name)
 
         new_index = self.index[slice_]
 
@@ -430,29 +424,24 @@ class DataFrame(object):
 
     def _merge_single(self, index1, index2):
         data = []
-        data_ids = []
         # TODO: fix this duplicate code
         if isinstance(index1, LazyData):
-            data_ids.append(index1.data_id)
             data.append(index1.expr)
         elif isinstance(index1, np.ndarray):
-            data_ids.append(None)
             data.append(index1)
         else:
             raise TypeError('expected data in index to be of type LazyData or np.ndarray')
 
         if isinstance(index2, LazyData):
-            data_ids.append(index2.data_id)
             data.append(index2.expr)
         elif isinstance(index2, np.ndarray):
-            data_ids.append(None)
             data.append(index2)
         else:
             raise TypeError('expected data in index to be of type LazyData or np.ndarray')
 
         data = weld_merge_single_index(data)
 
-        return [LazyData(data[i], WeldBit(), 1, data_id=data_ids[i]) for i in xrange(2)]
+        return [LazyData(data[i], WeldBit(), 1) for i in xrange(2)]
 
     def _index_to_values(self, levels, labels):
         if isinstance(levels, LazyData):
@@ -475,31 +464,26 @@ class DataFrame(object):
         index2 = [self._index_to_values(index2.levels[i], index2.labels[i]) for i in xrange(3)]
 
         data = []
-        data_ids = []
         # TODO: fix this duplicate code
         for i in xrange(3):
             if isinstance(index1[i], LazyData):
-                data_ids.append(index1[i].data_id)
                 data.append(index1[i].expr)
             elif isinstance(index1[i], np.ndarray):
-                data_ids.append(None)
                 data.append(index1[i])
             else:
                 raise TypeError('expected data in index to be of type LazyData or np.ndarray')
 
         for i in xrange(3):
             if isinstance(index2[i], LazyData):
-                data_ids.append(index2[i].data_id)
                 data.append(index2[i].expr)
             elif isinstance(index2[i], np.ndarray):
-                data_ids.append(None)
                 data.append(index2[i])
             else:
                 raise TypeError('expected data in index to be of type LazyData or np.ndarray')
 
         data = weld_merge_triple_index([data[:3], data[3:6]])
 
-        return [LazyData(data[i], WeldBit(), 1, data_id=data_ids[i]) for i in xrange(2)]
+        return [LazyData(data[i], WeldBit(), 1) for i in xrange(2)]
 
     # TODO: check for same column_names in both DataFrames!
     def merge(self, right):

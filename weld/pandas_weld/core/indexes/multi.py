@@ -86,11 +86,9 @@ class MultiIndex(object):
             for label in self.labels:
                 if isinstance(label, LazyData):
                     weld_type = label.weld_type
-                    data_id = label.data_id
                     label = label.expr
                 elif isinstance(label, np.ndarray):
                     weld_type = numpy_to_weld_type(label.dtype)
-                    data_id = None
                 else:
                     raise TypeError('expected data in column to be of type LazyData or np.ndarray')
 
@@ -98,8 +96,7 @@ class MultiIndex(object):
                                                        item.expr,
                                                        weld_type),
                                            weld_type,
-                                           1,
-                                           data_id))
+                                           1))
 
             return MultiIndex(self.levels, new_labels, self.names)
         else:
