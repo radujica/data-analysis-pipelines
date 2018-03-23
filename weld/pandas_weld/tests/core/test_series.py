@@ -32,8 +32,8 @@ def test_equal_series(series1, series2):
 
 
 class SeriesTests(unittest.TestCase):
-    @staticmethod
-    def test_getitem_slice_raw():
+    # noinspection PyMethodMayBeStatic
+    def test_getitem_slice_raw(self):
         data = np.array([1, 2, 3])
         series = Series(data, np.dtype(np.int64), RangeIndex(0, 3, 1))
 
@@ -42,8 +42,7 @@ class SeriesTests(unittest.TestCase):
 
         test_equal_series(expected_result, result)
 
-    @staticmethod
-    def test_getitem_slice():
+    def test_getitem_slice(self):
         weld_type = numpy_to_weld_type('int64')
         data = LazyData(np.array([1, 2, 3]), weld_type, 1)
         series = Series(data.expr, np.dtype(np.int64), RangeIndex(0, 3, 1))
@@ -53,8 +52,8 @@ class SeriesTests(unittest.TestCase):
 
         test_equal_series(expected_result, result)
 
-    @staticmethod
-    def test_getitem_series():
+    # noinspection PyMethodMayBeStatic
+    def test_getitem_series(self):
         data = np.array([1, 2, 3])
         series = Series(data, np.dtype(np.int64), RangeIndex(0, 3, 1))
 
@@ -63,8 +62,8 @@ class SeriesTests(unittest.TestCase):
 
         test_equal_series(expected_result, result)
 
-    @staticmethod
-    def test_head_raw():
+    # noinspection PyMethodMayBeStatic
+    def test_head_raw(self):
         data = np.array([1, 2, 3])
         series = Series(data, np.dtype(np.int64), RangeIndex(0, 3, 1))
 
@@ -73,8 +72,8 @@ class SeriesTests(unittest.TestCase):
 
         np.testing.assert_array_equal(expected_result, result)
 
-    @staticmethod
-    def test_head():
+    # noinspection PyMethodMayBeStatic
+    def test_head(self):
         data = LazyData(np.array([1, 2, 3]), np.dtype(np.int64), 1)
         series = Series(data.expr, np.dtype(np.int64), RangeIndex(0, 2, 1))
 
@@ -83,8 +82,8 @@ class SeriesTests(unittest.TestCase):
 
         np.testing.assert_array_equal(expected_result, result)
 
-    @staticmethod
-    def test_comparison():
+    # noinspection PyMethodMayBeStatic
+    def test_comparison(self):
         data = np.array([1, 2, 3, 4])
         series = Series(data, np.dtype(np.int64), RangeIndex(0, 4, 1))
 
@@ -93,8 +92,8 @@ class SeriesTests(unittest.TestCase):
 
         test_equal_series(expected_result, result)
 
-    @staticmethod
-    def test_element_wise_operation():
+    # noinspection PyMethodMayBeStatic
+    def test_element_wise_operation(self):
         data = np.array([1, 2, 3])
         series = Series(data, np.dtype(np.int64), RangeIndex(0, 3, 1))
 
@@ -103,8 +102,8 @@ class SeriesTests(unittest.TestCase):
 
         test_equal_series(expected_result, result)
 
-    @staticmethod
-    def test_aggregate():
+    # noinspection PyMethodMayBeStatic
+    def test_aggregate(self):
         data = np.array([1, 2, 3])
         series = Series(data, np.dtype(np.int64), RangeIndex(0, 3, 1))
 
@@ -113,8 +112,8 @@ class SeriesTests(unittest.TestCase):
 
         np.testing.assert_equal(expected_result, evaluate_if_necessary(result))
 
-    @staticmethod
-    def test_aggregate_min():
+    # noinspection PyMethodMayBeStatic
+    def test_aggregate_min(self):
         data = np.array([1, 2, 3])
         series = Series(data, np.dtype(np.int64), RangeIndex(0, 3, 1))
 
@@ -123,8 +122,8 @@ class SeriesTests(unittest.TestCase):
 
         np.testing.assert_equal(expected_result, evaluate_if_necessary(result))
 
-    @staticmethod
-    def test_count():
+    # noinspection PyMethodMayBeStatic
+    def test_count(self):
         data = np.array([1, 2, 3])
         series = Series(data, np.dtype(np.int64), RangeIndex(0, 3, 1))
 
@@ -133,8 +132,8 @@ class SeriesTests(unittest.TestCase):
 
         np.testing.assert_equal(expected_result, evaluate_if_necessary(result))
 
-    @staticmethod
-    def test_mean():
+    # noinspection PyMethodMayBeStatic
+    def test_mean(self):
         data = np.array([1, 2, 3, 4])
         series = Series(data, np.dtype(np.int64), RangeIndex(0, 4, 1))
 
@@ -143,8 +142,8 @@ class SeriesTests(unittest.TestCase):
 
         np.testing.assert_equal(expected_result, evaluate_if_necessary(result))
 
-    @staticmethod
-    def test_std():
+    # noinspection PyMethodMayBeStatic
+    def test_std(self):
         data = np.array([1, 2, 3, 4])
         series = Series(data, np.dtype(np.int64), RangeIndex(0, 4, 1))
 
@@ -152,6 +151,18 @@ class SeriesTests(unittest.TestCase):
         result = series.std()
 
         np.testing.assert_equal(expected_result, evaluate_if_necessary(result))
+
+    # noinspection PyMethodMayBeStatic
+    def test_agg(self):
+        data = np.array([1, 2, 3, 4])
+        series = Series(data, np.dtype(np.int64), RangeIndex(0, 4, 1))
+
+        expected_result = Series(np.array([1., 4.], dtype=np.float64),
+                                 np.dtype('float64'),
+                                 Index(np.array(['min', 'max'], dtype=np.str), np.dtype(np.str)))
+        result = series.agg(['min', 'max'])
+
+        test_equal_series(expected_result, result)
 
 
 def main():

@@ -111,8 +111,8 @@ class DataFrameTests(unittest.TestCase):
 
         test_equal_multiindex(expected_result.index, result.index)
 
-    @staticmethod
-    def test_element_wise_operation():
+    # noinspection PyMethodMayBeStatic
+    def test_element_wise_operation(self):
         expected_data = {'col1': np.array([2, 4, 6, 8]),
                          'col2': np.array([10, 12, 14, 16])}
         expected_index = pdw.MultiIndex.from_product([np.array([1, 2]), np.array([3, 4])], ['a', 'b'])
@@ -196,8 +196,21 @@ class DataFrameTests(unittest.TestCase):
 
         test_equal_series(expected_result, result)
 
-    @staticmethod
-    def test_join_1d_index():
+    def test_agg(self):
+        expected_result = pdw.DataFrame({'col1': np.array([1, 4], dtype=np.float64),
+                                         'col2': np.array([5, 8], dtype=np.float64)},
+                                        pdw.Index(np.array(['min', 'max'], dtype=np.dtype('str')),
+                                                  np.dtype('str')))
+
+        result = self.df.agg(['min', 'max'])
+
+        np.testing.assert_array_equal(evaluate_if_necessary(expected_result.index),
+                                      evaluate_if_necessary(result.index))
+        test_equal_series(expected_result['col1'], result['col1'])
+        test_equal_series(expected_result['col2'], result['col2'])
+
+    # noinspection PyMethodMayBeStatic
+    def test_join_1d_index(self):
         df1 = pdw.DataFrame({'col1': np.array([1, 2, 3, 4, 5])},
                             pdw.Index(np.array([1, 3, 4, 5, 6]), np.dtype(np.int64)))
         df2 = pdw.DataFrame({'col2': np.array([1, 2, 3])},
@@ -210,13 +223,11 @@ class DataFrameTests(unittest.TestCase):
 
         np.testing.assert_array_equal(evaluate_if_necessary(expected_result.index),
                                       evaluate_if_necessary(result.index))
-        np.testing.assert_array_equal(evaluate_if_necessary(expected_result['col1']),
-                                      evaluate_if_necessary(result['col1']))
-        np.testing.assert_array_equal(evaluate_if_necessary(expected_result['col2']),
-                                      evaluate_if_necessary(result['col2']))
+        test_equal_series(expected_result['col1'], result['col1'])
+        test_equal_series(expected_result['col2'], result['col2'])
 
-    @staticmethod
-    def test_join_multiindex():
+    # noinspection PyMethodMayBeStatic
+    def test_join_multiindex(self):
         df1 = pdw.DataFrame({'col1': np.arange(8)},
                             pdw.MultiIndex.from_product([np.array([1, 2]),
                                                          np.array([3, 4]),
@@ -240,10 +251,8 @@ class DataFrameTests(unittest.TestCase):
                                                        ['i1', 'i2', 'i3']))
 
         test_equal_multiindex(expected_result.index, result.index)
-        np.testing.assert_array_equal(evaluate_if_necessary(expected_result['col1']),
-                                      evaluate_if_necessary(result['col1']))
-        np.testing.assert_array_equal(evaluate_if_necessary(expected_result['col2']),
-                                      evaluate_if_necessary(result['col2']))
+        test_equal_series(expected_result['col1'], result['col1'])
+        test_equal_series(expected_result['col2'], result['col2'])
 
 
 def main():

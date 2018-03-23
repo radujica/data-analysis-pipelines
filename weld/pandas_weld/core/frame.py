@@ -29,12 +29,13 @@ class DataFrame(object):
         self.index = index
 
     def __repr__(self):
-        string_representation = """column names:\n\t%(columns)s\nindex names:\n\t%(indexes)s"""
+        string_representation = """column names:\n\t%(columns)s\nindex names:\n\t%(index)s"""
 
         return string_representation % {'columns': self.data.keys(),
-                                        'indexes': self.index.names}
+                                        'index': repr(self.index)}
 
     # TODO: prettify
+    # TODO: probably better if __str__
     def evaluate(self, verbose=True, decode=True, passes=None, num_threads=1,
                  apply_experimental_transforms=False):
         """ Evaluates by creating a str representation of the DataFrame
@@ -297,6 +298,8 @@ class DataFrame(object):
 
     # TODO: currently converts everything to float64; should act according to the input types
     # TODO: if there are strings it will fail, while in pandas for sum they are concatenated and prod are ignored
+    # TODO: pass in the evaluate options ~ verbose, etc
+    # TODO: evaluate index too
     def _aggregate(self, operation):
         assert isinstance(operation, (str, unicode))
 
@@ -491,5 +494,28 @@ class DataFrame(object):
 
         for column_name in right:
             new_data[column_name] = right[str(column_name)][bool_indexes[1]]
+
+        return DataFrame(new_data, new_index)
+
+    def agg(self, aggregations):
+        """ Eagerly aggregate the columns on multiple queries
+
+        Parameters
+        ----------
+        aggregations : list of str
+            list of desired aggregations; currently supported are
+            {'sum', 'prod', 'min', 'max', 'count', 'mean', 'std'}
+
+        Returns
+        -------
+        DataFrame
+
+        """
+        if len(aggregations) < 1:
+            raise TypeError('expected at least 1 aggregation')
+
+        new_data = {column_name: self[str(column_name)].agg(aggregations) for column_name in self}
+        # get any column's index, since they're (should be) the same
+        new_index = new_data[new_data.keys()[0]].index
 
         return DataFrame(new_data, new_index)

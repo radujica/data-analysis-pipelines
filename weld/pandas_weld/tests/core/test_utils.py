@@ -7,8 +7,8 @@ from pandas_weld.tests.utils import evaluate_if_necessary
 
 
 class SubsetTests(unittest.TestCase):
-    @staticmethod
-    def test_subset_arrays():
+    # noinspection PyMethodMayBeStatic
+    def test_subset_arrays(self):
         array = np.array([1, 2, 3, 4, 5, 6])
         slice_ = slice(0, 3, 1)
 
@@ -17,8 +17,8 @@ class SubsetTests(unittest.TestCase):
 
         np.testing.assert_array_equal(expected_result, evaluate_if_necessary(result))
 
-    @staticmethod
-    def test_subset_lazy_data():
+    # noinspection PyMethodMayBeStatic
+    def test_subset_lazy_data(self):
         array = LazyData(np.array([1, 2, 3, 4, 5, 6]), numpy_to_weld_type('int64'), 1)
         slice_ = slice(0, 3, 1)
 

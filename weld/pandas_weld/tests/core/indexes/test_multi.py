@@ -27,8 +27,8 @@ def test_equal_multiindex(expected_index, result_index):
 
 
 class MultiIndexTests(unittest.TestCase):
-    @staticmethod
-    def test_from_product_raw():
+    # noinspection PyMethodMayBeStatic
+    def test_from_product_raw(self):
         levels = [np.array([1, 2]), np.array([3, 4])]
         names = ['a', 'b']
 
@@ -40,8 +40,8 @@ class MultiIndexTests(unittest.TestCase):
 
         test_equal_multiindex(expected_result, result)
 
-    @staticmethod
-    def test_from_product():
+    # noinspection PyMethodMayBeStatic
+    def test_from_product(self):
         levels = [LazyData(np.array([1, 2]), WeldLong(), 1), LazyData(np.array([3, 4]), WeldLong(), 1)]
         names = ['a', 'b']
 
@@ -55,8 +55,8 @@ class MultiIndexTests(unittest.TestCase):
 
         test_equal_multiindex(expected_result, result)
 
-    @staticmethod
-    def test_getitem_filter():
+    # noinspection PyMethodMayBeStatic
+    def test_getitem_filter(self):
         levels = [LazyData(np.array([1, 2]), WeldLong(), 1), LazyData(np.array([3, 4]), WeldLong(), 1)]
         names = ['a', 'b']
 
@@ -73,8 +73,8 @@ class MultiIndexTests(unittest.TestCase):
 
         test_equal_multiindex(expected_result, result)
 
-    @staticmethod
-    def test_getitem_slice():
+    # noinspection PyMethodMayBeStatic
+    def test_getitem_slice(self):
         levels = [LazyData(np.array([1, 2]), WeldLong(), 1), LazyData(np.array([3, 4]), WeldLong(), 1)]
         names = ['a', 'b']
 

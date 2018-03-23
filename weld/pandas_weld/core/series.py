@@ -1,7 +1,10 @@
+from collections import OrderedDict
+
 from grizzly.encoders import numpy_to_weld_type
 from weld.types import WeldLong, WeldDouble
 from weld.weldobject import WeldObject
 from lazy_data import LazyData
+from indexes import Index
 from pandas_weld.weld import weld_aggregate, weld_compare, weld_filter, weld_element_wise_op, weld_count, weld_mean, \
     weld_standard_deviation
 from utils import subset, replace_slice_defaults
@@ -86,18 +89,11 @@ class Series(LazyData):
             if str(item.weld_type) != str(numpy_to_weld_type('bool')):
                 raise ValueError('expected series of bool to filter DataFrame rows')
 
-            if isinstance(self.expr, LazyData):
-                weld_type = self.expr.weld_type
-            elif isinstance(self.expr, np.ndarray):
-                weld_type = numpy_to_weld_type(self.expr.dtype)
-            else:
-                raise TypeError('expected data in column to be of type LazyData or np.ndarray')
-
             new_index = self.index[item]
 
             return Series(weld_filter(self.expr,
                                       item.expr,
-                                      weld_type),
+                                      self.weld_type),
                           self.dtype,
                           new_index,
                           self.name)
@@ -238,3 +234,32 @@ class Series(LazyData):
                                                 self.weld_type),
                         WeldDouble(),
                         0)
+
+    def agg(self, aggregations):
+        """ Eagerly aggregate on multiple queries
+
+        Parameters
+        ----------
+        aggregations : list of str
+            supported aggregations are = {'sum', 'prod', 'min', 'max', 'count', 'mean', 'std'}
+
+        Returns
+        -------
+        DataFrame
+
+        """
+        if len(aggregations) < 1:
+            raise TypeError('expected at least 1 aggregation')
+
+        aggregation_results = OrderedDict()
+        for aggregation in aggregations:
+            # call the same-name function to compute the aggregation
+            aggregation_results[str(aggregation)] = getattr(self, aggregation)()
+
+        values = np.array([k.evaluate(verbose=False) for k in aggregation_results.values()])
+        index = np.array(aggregation_results.keys(), dtype=np.str)
+
+        return Series(values.astype(np.float64),
+                      np.dtype(np.float64),
+                      Index(index, np.dtype(np.float64)),
+                      self.name)
