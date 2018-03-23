@@ -6,7 +6,7 @@ from indexes import MultiIndex
 from pandas_weld.weld import weld_filter, weld_element_wise_op, weld_aggregate, weld_merge_single_index, \
     weld_merge_triple_index, weld_index_to_values
 from series import Series
-from utils import replace_slice_defaults, weld_to_numpy_type
+from utils import replace_slice_defaults, weld_to_numpy_type, get_expr_or_raw
 import numpy as np
 
 
@@ -313,7 +313,8 @@ class DataFrame(object):
                                  series.weld_type,
                                  0).evaluate(verbose=False))
 
-        return Series(np.array(data).astype(np.float64), np.dtype(np.float64),
+        return Series(np.array(data).astype(np.float64),
+                      np.dtype(np.float64),
                       Index(np.array(index).astype(np.str), np.dtype(np.str)))
 
     def sum(self):
@@ -377,7 +378,8 @@ class DataFrame(object):
             # apply the operation
             data.append(series.count().evaluate(verbose=False))
 
-        return Series(np.array(data), np.dtype(np.int64),
+        return Series(np.array(data),
+                      np.dtype(np.int64),
                       Index(np.array(index).astype(np.str), np.dtype(np.str)))
 
     # see TODO at Series.mean()
@@ -398,7 +400,8 @@ class DataFrame(object):
             # apply the operation
             data.append(series.mean().evaluate(verbose=False))
 
-        return Series(np.array(data), np.dtype(np.float64),
+        return Series(np.array(data),
+                      np.dtype(np.float64),
                       Index(np.array(index).astype(np.str), np.dtype(np.str)))
 
     # see TODO at Series.std()
@@ -419,25 +422,12 @@ class DataFrame(object):
             # apply the operation
             data.append(series.std().evaluate(verbose=False))
 
-        return Series(np.array(data), np.dtype(np.float64),
+        return Series(np.array(data),
+                      np.dtype(np.float64),
                       Index(np.array(index).astype(np.str), np.dtype(np.str)))
 
     def _merge_single(self, index1, index2):
-        data = []
-        # TODO: fix this duplicate code
-        if isinstance(index1, LazyData):
-            data.append(index1.expr)
-        elif isinstance(index1, np.ndarray):
-            data.append(index1)
-        else:
-            raise TypeError('expected data in index to be of type LazyData or np.ndarray')
-
-        if isinstance(index2, LazyData):
-            data.append(index2.expr)
-        elif isinstance(index2, np.ndarray):
-            data.append(index2)
-        else:
-            raise TypeError('expected data in index to be of type LazyData or np.ndarray')
+        data = [get_expr_or_raw(index1), get_expr_or_raw(index2)]
 
         data = weld_merge_single_index(data)
 
@@ -463,25 +453,8 @@ class DataFrame(object):
         index1 = [self._index_to_values(index1.levels[i], index1.labels[i]) for i in xrange(3)]
         index2 = [self._index_to_values(index2.levels[i], index2.labels[i]) for i in xrange(3)]
 
-        data = []
-        # TODO: fix this duplicate code
-        for i in xrange(3):
-            if isinstance(index1[i], LazyData):
-                data.append(index1[i].expr)
-            elif isinstance(index1[i], np.ndarray):
-                data.append(index1[i])
-            else:
-                raise TypeError('expected data in index to be of type LazyData or np.ndarray')
-
-        for i in xrange(3):
-            if isinstance(index2[i], LazyData):
-                data.append(index2[i].expr)
-            elif isinstance(index2[i], np.ndarray):
-                data.append(index2[i])
-            else:
-                raise TypeError('expected data in index to be of type LazyData or np.ndarray')
-
-        data = weld_merge_triple_index([data[:3], data[3:6]])
+        data = weld_merge_triple_index([[get_expr_or_raw(index1[i]) for i in xrange(3)],
+                                        [get_expr_or_raw(index2[i]) for i in xrange(3)]])
 
         return [LazyData(data[i], WeldBit(), 1) for i in xrange(2)]
 

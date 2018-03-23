@@ -74,3 +74,11 @@ def replace_slice_defaults(slice_, default_start=0, default_step=1):
         step = default_step
 
     return slice(start, stop, step)
+
+
+def get_expr_or_raw(data):
+    if isinstance(data, LazyData):
+        return data.expr
+    else:
+        return data
+
