@@ -443,18 +443,19 @@ def weld_merge_single_index(indexes):
             |p|
                 let val1 = lookup(%(array1)s, p.$0);
                 let val2 = lookup(%(array2)s, p.$1);
-                {
+                let iter_output = 
                     if(val1 == val2,
-                 
                         {p.$0 + 1L, p.$1 + 1L, merge(p.$2, true), merge(p.$3, true)},
-                        
                         if(val1 < val2,  
                             {p.$0 + 1L, p.$1, merge(p.$2, false), p.$3},
                             {p.$0, p.$1 + 1L, p.$2, merge(p.$3, false)}
                         )
-                    ),
-                    if(val1 == val2, p.$0 + 1L, if(val1 < val2, p.$0 + 1L, p.$0)) < len1 && 
-                    if(val1 == val2, p.$1 + 1L, if(val1 < val2, p.$1, p.$1 + 1L)) < len2
+                    );
+                    
+                {
+                    iter_output,
+                    iter_output.$0 < len1 && 
+                    iter_output.$1 < len2
                 }
     );
     # iterate over remaining un-checked elements in both arrays
@@ -595,9 +596,8 @@ def weld_merge_triple_index(indexes):
             |p|
                 let val1 = {lookup(indexes1.$0, p.$0), lookup(indexes1.$1, p.$0), lookup(indexes1.$2, p.$0)};
                 let val2 = {lookup(indexes2.$0, p.$1), lookup(indexes2.$1, p.$1), lookup(indexes2.$2, p.$1)};
-                {
-                    # TODO: improve this duplicated code??? 
-                    # can't update variable in outer block with value from inner block -_-
+                
+                let iter_output = 
                     if(val1.$0 == val2.$0,
                         if(val1.$1 == val2.$1,
                             if(val1.$2 == val2.$2,
@@ -616,45 +616,11 @@ def weld_merge_triple_index(indexes):
                             {p.$0 + 1L, p.$1, merge(p.$2, false), p.$3},
                             {p.$0, p.$1 + 1L, p.$2, merge(p.$3, false)}
                         )
-                    ),
-                    if(val1.$0 == val2.$0, 
-                        if(val1.$1 == val2.$1,
-                            if(val2.$2 == val2.$2,
-                                p.$0 + 1L,
-                                if(val1.$2 < val2.$2,
-                                    p.$0 + 1L,
-                                    p.$0
-                                )
-                            ),
-                            if(val1.$1 < val2.$1,
-                                p.$0 + 1L,
-                                p.$0
-                            )
-                        ),
-                        if(val1.$0 < val2.$0,
-                            p.$0 + 1L,
-                            p.$0
-                        )
-                    ) < len1 && 
-                    if(val1.$0 == val2.$0, 
-                        if(val1.$1 == val2.$1,
-                            if(val2.$2 == val2.$2,
-                                p.$1 + 1L,
-                                if(val1.$2 < val2.$2,
-                                    p.$1 + 1L,
-                                    p.$1
-                                )
-                            ),
-                            if(val1.$1 < val2.$1,
-                                p.$1 + 1L,
-                                p.$1
-                            )
-                        ),
-                        if(val1.$0 < val2.$0,
-                            p.$1 + 1L,
-                            p.$1
-                        )
-                    ) < len2
+                    );
+                {
+                    iter_output,
+                    iter_output.$0 < len1 && 
+                    iter_output.$1 < len2
                 }
     );
     # iterate over remaining un-checked elements in both arrays
