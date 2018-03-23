@@ -100,7 +100,8 @@ class Series(LazyData):
         else:
             raise TypeError('expected a slice or a Series of bool in Series.__getitem__')
 
-    def head(self, n=10):
+    def head(self, n=10, verbose=False, decode=True, passes=None,
+             num_threads=1, apply_experimental_transforms=False):
         """ Eager operation to read first n rows
 
         This operation has no consequences, unlike getitem
@@ -109,6 +110,8 @@ class Series(LazyData):
         ----------
         n : int
             how many rows
+        verbose, decode, passes, num_threads, apply_experimental_transforms
+            see LazyData
 
         Returns
         -------
@@ -127,7 +130,7 @@ class Series(LazyData):
             data = self.input_mapping.input_functions[index](*new_args)
 
         if isinstance(data, WeldObject):
-            data = self.evaluate(verbose=False)
+            data = self.evaluate(verbose, decode, passes, num_threads, apply_experimental_transforms)
         elif isinstance(data, np.ndarray):
             data = data[:n]
         else:
@@ -235,13 +238,16 @@ class Series(LazyData):
                         WeldDouble(),
                         0)
 
-    def agg(self, aggregations):
+    def agg(self, aggregations, verbose=False, decode=True, passes=None,
+            num_threads=1, apply_experimental_transforms=False):
         """ Eagerly aggregate on multiple queries
 
         Parameters
         ----------
         aggregations : list of str
             supported aggregations are = {'sum', 'prod', 'min', 'max', 'count', 'mean', 'std'}
+        verbose, decode, passes, num_threads, apply_experimental_transforms
+            see LazyData
 
         Returns
         -------
@@ -256,7 +262,8 @@ class Series(LazyData):
             # call the same-name function to compute the aggregation
             aggregation_results[str(aggregation)] = getattr(self, aggregation)()
 
-        values = np.array([k.evaluate(verbose=False) for k in aggregation_results.values()])
+        values = np.array([k.evaluate(verbose, decode, passes, num_threads,
+                                      apply_experimental_transforms) for k in aggregation_results.values()])
         index = np.array(aggregation_results.keys(), dtype=np.str)
 
         return Series(values.astype(np.float64),

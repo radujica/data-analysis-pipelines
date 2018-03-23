@@ -154,7 +154,8 @@ class DataFrame(object):
         else:
             raise TypeError('expected a str, slice, list, or Series in DataFrame.__getitem__')
 
-    def head(self, n=10):
+    def head(self, n=10, verbose=False, decode=True, passes=None,
+             num_threads=1, apply_experimental_transforms=False):
         """ Eagerly evaluates the DataFrame
 
         This operation has no consequences, unlike getitem.
@@ -163,6 +164,8 @@ class DataFrame(object):
         ----------
         n : int
             how many rows to return
+        verbose, decode, passes, num_threads, apply_experimental_transforms
+            see LazyData
 
         Returns
         -------
@@ -177,14 +180,16 @@ class DataFrame(object):
             # making series because Series has the proper method to slice something; re-use the code above
             series = self[str(column_name)]
 
-            new_data[column_name] = Series(series.head(n),
+            new_data[column_name] = Series(series.head(n, verbose, decode, passes,
+                                                       num_threads, apply_experimental_transforms),
                                            series.dtype,
                                            series.index,
                                            series.name)
 
         new_index = self.index[slice_]
 
-        return DataFrame(new_data, new_index).evaluate(verbose=False)
+        return DataFrame(new_data, new_index).evaluate(verbose, decode, passes,
+                                                       num_threads, apply_experimental_transforms)
 
     def __setitem__(self, key, value):
         """ Add/update DataFrame column
@@ -298,9 +303,9 @@ class DataFrame(object):
 
     # TODO: currently converts everything to float64; should act according to the input types
     # TODO: if there are strings it will fail, while in pandas for sum they are concatenated and prod are ignored
-    # TODO: pass in the evaluate options ~ verbose, etc
     # TODO: evaluate index too
-    def _aggregate(self, operation):
+    def _aggregate(self, operation, verbose=False, decode=True, passes=None,
+                   num_threads=1, apply_experimental_transforms=False):
         assert isinstance(operation, (str, unicode))
 
         index = []
@@ -314,58 +319,88 @@ class DataFrame(object):
                                                 operation,
                                                 series.weld_type),
                                  series.weld_type,
-                                 0).evaluate(verbose=False))
+                                 0).evaluate(verbose, decode, passes, num_threads, apply_experimental_transforms))
 
         return Series(np.array(data).astype(np.float64),
                       np.dtype(np.float64),
                       Index(np.array(index).astype(np.str), np.dtype(np.str)))
 
-    def sum(self):
+    def sum(self, verbose=False, decode=True, passes=None,
+            num_threads=1, apply_experimental_transforms=False):
         """ Eager operation to sum all elements in their respective columns
 
+        Parameters
+        ----------
+        verbose, decode, passes, num_threads, apply_experimental_transforms
+            see LazyData
+
         Returns
         -------
         Series
             results are currently converted to float64
 
         """
-        return self._aggregate('+')
+        return self._aggregate('+', verbose, decode, passes, num_threads, apply_experimental_transforms)
 
-    def prod(self):
+    def prod(self, verbose=False, decode=True, passes=None,
+             num_threads=1, apply_experimental_transforms=False):
         """ Eager operation to multiply all elements in their respective columns
 
+        Parameters
+        ----------
+        verbose, decode, passes, num_threads, apply_experimental_transforms
+            see LazyData
+
         Returns
         -------
         Series
             results are currently converted to float64
 
         """
-        return self._aggregate('*')
+        return self._aggregate('*', verbose, decode, passes, num_threads, apply_experimental_transforms)
 
-    def min(self):
+    def min(self, verbose=False, decode=True, passes=None,
+            num_threads=1, apply_experimental_transforms=False):
         """ Eager operation to find the min value in each column
 
+        Parameters
+        ----------
+        verbose, decode, passes, num_threads, apply_experimental_transforms
+            see LazyData
+
         Returns
         -------
         Series
             results are currently converted to float64
 
         """
-        return self._aggregate('min')
+        return self._aggregate('min', verbose, decode, passes, num_threads, apply_experimental_transforms)
 
-    def max(self):
+    def max(self, verbose=False, decode=True, passes=None,
+            num_threads=1, apply_experimental_transforms=False):
         """ Eager operation to find the max value in each column
 
+        Parameters
+        ----------
+        verbose, decode, passes, num_threads, apply_experimental_transforms
+            see LazyData
+
         Returns
         -------
         Series
             results are currently converted to float64
 
         """
-        return self._aggregate('max')
+        return self._aggregate('max', verbose, decode, passes, num_threads, apply_experimental_transforms)
 
-    def count(self):
+    def count(self, verbose=False, decode=True, passes=None,
+              num_threads=1, apply_experimental_transforms=False):
         """ Eager operation to count the number of values in each column
+
+        Parameters
+        ----------
+        verbose, decode, passes, num_threads, apply_experimental_transforms
+            see LazyData
 
         Returns
         -------
@@ -379,15 +414,21 @@ class DataFrame(object):
             # get as series
             series = self[str(column_name)]
             # apply the operation
-            data.append(series.count().evaluate(verbose=False))
+            data.append(series.count().evaluate(verbose, decode, passes, num_threads, apply_experimental_transforms))
 
         return Series(np.array(data),
                       np.dtype(np.int64),
                       Index(np.array(index).astype(np.str), np.dtype(np.str)))
 
     # see TODO at Series.mean()
-    def mean(self):
+    def mean(self, verbose=False, decode=True, passes=None,
+             num_threads=1, apply_experimental_transforms=False):
         """ Eager operation to compute the mean of the values in each column
+
+        Parameters
+        ----------
+        verbose, decode, passes, num_threads, apply_experimental_transforms
+            see LazyData
 
         Returns
         -------
@@ -401,15 +442,21 @@ class DataFrame(object):
             # get as series
             series = self[str(column_name)]
             # apply the operation
-            data.append(series.mean().evaluate(verbose=False))
+            data.append(series.mean().evaluate(verbose, decode, passes, num_threads, apply_experimental_transforms))
 
         return Series(np.array(data),
                       np.dtype(np.float64),
                       Index(np.array(index).astype(np.str), np.dtype(np.str)))
 
     # see TODO at Series.std()
-    def std(self):
+    def std(self, verbose=False, decode=True, passes=None,
+            num_threads=1, apply_experimental_transforms=False):
         """ Eager operation to compute the standard deviation of the values in each column
+
+        Parameters
+        ----------
+        verbose, decode, passes, num_threads, apply_experimental_transforms
+            see LazyData
 
         Returns
         -------
@@ -423,12 +470,13 @@ class DataFrame(object):
             # get as series
             series = self[str(column_name)]
             # apply the operation
-            data.append(series.std().evaluate(verbose=False))
+            data.append(series.std().evaluate(verbose, decode, passes, num_threads, apply_experimental_transforms))
 
         return Series(np.array(data),
                       np.dtype(np.float64),
                       Index(np.array(index).astype(np.str), np.dtype(np.str)))
 
+    # noinspection PyMethodMayBeStatic
     def _merge_single(self, index1, index2):
         data = [get_expr_or_raw(index1), get_expr_or_raw(index2)]
 
@@ -436,6 +484,7 @@ class DataFrame(object):
 
         return [LazyData(data[i], WeldBit(), 1) for i in xrange(2)]
 
+    # noinspection PyMethodMayBeStatic
     def _index_to_values(self, levels, labels):
         if isinstance(levels, LazyData):
             weld_type = levels.weld_type
@@ -497,7 +546,8 @@ class DataFrame(object):
 
         return DataFrame(new_data, new_index)
 
-    def agg(self, aggregations):
+    def agg(self, aggregations, verbose=False, decode=True, passes=None,
+            num_threads=1, apply_experimental_transforms=False):
         """ Eagerly aggregate the columns on multiple queries
 
         Parameters
@@ -505,6 +555,8 @@ class DataFrame(object):
         aggregations : list of str
             list of desired aggregations; currently supported are
             {'sum', 'prod', 'min', 'max', 'count', 'mean', 'std'}
+        verbose, decode, passes, num_threads, apply_experimental_transforms
+            see LazyData
 
         Returns
         -------
@@ -514,7 +566,8 @@ class DataFrame(object):
         if len(aggregations) < 1:
             raise TypeError('expected at least 1 aggregation')
 
-        new_data = {column_name: self[str(column_name)].agg(aggregations) for column_name in self}
+        new_data = {column_name: self[str(column_name)].agg(aggregations, verbose, decode, passes, num_threads,
+                                                            apply_experimental_transforms) for column_name in self}
         # get any column's index, since they're (should be) the same
         new_index = new_data[new_data.keys()[0]].index
 

@@ -3,9 +3,6 @@ from grizzly.lazy_op import LazyOpResult, WeldObject
 
 # TODO: better solutions for recurring problem of having to always check LazyData or raw;
 # maybe make container for all input, i.e. all raw data is wrapped in LazyOpResult?
-# TODO: make an easier distinction between data that comes from file (LazyData) and non (currently still LazyData);
-# maybe a higher up class from which LazyData and LazyOpResult inherit could do it; the input_mapping seems to be a
-# better fit to WeldObject too
 # TODO: (better) decouple netCDF4_weld and pandas_weld hence making pandas_weld getitem more generic;
 # need an interface between parser and pandas; maybe store in lazydata which from parser the data came from?
 class InputMapping(object):
@@ -146,6 +143,7 @@ class LazyData(LazyOpResult):
 
     def __init__(self, expr, weld_type, dim, data_id=None, read_func=None, read_func_args=None):
         super(LazyData, self).__init__(expr, weld_type, dim)
+        # behaves like a flag for lazily-parsed data or raw (i.e. already in memory)
         self.data_id = data_id
 
         # only want to record new id's
@@ -161,7 +159,7 @@ class LazyData(LazyOpResult):
     def __repr__(self):
         return repr(self.expr)
 
-    def evaluate(self, verbose=True, decode=True, passes=None, num_threads=1,
+    def evaluate(self, verbose=False, decode=True, passes=None, num_threads=1,
                  apply_experimental_transforms=False):
         if isinstance(self.expr, WeldObject):
             # replace context values for every lazy recorded file input
