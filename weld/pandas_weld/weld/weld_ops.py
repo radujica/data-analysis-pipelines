@@ -535,10 +535,11 @@ def weld_index_to_values(levels, labels):
     return weld_obj
 
 
-# does NOT work correctly with duplicate elements; indexes MUST be sorted
 # TODO: generify this
 def weld_merge_triple_index(indexes):
     """ Returns bool arrays for which indexes shall be kept
+
+    Note it does NOT work correctly with duplicate elements; indexes MUST be already sorted
 
     Parameters
     ----------
@@ -592,36 +593,39 @@ def weld_merge_triple_index(indexes):
     let len2 = len(%(array4)s);
     let indexes1 = {%(array1)s, %(array2)s, %(array3)s};
     let indexes2 = {%(array4)s, %(array5)s, %(array6)s};
-    let res = iterate({0L, 0L, appender[bool], appender[bool]},
-            |p|
-                let val1 = {lookup(indexes1.$0, p.$0), lookup(indexes1.$1, p.$0), lookup(indexes1.$2, p.$0)};
-                let val2 = {lookup(indexes2.$0, p.$1), lookup(indexes2.$1, p.$1), lookup(indexes2.$2, p.$1)};
-                
-                let iter_output = 
-                    if(val1.$0 == val2.$0,
-                        if(val1.$1 == val2.$1,
-                            if(val1.$2 == val2.$2,
-                                {p.$0 + 1L, p.$1 + 1L, merge(p.$2, true), merge(p.$3, true)},
-                                if(val1.$2 < val2.$2,
+    let res = if(len1 > 0L && len2 > 0L,
+                iterate({0L, 0L, appender[bool], appender[bool]},
+                |p|
+                    let val1 = {lookup(indexes1.$0, p.$0), lookup(indexes1.$1, p.$0), lookup(indexes1.$2, p.$0)};
+                    let val2 = {lookup(indexes2.$0, p.$1), lookup(indexes2.$1, p.$1), lookup(indexes2.$2, p.$1)};
+                    
+                    let iter_output = 
+                        if(val1.$0 == val2.$0,
+                            if(val1.$1 == val2.$1,
+                                if(val1.$2 == val2.$2,
+                                    {p.$0 + 1L, p.$1 + 1L, merge(p.$2, true), merge(p.$3, true)},
+                                    if(val1.$2 < val2.$2,
+                                        {p.$0 + 1L, p.$1, merge(p.$2, false), p.$3},
+                                        {p.$0, p.$1 + 1L, p.$2, merge(p.$3, false)}
+                                    )
+                                ),
+                                if(val1.$1 < val2.$1,
                                     {p.$0 + 1L, p.$1, merge(p.$2, false), p.$3},
                                     {p.$0, p.$1 + 1L, p.$2, merge(p.$3, false)}
                                 )
                             ),
-                            if(val1.$1 < val2.$1,
+                            if(val1.$0 < val2.$0,
                                 {p.$0 + 1L, p.$1, merge(p.$2, false), p.$3},
                                 {p.$0, p.$1 + 1L, p.$2, merge(p.$3, false)}
                             )
-                        ),
-                        if(val1.$0 < val2.$0,
-                            {p.$0 + 1L, p.$1, merge(p.$2, false), p.$3},
-                            {p.$0, p.$1 + 1L, p.$2, merge(p.$3, false)}
-                        )
-                    );
-                {
-                    iter_output,
-                    iter_output.$0 < len1 && 
-                    iter_output.$1 < len2
-                }
+                        );
+                    {
+                        iter_output,
+                        iter_output.$0 < len1 && 
+                        iter_output.$1 < len2
+                    }
+                ),
+                {0L, 0L, appender[bool], appender[bool]}
     );
     # iterate over remaining un-checked elements in both arrays
     let res = if(res.$0 < len1, iterate(res,
