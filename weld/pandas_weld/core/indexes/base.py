@@ -36,7 +36,12 @@ class Index(LazyData):
         return self.expr
 
     def __repr__(self):
-        return "Index of type %s" % str(self.dtype)
+        return "{}(dtype={}, data={})".format(self.__class__.__name__,
+                                              self.dtype,
+                                              repr(self.data))
+
+    def __str__(self):
+        return str(self.data)
 
     def __getitem__(self, item):
         """ Retrieve a portion of the Index
@@ -70,21 +75,9 @@ class Index(LazyData):
             if str(item.weld_type) != str(numpy_to_weld_type('bool')):
                 raise ValueError('expected LazyData of bool to filter Index elements')
 
-            if isinstance(self.expr, LazyData):
-                weld_type = self.expr.weld_type
-            elif isinstance(self.expr, np.ndarray):
-                weld_type = numpy_to_weld_type(self.expr.dtype)
-            else:
-                raise TypeError('expected data in column to be of type LazyData or np.ndarray')
-
             return Index(weld_filter(self.expr,
                                      item.expr,
-                                     weld_type),
+                                     self.weld_type),
                          self.dtype)
         else:
             raise TypeError('expected slice or LazyData of bool in Index.__getitem__')
-
-    def evaluate(self, verbose=True, decode=True, passes=None, num_threads=1,
-                 apply_experimental_transforms=False):
-        return super(LazyData, self).evaluate(verbose, decode, passes,
-                                              num_threads, apply_experimental_transforms)

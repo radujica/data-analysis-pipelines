@@ -144,19 +144,15 @@ class Variable(LazyData):
         """
         return self.read_data(self.read_file_func, self.column_name, (slice(0, n, 1),))
 
-    # TODO: reduce printed expression context if materialized; can be looooooooooooooooong
     def __repr__(self):
-        """ Only a descriptive representation; no data is read """
-        string_representation = """variable: %(column_name)s, dtype: %(dtype)s
-    dimensions: %(dimensions)s
-    attributes: %(attributes)s
-    expression: %(expression)s"""
+        return "{}(column_name={}, dtype={}, dimensions={}, attributes={})".format(self.__class__.__name__,
+                                                                                   self.column_name,
+                                                                                   self.dtype,
+                                                                                   repr(self.dimensions),
+                                                                                   repr(self.attributes))
 
-        return string_representation % {'column_name': self.column_name,
-                                        'dtype': self.dtype,
-                                        'dimensions': self.dimensions,
-                                        'attributes': self.attributes,
-                                        'expression': self.expr}
+    def __str__(self):
+        return str(self.expr)
 
     # this and add are for learning/testing purposes
     def _element_wise_op(self, array, value, operation):

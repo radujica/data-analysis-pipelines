@@ -76,9 +76,19 @@ def replace_slice_defaults(slice_, default_start=0, default_step=1):
     return slice(start, stop, step)
 
 
-def get_expr_or_raw(data):
+def get_expression_or_raw(data):
     if isinstance(data, LazyData):
         return data.expr
     else:
         return data
 
+
+def evaluate_or_raw(data, verbose, decode, passes,
+                    num_threads, apply_experimental_transforms):
+    if isinstance(data, LazyData):
+        return data.evaluate(verbose, decode, passes,
+                             num_threads, apply_experimental_transforms)
+    elif isinstance(data, np.ndarray):
+        return data
+    else:
+        raise TypeError('expected LazyData or np.ndarray')

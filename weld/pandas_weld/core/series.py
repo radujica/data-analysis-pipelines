@@ -1,5 +1,4 @@
 from collections import OrderedDict
-
 from grizzly.encoders import numpy_to_weld_type
 from weld.types import WeldLong, WeldDouble
 from weld.weldobject import WeldObject
@@ -46,7 +45,13 @@ class Series(LazyData):
         return self.expr
 
     def __repr__(self):
-        return "Name:%s\n\tIndex:%s\n\tData:%s" % (self.name, repr(self.index), repr(self.expr))
+        return "{}(name={}, dtype={}, index={})".format(self.__class__.__name__,
+                                                        self.name,
+                                                        self.dtype,
+                                                        repr(self.index))
+
+    def __str__(self):
+        return str(self.data)
 
     def __getitem__(self, item):
         """ Lazy operation to select a subset of the series

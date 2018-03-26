@@ -157,7 +157,13 @@ class LazyData(LazyOpResult):
             self.input_mapping.append(data_id, expr.weld_code, read_func, read_func_args)
 
     def __repr__(self):
-        return repr(self.expr)
+        return "{}(weld_type={}, dimension={}, data_id={})".format(self.__class__.__name__,
+                                                                   self.weld_type,
+                                                                   self.dim,
+                                                                   self.data_id)
+
+    def __str__(self):
+        return str(self.expr)
 
     def evaluate(self, verbose=False, decode=True, passes=None, num_threads=1,
                  apply_experimental_transforms=False):

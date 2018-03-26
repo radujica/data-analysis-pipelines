@@ -6,7 +6,7 @@ from indexes import MultiIndex
 from pandas_weld.weld import weld_filter, weld_element_wise_op, weld_aggregate, weld_merge_single_index, \
     weld_merge_triple_index, weld_index_to_values
 from series import Series
-from utils import replace_slice_defaults, weld_to_numpy_type, get_expr_or_raw
+from utils import replace_slice_defaults, weld_to_numpy_type, get_expression_or_raw, evaluate_or_raw
 import numpy as np
 
 
@@ -29,14 +29,16 @@ class DataFrame(object):
         self.index = index
 
     def __repr__(self):
-        string_representation = """column names:\n\t%(columns)s\nindex names:\n\t%(index)s"""
+        return "{}(index={}, columns={})".format(self.__class__.__name__,
+                                                 repr(self.index),
+                                                 repr(self.data.keys()))
 
-        return string_representation % {'columns': self.data.keys(),
-                                        'index': repr(self.index)}
+    def __str__(self):
+        return "{}\n> Index\n{}\n> Data\n{}".format(self.__class__.__name__,
+                                                    str(self.index),
+                                                    str(self.data))
 
-    # TODO: prettify
-    # TODO: probably better if __str__
-    def evaluate(self, verbose=True, decode=True, passes=None, num_threads=1,
+    def evaluate(self, verbose=False, decode=True, passes=None, num_threads=1,
                  apply_experimental_transforms=False):
         """ Evaluates by creating a str representation of the DataFrame
 
@@ -50,16 +52,14 @@ class DataFrame(object):
 
         """
         materialized_columns = {}
-        # TODO: fix bug; what if not lazydata?
         for column in self.data.items():
-            materialized_columns[column[0]] = column[1].evaluate(verbose=verbose)
+            materialized_columns[column[0]] = evaluate_or_raw(column[1], verbose, decode, passes,
+                                                              num_threads, apply_experimental_transforms)
 
-        string_representation = """%(repr)s\nindex:\n\n%(index)s\ncolumns:\n\t%(columns)s"""
-
-        return string_representation % {'repr': self.__repr__(),
-                                        'index': self.index.evaluate(verbose, decode, passes,
-                                                                     num_threads, apply_experimental_transforms),
-                                        'columns': materialized_columns}
+        return "{}\n> Index\n{}\n> Columns\n{}".format(self.__class__.__name__,
+                                                       self.index.evaluate(verbose, decode, passes,
+                                                                           num_threads, apply_experimental_transforms),
+                                                       materialized_columns)
 
     def __iter__(self):
         for column_name in self.data:
@@ -303,7 +303,6 @@ class DataFrame(object):
 
     # TODO: currently converts everything to float64; should act according to the input types
     # TODO: if there are strings it will fail, while in pandas for sum they are concatenated and prod are ignored
-    # TODO: evaluate index too
     def _aggregate(self, operation, verbose=False, decode=True, passes=None,
                    num_threads=1, apply_experimental_transforms=False):
         assert isinstance(operation, (str, unicode))
@@ -478,7 +477,7 @@ class DataFrame(object):
 
     # noinspection PyMethodMayBeStatic
     def _merge_single(self, index1, index2):
-        data = [get_expr_or_raw(index1), get_expr_or_raw(index2)]
+        data = [get_expression_or_raw(index1), get_expression_or_raw(index2)]
 
         data = weld_merge_single_index(data)
 
@@ -505,8 +504,8 @@ class DataFrame(object):
         index1 = [self._index_to_values(index1.levels[i], index1.labels[i]) for i in xrange(3)]
         index2 = [self._index_to_values(index2.levels[i], index2.labels[i]) for i in xrange(3)]
 
-        data = weld_merge_triple_index([[get_expr_or_raw(index1[i]) for i in xrange(3)],
-                                        [get_expr_or_raw(index2[i]) for i in xrange(3)]])
+        data = weld_merge_triple_index([[get_expression_or_raw(index1[i]) for i in xrange(3)],
+                                        [get_expression_or_raw(index2[i]) for i in xrange(3)]])
 
         return [LazyData(data[i], WeldBit(), 1) for i in xrange(2)]
 

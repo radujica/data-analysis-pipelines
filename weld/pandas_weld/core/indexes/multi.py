@@ -3,6 +3,8 @@ import numpy_weld as npw
 from lazy_data import LazyData
 from collections import OrderedDict
 from grizzly.encoders import numpy_to_weld_type
+
+from pandas_weld.core.utils import evaluate_or_raw
 from pandas_weld.weld import weld_filter
 
 
@@ -55,9 +57,14 @@ class MultiIndex(object):
 
         return cls(levels, labels, names)
 
-    # only names are (already) materialized
     def __repr__(self):
-        return "index names:\n\t%s" % str(self.names)
+        return "{}(names={})".format(self.__class__.__name__,
+                                     self.names)
+
+    def __str__(self):
+        return "{}\n>> Levels\n{}\n>> Labels\n{}".format(self.__class__.__name__,
+                                                         str(self.levels),
+                                                         str(self.labels))
 
     def __getitem__(self, item):
         """ Retrieve a portion of the MultiIndex
@@ -102,19 +109,7 @@ class MultiIndex(object):
         else:
             raise TypeError('expected slice or LazyData of bool in MultiIndex.__getitem__')
 
-    @staticmethod
-    def _evaluate_or_raw(array, verbose, decode, passes,
-                         num_threads, apply_experimental_transforms):
-        if isinstance(array, LazyData):
-            return array.evaluate(verbose, decode, passes,
-                                  num_threads, apply_experimental_transforms)
-        elif isinstance(array, np.ndarray):
-            return array
-        else:
-            raise TypeError('expected LazyData or np.ndarray')
-
-    # TODO: prettify
-    def evaluate(self, verbose=True, decode=True, passes=None, num_threads=1,
+    def evaluate(self, verbose=False, decode=True, passes=None, num_threads=1,
                  apply_experimental_transforms=False):
         """ Evaluates by creating a str representation of the MultiIndex
 
@@ -131,13 +126,11 @@ class MultiIndex(object):
         materialized_labels = OrderedDict()
 
         for i in xrange(len(self.names)):
-            materialized_levels[self.names[i]] = MultiIndex._evaluate_or_raw(self.levels[i], verbose, decode, passes,
-                                                                             num_threads, apply_experimental_transforms)
-            materialized_labels[self.names[i]] = MultiIndex._evaluate_or_raw(self.labels[i], verbose, decode, passes,
-                                                                             num_threads, apply_experimental_transforms)
+            materialized_levels[self.names[i]] = evaluate_or_raw(self.levels[i], verbose, decode, passes,
+                                                                 num_threads, apply_experimental_transforms)
+            materialized_labels[self.names[i]] = evaluate_or_raw(self.labels[i], verbose, decode, passes,
+                                                                 num_threads, apply_experimental_transforms)
 
-        string_representation = """%(repr)s\nlevels:\n\t%(levels)s\nlabels:\n\t%(labels)s"""
-
-        return string_representation % {'repr': repr(self),
-                                        'levels': materialized_levels,
-                                        'labels': materialized_labels}
+        return "{}\n>> Levels\n{}\n>> Labels\n{}".format(self.__class__.__name__,
+                                                         materialized_levels,
+                                                         materialized_labels)

@@ -33,7 +33,13 @@ class RangeIndex(LazyData):
         return self.expr
 
     def __repr__(self):
-        return "RangeIndex with start=%d, stop=%d, step=%d" % (self.start, self.stop, self.step)
+        return "{}(start={}, stop={}, step={})".format(self.__class__.__name__,
+                                                       self.start,
+                                                       self.stop,
+                                                       self.step)
+
+    def __str__(self):
+        return str(self.data)
 
     def __getitem__(self, item):
         """ Retrieve a portion of the RangeIndex
@@ -74,8 +80,3 @@ class RangeIndex(LazyData):
                          np.dtype(np.int64))
         else:
             raise TypeError('expected slice or Series of bool in Index.__getitem__')
-
-    def evaluate(self, verbose=True, decode=True, passes=None, num_threads=1,
-                 apply_experimental_transforms=False):
-        return super(LazyData, self).evaluate(verbose, decode, passes,
-                                              num_threads, apply_experimental_transforms)
