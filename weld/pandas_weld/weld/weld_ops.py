@@ -6,6 +6,7 @@ _decoder = NumPyDecoder()
 
 
 # TODO all: types can be inferred with '?'; is the cost of doing it high?
+# TODO: improve weld code, e.g. tovec -> vecmerger?
 def weld_aggregate(array, operation, weld_type):
     """ Returns operation on the elements in the array.
 
@@ -362,6 +363,7 @@ def weld_standard_deviation(array, weld_type):
     """
     weld_obj = WeldObject(_encoder, _decoder)
 
+    # TODO: method for this
     array_var = weld_obj.update(array)
     if isinstance(array, WeldObject):
         array_var = array.obj_id
@@ -659,3 +661,227 @@ def weld_merge_triple_index(indexes):
                                                              'array6': weld_ids[5]} + '.$3)'
 
     return [weld_objects[0], weld_objects[3]]
+
+
+def weld_groupby(by, by_types, columns, columns_types):
+    """ Groups by the columns in by
+
+    Parameters
+    ----------
+    by : list of np.array / WeldObject
+        the data to group by
+    by_types : list of WeldType
+        corresponding to by
+    columns : list of np.array / WeldObject
+        the data to group
+    columns_types : list of WeldType
+        corresponding to columns
+
+    Returns
+    -------
+    WeldObject
+        representation of the computation
+
+    """
+    weld_obj = WeldObject(_encoder, _decoder)
+
+    # TODO: method to do this
+    by_list_var = []
+    for by_elem in by:
+        by_var = weld_obj.update(by_elem)
+        if isinstance(by_elem, WeldObject):
+            by_var = by_elem.obj_id
+            weld_obj.dependencies[by_var] = by_elem
+        by_list_var.append(by_var)
+
+    columns_list_var = []
+    for column in columns:
+        column_var = weld_obj.update(column)
+        if isinstance(column, WeldObject):
+            column_var = column.obj_id
+            weld_obj.dependencies[column_var] = column
+        columns_list_var.append(column_var)
+
+    weld_template = """
+    let columns = result(
+            for(
+                zip(%(columns)s),
+                appender,
+                |b, i, e|
+                    merge(b, e)
+            )
+    );
+    
+    tovec(
+        result(
+            for(
+                zip(%(by)s, columns),
+                groupmerger[%(by_types)s, %(columns_types)s],
+                |b, i, e|
+                    merge(b, {e.$0, e.$1})
+            )
+        )
+    )"""
+
+    by = 'zip(%s)' % ', '.join(by_list_var) if len(by_list_var) > 1 else '%s' % by_list_var[0]
+    columns = 'zip(%s)' % ', '.join(columns_list_var) if len(columns_list_var) > 1 else '%s' % columns_list_var[0]
+    by_types = '{%s}' % ', '.join([str(k) for k in by_types]) if len(by_types) > 1 else '%s' % by_types[0]
+    columns_types = '{%s}' % ', '.join([str(k) for k in columns_types]) if len(columns_types) > 1 else '%s' % columns_types[0]
+
+    weld_obj.weld_code = weld_template % {'by': by,
+                                          'columns': columns,
+                                          'by_types': by_types,
+                                          'columns_types': columns_types}
+
+    return weld_obj
+
+
+def weld_groupby_aggregate(grouped_df, by_types, columns_types, operation):
+    """ Groups by the columns in by
+
+    Parameters
+    ----------
+    grouped_df : WeldObject
+        DataFrame which has been grouped through weld_groupby
+    by_types : list of WeldType
+        corresponding to by
+    columns_types : list of WeldType
+        corresponding to columns
+    operation : {'+', '*', 'min', 'max', 'mean', 'std'}
+        what operation to apply to grouped rows
+
+    Returns
+    -------
+    WeldObject
+        representation of the computation
+
+    """
+    weld_obj = WeldObject(_encoder, _decoder)
+
+    grouped_df_var = weld_obj.update(grouped_df)
+
+    assert grouped_df_var is None
+
+    grouped_df_var = grouped_df.obj_id
+    weld_obj.dependencies[grouped_df_var] = grouped_df
+
+    weld_template = """
+    tovec(
+        result(
+            for(
+                %(grouped_df)s,
+                dictmerger[%(by_types)s, %(columns_types)s, +],
+                |b, i, e|
+                    let merged = 
+                        result(
+                            for(e.$1,
+                                merger[%(columns_types)s, %(operation)s],
+                                |c, j, f|
+                                    merge(c, f)
+                            )
+                    );
+                    
+                    merge(b, {e.$0, merged})
+            )
+        )
+    )"""
+
+    by_types = '{%s}' % ', '.join([str(k) for k in by_types]) if len(by_types) > 1 else '%s' % by_types[0]
+    columns_types = '{%s}' % ', '.join([str(k) for k in columns_types]) if len(columns_types) > 1 else '%s' % columns_types[0]
+
+    weld_obj.weld_code = weld_template % {'grouped_df': grouped_df_var,
+                                          'operation': operation,
+                                          'by_types': by_types,
+                                          'columns_types': columns_types}
+
+    return weld_obj
+
+
+def weld_get_column(grouped_df, index, is_index=False):
+    """ Gets the (index) column from the grouped DataFrame
+
+    Parameters
+    ----------
+    grouped_df : WeldObject
+        DataFrame which has been grouped through weld_groupby
+    index : int
+        index of the column; the mapping name-to-index is maintained by DataFrameGroupBy
+    is_index : bool
+        to signal if the requested column is in the index
+
+    Returns
+    -------
+    WeldObject
+        representation of the computation
+
+    """
+    weld_obj = WeldObject(_encoder, _decoder)
+
+    grouped_df_var = weld_obj.update(grouped_df)
+
+    assert grouped_df_var is None
+
+    grouped_df_var = grouped_df.obj_id
+    weld_obj.dependencies[grouped_df_var] = grouped_df
+
+    weld_template = """
+    map(
+        %(grouped_df)s,
+        |e|
+            e.$%(index)s
+    )"""
+
+    weld_obj.weld_code = weld_template % {'grouped_df': grouped_df_var,
+                                          'index': '%s' % index if is_index else '1.$%s' % index}
+
+    return weld_obj
+
+
+# TODO: bugged! should be ordered dict
+def weld_unique(array, type):
+    """ Extract the unique elements in the array
+
+    Parameters
+    ----------
+    array : np.ndarray / WeldObject
+        input array
+    type : WeldType
+        of the input array
+
+    Returns
+    -------
+    WeldObject
+        representation of this computation
+
+    """
+    weld_obj = WeldObject(_encoder, _decoder)
+
+    array_var = weld_obj.update(array)
+    if isinstance(array, WeldObject):
+        array_var = array.obj_id
+        weld_obj.dependencies[array_var] = array
+
+    weld_template = """
+    map(
+        tovec(
+            result(
+                for(
+                    map(
+                        %(array)s,
+                        |e| 
+                            {e, 0}
+                    ),
+                    dictmerger[%(type)s, i32, +],
+                    |b, i, e| 
+                        merge(b,e)
+                )
+            )
+        ),
+        |e| 
+            e.$0
+    )"""
+
+    weld_obj.weld_code = weld_template % {'array': array_var,
+                                          'type': type}
+
+    return weld_obj

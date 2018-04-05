@@ -56,6 +56,22 @@ class MultiIndexTests(unittest.TestCase):
         test_equal_multiindex(expected_result, result)
 
     # noinspection PyMethodMayBeStatic
+    # TODO: this is broken! should be OrderedDict
+    def test_from_arrays(self):
+        arrays = [np.array([1, 1, 2, 2]), np.array([3, 4, 3, 4])]
+        names = ['a', 'b']
+
+        result = pdw.MultiIndex.from_arrays(arrays, names)
+
+        expected_result = pdw.MultiIndex([np.array([2, 1]),
+                                          np.array([4, 3])],
+                                         [np.array([0, 0, 1, 1]),
+                                          np.array([0, 1, 0, 1])],
+                                         ['a', 'b'])
+
+        test_equal_multiindex(expected_result, result)
+
+    # noinspection PyMethodMayBeStatic
     def test_getitem_filter(self):
         levels = [LazyData(np.array([1, 2]), WeldLong(), 1), LazyData(np.array([3, 4]), WeldLong(), 1)]
         names = ['a', 'b']

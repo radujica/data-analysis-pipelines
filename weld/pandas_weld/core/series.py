@@ -144,6 +144,7 @@ class Series(LazyData):
         return data
 
     # comparisons are limited to scalars
+    # TODO: perhaps storing boolean masks is more efficient? ~ bitwise-and vs merged for-loop map
     def _comparison(self, other, comparison):
         if not isinstance(other, (str, unicode, int, long, float, bool)):
             raise TypeError('can only compare with scalars')

@@ -4,7 +4,7 @@ from lazy_data import LazyData
 from indexes import Index
 from indexes import MultiIndex
 from pandas_weld.weld import weld_filter, weld_element_wise_op, weld_aggregate, weld_merge_single_index, \
-    weld_merge_triple_index, weld_index_to_values
+    weld_merge_triple_index, weld_index_to_values, weld_groupby
 from series import Series
 from utils import replace_slice_defaults, weld_to_numpy_type, get_expression_or_raw, evaluate_or_raw
 import numpy as np
@@ -15,7 +15,7 @@ class DataFrame(object):
 
     Parameters
     ----------
-    data : dict
+    data : {}
         column names -> data array or LazyData
     index : Index, MultiIndex, or RangeIndex
 
@@ -24,9 +24,30 @@ class DataFrame(object):
     pandas.DataFrame
 
     """
+    def _gather_dtypes(self, data):
+        dtypes = {}
+        for k, v in data.items():
+            if isinstance(v, LazyData):
+                dtype = weld_to_numpy_type(v.weld_type)
+            elif isinstance(v, np.ndarray):
+                dtype = v.dtype
+            else:
+                raise ValueError('expected data to contain LazyData or np.array')
+
+            dtypes[k] = dtype
+
+        return dtypes
+
     def __init__(self, data, index):
         self.data = data
         self.index = index
+        self._dtypes = self._gather_dtypes(data)
+
+    @property
+    def dtypes(self):
+        return Series(np.array(self._dtypes.values(), dtype=np.object),
+                      np.dtype(np.object),
+                      Index(self._dtypes.keys(), dtype=np.dtype(np.str)))
 
     def __repr__(self):
         return "{}(index={}, columns={})".format(self.__class__.__name__,
@@ -571,3 +592,59 @@ class DataFrame(object):
         new_index = new_data[new_data.keys()[0]].index
 
         return DataFrame(new_data, new_index)
+
+    # noinspection SpellCheckingInspection
+    # TODO: extremely limited by weld: can only group on 1 column and have only 1 other column
+    def groupby(self, by):
+        """ Group by one or more columns
+
+        Parameters
+        ----------
+        by : str or list of str
+            to group by
+
+        Returns
+        -------
+        DataFrameGroupBy
+
+        """
+        # to avoid circular dependency
+        from pandas_weld.core.groupby import DataFrameGroupBy
+
+        if isinstance(by, str):
+            by_series = self[by]
+            by_weld_types = [by_series.weld_type]
+            by_data = [get_expression_or_raw(by_series)]
+            by_types = [by_series.dtype]
+
+            column_series = [self[column] for column in self if column is not by]
+            # need by as a list
+            by = [by]
+        elif isinstance(by, list):
+            if len(by) < 1:
+                raise ValueError('expected a list with at least a value')
+
+            by_series = [self[column] for column in by]
+            by_weld_types = [k.weld_type for k in by_series]
+            by_data = [get_expression_or_raw(column) for column in by_series]
+            by_types = [column.dtype for column in by_series]
+
+            column_series = [self[column] for column in self if column not in by]
+
+        else:
+            raise TypeError('expected one or more column names')
+
+        column_names = [column.name for column in column_series]
+        column_types = [column.dtype for column in column_series]
+        column_weld_types = [column.weld_type for column in column_series]
+
+        columns_to_group = [get_expression_or_raw(self[column]) for column in column_names]
+
+        return DataFrameGroupBy(weld_groupby(by_data,
+                                             by_weld_types,
+                                             columns_to_group,
+                                             column_weld_types),
+                                by,
+                                by_types,
+                                column_names,
+                                column_types)

@@ -23,22 +23,24 @@ class Index(LazyData):
     Index
 
     """
-    def __init__(self, data, dtype):
+    def __init__(self, data, dtype, name=None):
         if not isinstance(data, (np.ndarray, WeldObject)):
             raise TypeError('expected np.ndarray or WeldObject in Series.__init__')
 
         super(Index, self).__init__(data, numpy_to_weld_type(dtype), 1)
 
         self.dtype = dtype
+        self.name = name
 
     @property
     def data(self):
         return self.expr
 
     def __repr__(self):
-        return "{}(dtype={}, data={})".format(self.__class__.__name__,
-                                              self.dtype,
-                                              repr(self.data))
+        return "{}(name={}, dtype={}, data={})".format(self.__class__.__name__,
+                                                       self.name,
+                                                       self.dtype,
+                                                       repr(self.data))
 
     def __str__(self):
         return str(self.data)

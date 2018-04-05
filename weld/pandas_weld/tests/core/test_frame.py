@@ -254,6 +254,31 @@ class DataFrameTests(unittest.TestCase):
         test_equal_series(expected_result['col1'], result['col1'])
         test_equal_series(expected_result['col2'], result['col2'])
 
+    # noinspection PyMethodMayBeStatic
+    # TODO: 2 things that need fixing: MultiIndex.from_arrays' ordereddict & multiple_columns merger
+    def test_groupby_single_column_sum(self):
+        df = pdw.DataFrame({'col1': np.array([1, 1, 2, 3, 3], dtype=np.int32),
+                            'col2': np.array([3, 4, 5, 5, 6], dtype=np.int64),
+                            'col3': np.array([5., 6., 7., 7., 7.], dtype=np.float32)},
+                           pdw.MultiIndex.from_product([np.array([1, 1, 2, 3, 3], dtype=np.int32),
+                                                        np.array([5., 6., 7., 7., 7.], dtype=np.float32)],
+                                                       ['i32', 'f32']))
+
+        result = df.groupby('col1').sum()
+
+        expected_result = pdw.DataFrame({'col2': np.array([7, 5, 11], dtype=np.int64),
+                                         'col3': np.array([11., 7., 14.], dtype=np.float32)},
+                                        pdw.Index(np.array([1, 2, 3], dtype=np.int32), np.dtype('int32'), 'col1'))
+
+        # TODO: test equal 1d index method (both rangeindex and index should work)
+        np.testing.assert_array_equal(evaluate_if_necessary(expected_result.index),
+                                      evaluate_if_necessary(result.index))
+        test_equal_series(expected_result['col2'], result['col2'])
+        test_equal_series(expected_result['col3'], result['col3'])
+
+    def test_groupby_multiple_columns_sum(self):
+        raise NotImplementedError
+
 
 def main():
     unittest.main()

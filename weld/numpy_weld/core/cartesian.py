@@ -264,7 +264,7 @@ def cartesian_product_indices(arrays):
         elif isinstance(arrays_copied[i], np.ndarray):
             weld_type = numpy_to_weld_type(arrays_copied[i].dtype)
         else:
-            raise NotImplementedError
+            raise TypeError('expected LazyData or np.ndarray')
 
         weld_types.append(weld_type)
 

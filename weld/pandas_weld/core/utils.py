@@ -79,8 +79,19 @@ def replace_slice_defaults(slice_, default_start=0, default_step=1):
 def get_expression_or_raw(data):
     if isinstance(data, LazyData):
         return data.expr
-    else:
+    elif isinstance(data, np.ndarray):
         return data
+    else:
+        raise TypeError('expected LazyData or np.ndarray')
+
+
+def get_weld_type(data):
+    if isinstance(data, LazyData):
+        return data.weld_type
+    if isinstance(data, np.ndarray):
+        return numpy_to_weld_type(data.dtype)
+    else:
+        raise TypeError('expected LazyData or np.ndarray')
 
 
 def evaluate_or_raw(data, verbose, decode, passes,

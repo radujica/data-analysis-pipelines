@@ -3,9 +3,8 @@ import numpy_weld as npw
 from lazy_data import LazyData
 from collections import OrderedDict
 from grizzly.encoders import numpy_to_weld_type
-
-from pandas_weld.core.utils import evaluate_or_raw
-from pandas_weld.weld import weld_filter
+from pandas_weld.core.utils import evaluate_or_raw, get_expression_or_raw, get_weld_type
+from pandas_weld.weld import weld_filter, weld_unique
 
 
 class MultiIndex(object):
@@ -56,6 +55,15 @@ class MultiIndex(object):
         labels = npw.cartesian_product_indices(levels)
 
         return cls(levels, labels, names)
+
+    @classmethod
+    def from_arrays(cls, arrays, names):
+
+        weld_types = [get_weld_type(k) for k in arrays]
+        arrays = [get_expression_or_raw(k) for k in arrays]
+        levels = [LazyData(weld_unique(arrays[k], weld_types[k]), weld_types[k], 1) for k in xrange(len(arrays))]
+
+        return cls.from_product(levels, names)
 
     def __repr__(self):
         return "{}(names={})".format(self.__class__.__name__,
