@@ -279,6 +279,22 @@ class DataFrameTests(unittest.TestCase):
     def test_groupby_multiple_columns_sum(self):
         raise NotImplementedError
 
+    def test_reset_index(self):
+        result = self.df.reset_index()
+
+        expected_result = pdw.DataFrame({'col1': np.array([1, 2, 3, 4]),
+                                         'col2': np.array([5., 6., 7., 8.]),
+                                         'a': np.array([1, 1, 2, 2]),
+                                         'b': np.array([3, 4, 3, 4])},
+                                        pdw.RangeIndex(0, 4, 1))
+
+        np.testing.assert_array_equal(evaluate_if_necessary(expected_result.index),
+                                      evaluate_if_necessary(result.index))
+        test_equal_series(expected_result['col1'], result['col1'])
+        test_equal_series(expected_result['col2'], result['col2'])
+        test_equal_series(expected_result['a'], result['a'])
+        test_equal_series(expected_result['b'], result['b'])
+
 
 def main():
     unittest.main()

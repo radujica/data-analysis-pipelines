@@ -1,12 +1,11 @@
 from grizzly.encoders import numpy_to_weld_type
-from weld.types import WeldBit
+from weld.types import WeldBit, WeldLong
 from lazy_data import LazyData
-from indexes import Index
-from indexes import MultiIndex
+from indexes import Index, MultiIndex, RangeIndex
 from pandas_weld.weld import weld_filter, weld_element_wise_op, weld_aggregate, weld_merge_single_index, \
-    weld_merge_triple_index, weld_index_to_values, weld_groupby
+    weld_merge_triple_index, weld_index_to_values, weld_groupby, weld_count
 from series import Series
-from utils import replace_slice_defaults, weld_to_numpy_type, get_expression_or_raw, evaluate_or_raw
+from utils import replace_slice_defaults, weld_to_numpy_type, get_expression_or_raw, evaluate_or_raw, get_weld_type
 import numpy as np
 
 
@@ -648,3 +647,27 @@ class DataFrame(object):
                                 by_types,
                                 column_names,
                                 column_types)
+
+    def reset_index(self):
+        new_columns = {}
+
+        # the index
+        if isinstance(self.index, (Index, RangeIndex)):
+            new_columns[self.index.name] = self.index
+        else:
+            # is MultiIndex
+            for i in xrange(len(self.index.levels)):
+                new_columns[self.index.names[i]] = \
+                    LazyData(weld_index_to_values(get_expression_or_raw(self.index.levels[i]),
+                                                  get_expression_or_raw(self.index.labels[i])),
+                             get_weld_type(self.index.labels[i]),
+                             1)
+
+        # the data/columns
+        new_columns.update(self.data)
+
+        # assumes at least 1 column
+        a_column = get_expression_or_raw(new_columns.values()[0])
+        new_index = RangeIndex(0, LazyData(weld_count(a_column), WeldLong(), 0).evaluate(), 1)
+
+        return DataFrame(new_columns, new_index)
