@@ -1,9 +1,8 @@
-import numpy as np
 import numpy_weld as npw
 from lazy_data import LazyData
 from collections import OrderedDict
 from grizzly.encoders import numpy_to_weld_type
-from pandas_weld.core.utils import evaluate_or_raw, get_expression_or_raw, get_weld_type
+from pandas_weld.core.utils import evaluate_or_raw, get_expression_or_raw, get_weld_type, get_weld_info
 from pandas_weld.weld import weld_filter, weld_unique
 
 
@@ -99,13 +98,7 @@ class MultiIndex(object):
             # TODO: filter unnecessary levels too
             new_labels = []
             for label in self.labels:
-                if isinstance(label, LazyData):
-                    weld_type = label.weld_type
-                    label = label.expr
-                elif isinstance(label, np.ndarray):
-                    weld_type = numpy_to_weld_type(label.dtype)
-                else:
-                    raise TypeError('expected data in column to be of type LazyData or np.ndarray')
+                label, weld_type = get_weld_info(label, True, True)
 
                 new_labels.append(LazyData(weld_filter(label,
                                                        item.expr,

@@ -5,7 +5,8 @@ from indexes import Index, MultiIndex, RangeIndex
 from pandas_weld.weld import weld_filter, weld_element_wise_op, weld_aggregate, weld_merge_single_index, \
     weld_merge_triple_index, weld_index_to_values, weld_groupby, weld_count
 from series import Series
-from utils import replace_slice_defaults, weld_to_numpy_type, get_expression_or_raw, evaluate_or_raw, get_weld_type
+from utils import replace_slice_defaults, get_expression_or_raw, evaluate_or_raw, get_weld_type, \
+    get_dtype, get_weld_info
 import numpy as np
 
 
@@ -26,14 +27,7 @@ class DataFrame(object):
     def _gather_dtypes(self, data):
         dtypes = {}
         for k, v in data.items():
-            if isinstance(v, LazyData):
-                dtype = weld_to_numpy_type(v.weld_type)
-            elif isinstance(v, np.ndarray):
-                dtype = v.dtype
-            else:
-                raise ValueError('expected data to contain LazyData or np.array')
-
-            dtypes[k] = dtype
+            dtypes[k] = get_dtype(v)
 
         return dtypes
 
@@ -107,18 +101,13 @@ class DataFrame(object):
         """
         if isinstance(item, str):
             element = self.data[item]
-            if isinstance(element, LazyData):
-                return Series(element.expr,
-                              weld_to_numpy_type(element.weld_type),
-                              self.index,
-                              item)
-            elif isinstance(element, np.ndarray):
-                return Series(element,
-                              element.dtype,
-                              self.index,
-                              item)
-            else:
-                raise TypeError('column is neither LazyData nor np.ndarray')
+
+            data, dtype = get_weld_info(element, expression=True, dtype=True)
+
+            return Series(data,
+                          dtype,
+                          self.index,
+                          item)
         elif isinstance(item, slice):
             item = replace_slice_defaults(item)
 
@@ -151,15 +140,7 @@ class DataFrame(object):
             for column_name in self:
                 data = self.data[column_name]
 
-                if isinstance(data, LazyData):
-                    weld_type = data.weld_type
-                    dtype = weld_to_numpy_type(weld_type)
-                    data = data.expr
-                elif isinstance(data, np.ndarray):
-                    weld_type = numpy_to_weld_type(data.dtype)
-                    dtype = data.dtype
-                else:
-                    raise TypeError('expected data in column to be of type LazyData or np.ndarray')
+                data, weld_type, dtype = get_weld_info(data, expression=True, weld_type=True, dtype=True)
 
                 new_data[column_name] = Series(weld_filter(data,
                                                            item.expr,
@@ -505,13 +486,7 @@ class DataFrame(object):
 
     # noinspection PyMethodMayBeStatic
     def _index_to_values(self, levels, labels):
-        if isinstance(levels, LazyData):
-            weld_type = levels.weld_type
-            levels = levels.expr
-        elif isinstance(levels, np.ndarray):
-            weld_type = numpy_to_weld_type(levels.dtype)
-        else:
-            raise TypeError('expected levels to be of type LazyData or np.ndarray')
+        levels, weld_type = get_weld_info(levels, expression=True, weld_type=True)
 
         if isinstance(labels, LazyData):
             labels = labels.expr

@@ -88,10 +88,31 @@ def get_expression_or_raw(data):
 def get_weld_type(data):
     if isinstance(data, LazyData):
         return data.weld_type
-    if isinstance(data, np.ndarray):
+    elif isinstance(data, np.ndarray):
         return numpy_to_weld_type(data.dtype)
     else:
         raise TypeError('expected LazyData or np.ndarray')
+
+
+def get_dtype(data):
+    if isinstance(data, LazyData):
+        return weld_to_numpy_type(data.weld_type)
+    elif isinstance(data, np.ndarray):
+        return data.dtype
+    else:
+        raise TypeError('expected LazyData or np.ndarray')
+
+
+def get_weld_info(data, expression=False, weld_type=False, dtype=False):
+    result = []
+    if expression:
+        result.append(get_expression_or_raw(data))
+    if weld_type:
+        result.append(get_weld_type(data))
+    if dtype:
+        result.append(get_dtype(data))
+
+    return tuple(result)
 
 
 def evaluate_or_raw(data, verbose, decode, passes,
