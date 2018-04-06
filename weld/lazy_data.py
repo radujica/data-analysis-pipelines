@@ -141,9 +141,9 @@ class LazyData(LazyOpResult):
 
         return data_id
 
+    # data_id behaves like a flag for lazily-parsed data or raw (i.e. already in memory)
     def __init__(self, expr, weld_type, dim, data_id=None, read_func=None, read_func_args=None):
         super(LazyData, self).__init__(expr, weld_type, dim)
-        # behaves like a flag for lazily-parsed data or raw (i.e. already in memory)
         self.data_id = data_id
 
         # only want to record new id's
@@ -157,10 +157,9 @@ class LazyData(LazyOpResult):
             self.input_mapping.append(data_id, expr.weld_code, read_func, read_func_args)
 
     def __repr__(self):
-        return "{}(weld_type={}, dimension={}, data_id={})".format(self.__class__.__name__,
-                                                                   self.weld_type,
-                                                                   self.dim,
-                                                                   self.data_id)
+        return "{}(weld_type={}, dimension={})".format(self.__class__.__name__,
+                                                       self.weld_type,
+                                                       self.dim)
 
     def __str__(self):
         return str(self.expr)
