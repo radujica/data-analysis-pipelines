@@ -5,7 +5,7 @@ from weld.weldobject import WeldObject
 from lazy_data import LazyData
 from indexes import Index
 from pandas_weld.weld import weld_aggregate, weld_compare, weld_filter, weld_element_wise_op, weld_count, weld_mean, \
-    weld_standard_deviation
+    weld_standard_deviation, weld_udf
 from utils import subset, replace_slice_defaults
 import numpy as np
 
@@ -30,6 +30,7 @@ class Series(LazyData):
 
     """
 
+    # TODO: accept index as None and encode as RangeIndex(stop=len(self.expr))
     def __init__(self, data, dtype, index, name=None):
         if not isinstance(data, (np.ndarray, WeldObject)):
             raise TypeError('expected np.ndarray or WeldObject in Series.__init__')
@@ -275,4 +276,44 @@ class Series(LazyData):
         return Series(values.astype(np.float64),
                       np.dtype(np.float64),
                       Index(index, np.dtype(np.float64)),
+                      self.name)
+
+    # TODO: implement something like reduce for single result? though this is not supported even by pandas
+    def map(self, weld_template, mapping):
+        """ Apply custom weld code to this series
+
+        Cannot accept lambdas such as pandas' map, though behaves in a similar fashion
+
+        Parameters
+        ----------
+        weld_template : str
+            the code that will be recorded for execution; it is assumed that the
+            length of the resulting Series will be the same after execution
+        mapping : dict
+            maps placeholders from weld_template to either arrays (np.array or WeldObject) or scalars;
+            self (this Series) is included by default as 'self'
+
+        Returns
+        -------
+        Series
+            with the same index
+
+        Examples
+        --------
+        >>> series = Series(np.array([1, 3, 4]), np.dtype(np.int64), RangeIndex(0, 3, 1))
+        >>> weld_template = "map(%(self)s, |e| e + %(scalar)s)"
+        >>> mapping = {'scalar': '2L'}
+        >>> series.map(weld_template, mapping).evaluate()
+        [3 5 6]
+
+        """
+        if not isinstance(mapping, dict):
+            raise TypeError('mapping must be a dict mapping string placeholders to data')
+
+        mapping.update({'self': self.expr})
+
+        return Series(weld_udf(weld_template,
+                               mapping),
+                      self.dtype,
+                      self.index,
                       self.name)

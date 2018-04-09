@@ -164,6 +164,18 @@ class SeriesTests(unittest.TestCase):
 
         test_equal_series(expected_result, result)
 
+    # noinspection PyMethodMayBeStatic
+    def test_map_weld_code(self):
+        series = Series(np.array([1, 3, 4]), np.dtype(np.int64), RangeIndex(0, 3, 1))
+
+        weld_template = "map(%(self)s, |e| e + %(scalar)s)"
+        mapping = {'scalar': '2L'}
+        result = series.map(weld_template, mapping)
+
+        expected_result = Series(np.array([3, 5, 6]), np.dtype(np.int64), RangeIndex(0, 3, 1))
+
+        test_equal_series(expected_result, result)
+
 
 def main():
     unittest.main()

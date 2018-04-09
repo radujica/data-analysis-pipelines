@@ -1,3 +1,4 @@
+import numpy as np
 from grizzly.encoders import NumPyEncoder, NumPyDecoder
 from weld.weldobject import WeldObject
 
@@ -883,5 +884,53 @@ def weld_unique(array, type):
 
     weld_obj.weld_code = weld_template % {'array': array_var,
                                           'type': type}
+
+    return weld_obj
+
+
+def weld_udf(weld_template, mapping):
+    """ Apply weld_code given arrays and scalars as input
+
+    The placeholders in the weld_code are replaced in the same order
+    as passed into arrays
+
+    Parameters
+    ----------
+    weld_template : str
+        the code that will be recorded for execution
+    mapping : dict
+        maps placeholders to either arrays (np.array or WeldObject) or scalars
+
+    Returns
+    -------
+        the result of the inputted weld_code computation
+
+    Examples
+    -------
+    >>> array = np.array([1, 3, 4])
+    >>> weld_template = "map(%(array)s, |e| e + %(scalar)s)"
+    >>> mapping = {'array': array, 'scalar': '2L'}
+    >>> result = weld_udf(weld_template, mapping)
+    >>> LazyData(result, WeldLong(), 1).evaluate()
+    [3 5 6]
+
+    """
+    weld_obj = WeldObject(_encoder, _decoder)
+
+    # update the mapping with the weld var's (array_var in other methods)
+    for k, v in mapping.items():
+        # does not need to be registered if not np.array or weldobject
+        if not isinstance(v, (np.ndarray, WeldObject)):
+            continue
+
+        array_var = weld_obj.update(v)
+
+        if isinstance(v, WeldObject):
+            array_var = v.obj_id
+            weld_obj.dependencies[array_var] = v
+
+        mapping.update({k: array_var})
+
+    weld_obj.weld_code = weld_template % mapping
 
     return weld_obj
