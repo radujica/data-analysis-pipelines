@@ -1,14 +1,11 @@
 import numpy as np
 from grizzly.encoders import NumPyEncoder, NumPyDecoder
-from weld.types import WeldInt, py_object, CDLL, RTLD_GLOBAL
 from weld.weldobject import WeldObject
-import os
 
 _encoder = NumPyEncoder()
 _decoder = NumPyDecoder()
 
 
-# TODO all: types can be inferred with '?'; is the cost of doing it high?
 # TODO: improve weld code, e.g. tovec -> vecmerger?
 def weld_aggregate(array, operation, weld_type):
     """ Returns operation on the elements in the array.
@@ -52,8 +49,7 @@ def weld_aggregate(array, operation, weld_type):
     return weld_obj
 
 
-# TODO: replace with slice? apparently it exists
-def weld_subset(array, slice_, weld_type):
+def weld_subset(array, slice_):
     """ Return a subset of the input array
 
     Parameters
@@ -62,8 +58,6 @@ def weld_subset(array, slice_, weld_type):
         1-dimensional array
     slice_ : slice
         subset to return
-    weld_type : WeldType
-        type of each element in the array
 
     Returns
     -------
@@ -79,26 +73,33 @@ def weld_subset(array, slice_, weld_type):
         array_var = array.obj_id
         weld_obj.dependencies[array_var] = array
 
-    weld_template = """
-    result(
-        for(
-            iter(%(array)s, %(slice_start)s, %(slice_stop)s, %(slice_step)s),
-            appender[%(type)s],
-            |b: appender[%(type)s], i: i64, n: %(type)s| 
-                merge(b, n)
-        )  
-    )"""
+    if slice_.step == 1:
+        weld_template = """
+        slice(
+            %(array)s,
+            %(slice_start)s,
+            %(slice_stop)s
+        )"""
+    else:
+        weld_template = """
+        result(
+            for(
+                iter(%(array)s, %(slice_start)s, %(slice_stop)s, %(slice_step)s),
+                appender,
+                |b, i, n| 
+                    merge(b, n)
+            )  
+        )"""
 
     weld_obj.weld_code = weld_template % {'array': array_var,
-                                          'type': weld_type,
-                                          'slice_start': '%sL' % slice_.start,
-                                          'slice_stop': '%sL' % slice_.stop,
-                                          'slice_step': '%sL' % slice_.step}
+                                          'slice_start': 'i64(%s)' % slice_.start,
+                                          'slice_stop': 'i64(%s)' % slice_.stop,
+                                          'slice_step': 'i64(%s)' % slice_.step}
 
     return weld_obj
 
 
-def weld_filter(array, bool_array, weld_type):
+def weld_filter(array, bool_array):
     """ Returns a new array only with the elements with a corresponding
     True in bool_array
 
@@ -108,8 +109,6 @@ def weld_filter(array, bool_array, weld_type):
         input array
     bool_array : np.ndarray / WeldObject
         array of bool with True for elements in array desired in the result array
-    weld_type : WeldType
-        type of each element in the input array
 
     Returns
     -------
@@ -133,8 +132,8 @@ def weld_filter(array, bool_array, weld_type):
     result(
         for(
             zip(%(array)s, %(bool_array)s),
-            appender[%(type)s],
-            |b: appender[%(type)s], i: i64, e: {%(type)s, bool}| 
+            appender,
+            |b, i, e| 
                 if (e.$1, 
                     merge(b, e.$0), 
                     b)
@@ -142,8 +141,7 @@ def weld_filter(array, bool_array, weld_type):
     )"""
 
     weld_obj.weld_code = weld_template % {'array': array_var,
-                                          'bool_array': bool_array_var,
-                                          'type': weld_type}
+                                          'bool_array': bool_array_var}
 
     return weld_obj
 
@@ -337,7 +335,7 @@ def weld_mean(array, weld_type):
         for(
             %(array)s,
             merger[%(type)s, +],
-            |b, i: i64, n: %(type)s|
+            |b, i, n|
                 merge(b, n)
         );
     f64(result(sum)) / f64(len(%(array)s))"""
@@ -366,7 +364,6 @@ def weld_standard_deviation(array, weld_type):
     """
     weld_obj = WeldObject(_encoder, _decoder)
 
-    # TODO: method for this
     array_var = weld_obj.update(array)
     if isinstance(array, WeldObject):
         array_var = array.obj_id
@@ -688,7 +685,6 @@ def weld_groupby(by, by_types, columns, columns_types):
     """
     weld_obj = WeldObject(_encoder, _decoder)
 
-    # TODO: method to do this
     by_list_var = []
     for by_elem in by:
         by_var = weld_obj.update(by_elem)
@@ -714,7 +710,6 @@ def weld_groupby(by, by_types, columns, columns_types):
                     merge(b, e)
             )
     );
-    
     tovec(
         result(
             for(

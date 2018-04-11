@@ -143,8 +143,7 @@ class DataFrame(object):
                 data, weld_type, dtype = get_weld_info(data, expression=True, weld_type=True, dtype=True)
 
                 new_data[column_name] = Series(weld_filter(data,
-                                                           item.expr,
-                                                           weld_type),
+                                                           item.expr),
                                                dtype,
                                                self.index,
                                                column_name)

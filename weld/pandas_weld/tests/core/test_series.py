@@ -42,6 +42,7 @@ class SeriesTests(unittest.TestCase):
 
         test_equal_series(expected_result, result)
 
+    # noinspection PyMethodMayBeStatic
     def test_getitem_slice(self):
         weld_type = numpy_to_weld_type('int64')
         data = LazyData(np.array([1, 2, 3]), weld_type, 1)

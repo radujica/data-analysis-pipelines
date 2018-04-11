@@ -98,8 +98,7 @@ class Series(LazyData):
             new_index = self.index[item]
 
             return Series(weld_filter(self.expr,
-                                      item.expr,
-                                      self.weld_type),
+                                      item.expr),
                           self.dtype,
                           new_index,
                           self.name)

@@ -48,8 +48,7 @@ def subset(array, slice_):
         raise TypeError('expected array as LazyData or np.ndarray')
 
     return LazyData(weld_subset(array,
-                                slice_,
-                                weld_type),
+                                slice_),
                     weld_type,
                     1)
 

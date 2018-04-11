@@ -75,8 +75,7 @@ class RangeIndex(LazyData):
                 raise ValueError('expected series of bool to filter Index elements')
 
             return Index(weld_filter(self.expr,
-                                     item.expr,
-                                     numpy_to_weld_type(np.dtype(np.int64))),
+                                     item.expr),
                          np.dtype(np.int64))
         else:
             raise TypeError('expected slice or Series of bool in Index.__getitem__')

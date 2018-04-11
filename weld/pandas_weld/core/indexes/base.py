@@ -78,8 +78,7 @@ class Index(LazyData):
                 raise ValueError('expected LazyData of bool to filter Index elements')
 
             return Index(weld_filter(self.expr,
-                                     item.expr,
-                                     self.weld_type),
+                                     item.expr),
                          self.dtype)
         else:
             raise TypeError('expected slice or LazyData of bool in Index.__getitem__')

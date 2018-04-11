@@ -101,8 +101,7 @@ class MultiIndex(object):
                 label, weld_type = get_weld_info(label, True, True)
 
                 new_labels.append(LazyData(weld_filter(label,
-                                                       item.expr,
-                                                       weld_type),
+                                                       item.expr),
                                            weld_type,
                                            1))
 
