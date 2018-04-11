@@ -282,7 +282,9 @@ class Series(LazyData):
     def map(self, weld_template, mapping):
         """ Apply custom weld code to this series
 
-        Cannot accept lambdas such as pandas' map, though behaves in a similar fashion
+        Cannot accept lambdas such as pandas' map, though behaves in a similar fashion.
+
+        Can also work with dynamically loaded C udf (see test_series)
 
         Parameters
         ----------

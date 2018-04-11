@@ -1,6 +1,8 @@
 import numpy as np
 from grizzly.encoders import NumPyEncoder, NumPyDecoder
+from weld.types import WeldInt, py_object, CDLL, RTLD_GLOBAL
 from weld.weldobject import WeldObject
+import os
 
 _encoder = NumPyEncoder()
 _decoder = NumPyDecoder()
@@ -890,9 +892,6 @@ def weld_unique(array, type):
 
 def weld_udf(weld_template, mapping):
     """ Apply weld_code given arrays and scalars as input
-
-    The placeholders in the weld_code are replaced in the same order
-    as passed into arrays
 
     Parameters
     ----------

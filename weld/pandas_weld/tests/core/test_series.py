@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from grizzly.encoders import numpy_to_weld_type
+from grizzly.encoders import numpy_to_weld_type, WeldObject
 from lazy_data import LazyData
 from pandas_weld import Series, RangeIndex, MultiIndex, Index
 from indexes import test_equal_multiindex
@@ -169,6 +169,21 @@ class SeriesTests(unittest.TestCase):
         series = Series(np.array([1, 3, 4]), np.dtype(np.int64), RangeIndex(0, 3, 1))
 
         weld_template = "map(%(self)s, |e| e + %(scalar)s)"
+        mapping = {'scalar': '2L'}
+        result = series.map(weld_template, mapping)
+
+        expected_result = Series(np.array([3, 5, 6]), np.dtype(np.int64), RangeIndex(0, 3, 1))
+
+        test_equal_series(expected_result, result)
+
+    # noinspection PyMethodMayBeStatic
+    def test_map_weld_cudf(self):
+        import os
+        WeldObject.load_binary(os.path.dirname(__file__) + '/cudf/udf_c.so')
+
+        series = Series(np.array([1, 3, 4]), np.dtype(np.int64), RangeIndex(0, 3, 1))
+
+        weld_template = "cudf[udf_add, vec[i64]](%(self)s, %(scalar)s)"
         mapping = {'scalar': '2L'}
         result = series.map(weld_template, mapping)
 
