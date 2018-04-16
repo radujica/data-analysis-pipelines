@@ -2,7 +2,7 @@ import numpy as np
 from grizzly.encoders import NumPyEncoder, NumPyDecoder, numpy_to_weld_type
 from weld.types import WeldLong
 from weld.weldobject import WeldObject
-from lazy_data import LazyData
+from lazy_result import LazyResult
 
 # the methods are only intended to work with numpy, so have a single encoder/decoder
 _encoder = NumPyEncoder()
@@ -67,7 +67,7 @@ def duplicate_elements_indices(array, n, cartesian=False):
     [0, 0, 1, 1, 2, 2]
 
     """
-    if isinstance(array, LazyData):
+    if isinstance(array, LazyResult):
         weld_type = array.weld_type
         array = array.expr
     elif isinstance(array, np.ndarray):
@@ -75,9 +75,9 @@ def duplicate_elements_indices(array, n, cartesian=False):
     else:
         raise NotImplementedError
 
-    return LazyData(_duplicate_elements_indices(array, n, weld_type, cartesian),
-                    WeldLong(),
-                    1)
+    return LazyResult(_duplicate_elements_indices(array, n, weld_type, cartesian),
+                      WeldLong(),
+                      1)
 
 
 def _duplicate_array_indices(array, n, weld_type, cartesian=False):
@@ -136,7 +136,7 @@ def duplicate_array_indices(array, n, cartesian=False):
     [0, 1, 2, 0, 1, 2]
 
     """
-    if isinstance(array, LazyData):
+    if isinstance(array, LazyResult):
         weld_type = array.weld_type
         array = array.expr
     elif isinstance(array, np.ndarray):
@@ -144,9 +144,9 @@ def duplicate_array_indices(array, n, cartesian=False):
     else:
         raise NotImplementedError
 
-    return LazyData(_duplicate_array_indices(array, n, weld_type, cartesian),
-                    WeldLong(),
-                    1)
+    return LazyResult(_duplicate_array_indices(array, n, weld_type, cartesian),
+                      WeldLong(),
+                      1)
 
 
 # helper class to name pair elements in _cartesian_product_indices
@@ -258,7 +258,7 @@ def cartesian_product_indices(arrays):
     weld_types = []
 
     for i in xrange(number_of_arrays):
-        if isinstance(arrays_copied[i], LazyData):
+        if isinstance(arrays_copied[i], LazyResult):
             weld_type = arrays_copied[i].weld_type
             arrays_copied[i] = arrays_copied[i].expr
         elif isinstance(arrays_copied[i], np.ndarray):
@@ -270,4 +270,4 @@ def cartesian_product_indices(arrays):
 
     weld_objects = _cartesian_product_indices(arrays_copied, weld_types, number_of_arrays)
 
-    return [LazyData(weld_objects[k], WeldLong(), 1) for k in xrange(number_of_arrays)]
+    return [LazyResult(weld_objects[k], WeldLong(), 1) for k in xrange(number_of_arrays)]

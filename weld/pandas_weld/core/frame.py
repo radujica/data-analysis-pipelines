@@ -1,6 +1,6 @@
 from grizzly.encoders import numpy_to_weld_type
 from weld.types import WeldBit, WeldLong
-from lazy_data import LazyData
+from lazy_result import LazyResult
 from indexes import Index, MultiIndex, RangeIndex
 from pandas_weld.weld import weld_filter, weld_element_wise_op, weld_aggregate, weld_merge_single_index, \
     weld_merge_triple_index, weld_index_to_values, weld_groupby, weld_count
@@ -24,7 +24,8 @@ class DataFrame(object):
     pandas.DataFrame
 
     """
-    def _gather_dtypes(self, data):
+    @staticmethod
+    def _gather_dtypes(data):
         dtypes = {}
         for k, v in data.items():
             dtypes[k] = get_dtype(v)
@@ -66,9 +67,9 @@ class DataFrame(object):
 
         """
         materialized_columns = {}
-        for column in self.data.items():
-            materialized_columns[column[0]] = evaluate_or_raw(column[1], verbose, decode, passes,
-                                                              num_threads, apply_experimental_transforms)
+        for k, v in self.data.items():
+            materialized_columns[k] = evaluate_or_raw(v, verbose, decode, passes,
+                                                      num_threads, apply_experimental_transforms)
 
         return "{}\n> Index\n{}\n> Columns\n{}".format(self.__class__.__name__,
                                                        self.index.evaluate(verbose, decode, passes,
@@ -77,7 +78,7 @@ class DataFrame(object):
 
     def __iter__(self):
         for column_name in self.data:
-            yield column_name
+            yield str(column_name)
 
     def __getitem__(self, item):
         """ Retrieve a portion of the DataFrame
@@ -132,7 +133,7 @@ class DataFrame(object):
                 new_data[column_name] = self.data[column_name]
 
             return DataFrame(new_data, self.index)
-        elif isinstance(item, LazyData):
+        elif isinstance(item, LazyResult):
             if str(item.weld_type) != str(numpy_to_weld_type('bool')):
                 raise ValueError('expected series of bool to filter DataFrame rows')
 
@@ -204,7 +205,7 @@ class DataFrame(object):
         """
         if not isinstance(key, str):
             raise TypeError('expected key as a str')
-        elif not isinstance(value, LazyData) and not isinstance(value, np.ndarray):
+        elif not isinstance(value, LazyResult) and not isinstance(value, np.ndarray):
             raise TypeError('expected value as LazyData or np.ndarray')
 
         self.data[key] = value
@@ -250,6 +251,10 @@ class DataFrame(object):
             returns a new DataFrame without these columns
 
         """
+        # can't know at this point if the call is needed: if from csv, it is; from netcdf4, it is not.
+        # a dataframe might contain data from both sources anyway
+        [k.update_columns(columns) for k in self if isinstance(k, LazyResult)]
+
         if isinstance(columns, str):
             new_data = {}
             for column_name in self:
@@ -314,11 +319,12 @@ class DataFrame(object):
             # get as series
             series = self[str(column_name)]
             # apply the operation
-            data.append(LazyData(weld_aggregate(series.expr,
-                                                operation,
-                                                series.weld_type),
-                                 series.weld_type,
-                                 0).evaluate(verbose, decode, passes, num_threads, apply_experimental_transforms))
+            data.append(LazyResult(weld_aggregate(series.expr,
+                                                  operation,
+                                                  series.weld_type),
+                                   series.weld_type,
+                                   0).evaluate(verbose, decode, passes,
+                                               num_threads, apply_experimental_transforms))
 
         return Series(np.array(data).astype(np.float64),
                       np.dtype(np.float64),
@@ -339,7 +345,8 @@ class DataFrame(object):
             results are currently converted to float64
 
         """
-        return self._aggregate('+', verbose, decode, passes, num_threads, apply_experimental_transforms)
+        return self._aggregate('+', verbose, decode, passes,
+                               num_threads, apply_experimental_transforms)
 
     def prod(self, verbose=False, decode=True, passes=None,
              num_threads=1, apply_experimental_transforms=False):
@@ -356,7 +363,8 @@ class DataFrame(object):
             results are currently converted to float64
 
         """
-        return self._aggregate('*', verbose, decode, passes, num_threads, apply_experimental_transforms)
+        return self._aggregate('*', verbose, decode, passes,
+                               num_threads, apply_experimental_transforms)
 
     def min(self, verbose=False, decode=True, passes=None,
             num_threads=1, apply_experimental_transforms=False):
@@ -373,7 +381,8 @@ class DataFrame(object):
             results are currently converted to float64
 
         """
-        return self._aggregate('min', verbose, decode, passes, num_threads, apply_experimental_transforms)
+        return self._aggregate('min', verbose, decode, passes,
+                               num_threads, apply_experimental_transforms)
 
     def max(self, verbose=False, decode=True, passes=None,
             num_threads=1, apply_experimental_transforms=False):
@@ -390,7 +399,8 @@ class DataFrame(object):
             results are currently converted to float64
 
         """
-        return self._aggregate('max', verbose, decode, passes, num_threads, apply_experimental_transforms)
+        return self._aggregate('max', verbose, decode, passes,
+                               num_threads, apply_experimental_transforms)
 
     def count(self, verbose=False, decode=True, passes=None,
               num_threads=1, apply_experimental_transforms=False):
@@ -413,7 +423,8 @@ class DataFrame(object):
             # get as series
             series = self[str(column_name)]
             # apply the operation
-            data.append(series.count().evaluate(verbose, decode, passes, num_threads, apply_experimental_transforms))
+            data.append(series.count().evaluate(verbose, decode, passes,
+                                                num_threads, apply_experimental_transforms))
 
         return Series(np.array(data),
                       np.dtype(np.int64),
@@ -441,7 +452,8 @@ class DataFrame(object):
             # get as series
             series = self[str(column_name)]
             # apply the operation
-            data.append(series.mean().evaluate(verbose, decode, passes, num_threads, apply_experimental_transforms))
+            data.append(series.mean().evaluate(verbose, decode, passes,
+                                               num_threads, apply_experimental_transforms))
 
         return Series(np.array(data),
                       np.dtype(np.float64),
@@ -469,7 +481,8 @@ class DataFrame(object):
             # get as series
             series = self[str(column_name)]
             # apply the operation
-            data.append(series.std().evaluate(verbose, decode, passes, num_threads, apply_experimental_transforms))
+            data.append(series.std().evaluate(verbose, decode, passes,
+                                              num_threads, apply_experimental_transforms))
 
         return Series(np.array(data),
                       np.dtype(np.float64),
@@ -481,16 +494,16 @@ class DataFrame(object):
 
         data = weld_merge_single_index(data)
 
-        return [LazyData(data[i], WeldBit(), 1) for i in xrange(2)]
+        return [LazyResult(data[i], WeldBit(), 1) for i in xrange(2)]
 
     # noinspection PyMethodMayBeStatic
     def _index_to_values(self, levels, labels):
         levels, weld_type = get_weld_info(levels, expression=True, weld_type=True)
 
-        if isinstance(labels, LazyData):
+        if isinstance(labels, LazyResult):
             labels = labels.expr
 
-        return LazyData(weld_index_to_values(levels, labels), weld_type, 1)
+        return LazyResult(weld_index_to_values(levels, labels), weld_type, 1)
 
     def _merge_multi(self, index1, index2):
         assert len(index1.levels) == len(index2.levels) == 3
@@ -501,7 +514,7 @@ class DataFrame(object):
         data = weld_merge_triple_index([[get_expression_or_raw(index1[i]) for i in xrange(3)],
                                         [get_expression_or_raw(index2[i]) for i in xrange(3)]])
 
-        return [LazyData(data[i], WeldBit(), 1) for i in xrange(2)]
+        return [LazyResult(data[i], WeldBit(), 1) for i in xrange(2)]
 
     # TODO: check for same column_names in both DataFrames!
     def merge(self, right):
@@ -632,16 +645,16 @@ class DataFrame(object):
             # is MultiIndex
             for i in xrange(len(self.index.levels)):
                 new_columns[self.index.names[i]] = \
-                    LazyData(weld_index_to_values(get_expression_or_raw(self.index.levels[i]),
-                                                  get_expression_or_raw(self.index.labels[i])),
-                             get_weld_type(self.index.labels[i]),
-                             1)
+                    LazyResult(weld_index_to_values(get_expression_or_raw(self.index.levels[i]),
+                                                    get_expression_or_raw(self.index.labels[i])),
+                               get_weld_type(self.index.labels[i]),
+                               1)
 
         # the data/columns
         new_columns.update(self.data)
 
         # assumes at least 1 column
         a_column = get_expression_or_raw(new_columns.values()[0])
-        new_index = RangeIndex(0, LazyData(weld_count(a_column), WeldLong(), 0).evaluate(), 1)
+        new_index = RangeIndex(0, LazyResult(weld_count(a_column), WeldLong(), 0).evaluate(), 1)
 
         return DataFrame(new_columns, new_index)

@@ -2,15 +2,15 @@ from collections import OrderedDict
 from grizzly.encoders import numpy_to_weld_type
 from weld.types import WeldLong, WeldDouble
 from weld.weldobject import WeldObject
-from lazy_data import LazyData
+from lazy_result import LazyResult
 from indexes import Index
 from pandas_weld.weld import weld_aggregate, weld_compare, weld_filter, weld_element_wise_op, weld_count, weld_mean, \
-    weld_standard_deviation, weld_udf
-from utils import subset, replace_slice_defaults
+    weld_standard_deviation, weld_udf, weld_array_op
+from utils import subset, replace_slice_defaults, get_expression_or_raw
 import numpy as np
 
 
-class Series(LazyData):
+class Series(LazyResult):
     """ Weld-ed pandas Series
 
     Parameters
@@ -77,13 +77,7 @@ class Series(LazyData):
         if isinstance(item, slice):
             item = replace_slice_defaults(item)
 
-            # update func_args so that less data is read from file
-            if isinstance(self, LazyData) and self.data_id is not None:
-                index = self.input_mapping.data_ids.index(self.data_id)
-                old_args = self.input_mapping.input_function_args[index]
-                slice_as_tuple = (slice(item.start, item.stop, item.step),)
-                new_args = old_args + (slice_as_tuple,)
-                self.input_mapping.update_input_function_args(index, new_args)
+            self.update_rows(item)
 
             new_index = self.index[item]
 
@@ -91,7 +85,7 @@ class Series(LazyData):
                           self.dtype,
                           new_index,
                           self.name)
-        elif isinstance(item, LazyData):
+        elif isinstance(item, LazyResult):
             if str(item.weld_type) != str(numpy_to_weld_type('bool')):
                 raise ValueError('expected series of bool to filter DataFrame rows')
 
@@ -104,44 +98,6 @@ class Series(LazyData):
                           self.name)
         else:
             raise TypeError('expected a slice or a Series of bool in Series.__getitem__')
-
-    def head(self, n=10, verbose=False, decode=True, passes=None,
-             num_threads=1, apply_experimental_transforms=False):
-        """ Eager operation to read first n rows
-
-        This operation has no consequences, unlike getitem
-
-        Parameters
-        ----------
-        n : int
-            how many rows
-        verbose, decode, passes, num_threads, apply_experimental_transforms
-            see LazyData
-
-        Returns
-        -------
-        np.array
-            or other raw data
-
-        """
-        slice_ = replace_slice_defaults(slice(n))
-        data = self.expr
-
-        if self.data_id is not None:
-            index = self.input_mapping.data_ids.index(self.data_id)
-            old_args = self.input_mapping.input_function_args[index]
-            slice_as_tuple = (slice_,)
-            new_args = old_args + (slice_as_tuple,)
-            data = self.input_mapping.input_functions[index](*new_args)
-
-        if isinstance(data, WeldObject):
-            data = self.evaluate(verbose, decode, passes, num_threads, apply_experimental_transforms)
-        elif isinstance(data, np.ndarray):
-            data = data[:n]
-        else:
-            raise TypeError('underlying data is neither LazyData nor np.ndarray')
-
-        return data
 
     # comparisons are limited to scalars
     # TODO: perhaps storing boolean masks is more efficient? ~ bitwise-and vs merged for-loop map
@@ -179,18 +135,27 @@ class Series(LazyData):
 
     # TODO: add type conversion(?); pandas works when e.g. column_of_ints - 2.0 => float result
     def _element_wise_operation(self, other, operation):
-        if not isinstance(other, (str, unicode, int, long, float, bool)):
-            raise TypeError('can only compare with scalars')
-
         assert isinstance(operation, (str, unicode))
 
-        return Series(weld_element_wise_op(self.expr,
-                                           other,
-                                           operation,
-                                           self.weld_type),
-                      self.dtype,
-                      self.index,
-                      self.name)
+        if isinstance(other, Series):
+            other = get_expression_or_raw(other)
+
+            return Series(weld_array_op(self.expr,
+                                        other,
+                                        operation),
+                          self.dtype,
+                          self.index,
+                          self.name)
+        elif isinstance(other, (str, int, long, float)):
+            return Series(weld_element_wise_op(self.expr,
+                                               other,
+                                               operation,
+                                               self.weld_type),
+                          self.dtype,
+                          self.index,
+                          self.name)
+        else:
+            raise TypeError('can only apply operation to scalar or Series')
 
     def __add__(self, other):
         return self._element_wise_operation(other, '+')
@@ -207,11 +172,11 @@ class Series(LazyData):
     def _aggregate(self, operation):
         assert isinstance(operation, (str, unicode))
 
-        return LazyData(weld_aggregate(self.expr,
-                                       operation,
-                                       self.weld_type),
-                        self.weld_type,
-                        0)
+        return LazyResult(weld_aggregate(self.expr,
+                                         operation,
+                                         self.weld_type),
+                          self.weld_type,
+                          0)
 
     def sum(self):
         return self._aggregate('+')
@@ -226,23 +191,23 @@ class Series(LazyData):
         return self._aggregate('max')
 
     def count(self):
-        return LazyData(weld_count(self.expr),
-                        WeldLong(),
-                        0)
+        return LazyResult(weld_count(self.expr),
+                          WeldLong(),
+                          0)
 
     # TODO: not safe against overflows, i.e. the sum in sum/length
     def mean(self):
-        return LazyData(weld_mean(self.expr,
-                                  self.weld_type),
-                        WeldDouble(),
-                        0)
+        return LazyResult(weld_mean(self.expr,
+                                    self.weld_type),
+                          WeldDouble(),
+                          0)
 
     # TODO: same as mean
     def std(self):
-        return LazyData(weld_standard_deviation(self.expr,
-                                                self.weld_type),
-                        WeldDouble(),
-                        0)
+        return LazyResult(weld_standard_deviation(self.expr,
+                                                  self.weld_type),
+                          WeldDouble(),
+                          0)
 
     def agg(self, aggregations, verbose=False, decode=True, passes=None,
             num_threads=1, apply_experimental_transforms=False):

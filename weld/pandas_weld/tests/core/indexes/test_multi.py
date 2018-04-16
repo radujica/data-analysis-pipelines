@@ -3,7 +3,7 @@ import numpy as np
 import pandas_weld as pdw
 from grizzly.encoders import numpy_to_weld_type
 from weld.types import WeldLong
-from lazy_data import LazyData
+from lazy_result import LazyResult
 from pandas_weld.tests.utils import evaluate_array_if_necessary
 
 
@@ -42,15 +42,15 @@ class MultiIndexTests(unittest.TestCase):
 
     # noinspection PyMethodMayBeStatic
     def test_from_product(self):
-        levels = [LazyData(np.array([1, 2]), WeldLong(), 1), LazyData(np.array([3, 4]), WeldLong(), 1)]
+        levels = [LazyResult(np.array([1, 2]), WeldLong(), 1), LazyResult(np.array([3, 4]), WeldLong(), 1)]
         names = ['a', 'b']
 
         result = pdw.MultiIndex.from_product(levels, names)
 
-        expected_result = pdw.MultiIndex([LazyData(np.array([1, 2]), WeldLong(), 1),
-                                          LazyData(np.array([3, 4]), WeldLong(), 1)],
-                                         [LazyData(np.array([0, 0, 1, 1]), WeldLong(), 1),
-                                          LazyData(np.array([0, 1, 0, 1]), WeldLong(), 1)],
+        expected_result = pdw.MultiIndex([LazyResult(np.array([1, 2]), WeldLong(), 1),
+                                          LazyResult(np.array([3, 4]), WeldLong(), 1)],
+                                         [LazyResult(np.array([0, 0, 1, 1]), WeldLong(), 1),
+                                          LazyResult(np.array([0, 1, 0, 1]), WeldLong(), 1)],
                                          ['a', 'b'])
 
         test_equal_multiindex(expected_result, result)
@@ -73,33 +73,33 @@ class MultiIndexTests(unittest.TestCase):
 
     # noinspection PyMethodMayBeStatic
     def test_getitem_filter(self):
-        levels = [LazyData(np.array([1, 2]), WeldLong(), 1), LazyData(np.array([3, 4]), WeldLong(), 1)]
+        levels = [LazyResult(np.array([1, 2]), WeldLong(), 1), LazyResult(np.array([3, 4]), WeldLong(), 1)]
         names = ['a', 'b']
 
-        to_filter = LazyData(np.array([True, False, True, False], dtype=np.bool),
-                             numpy_to_weld_type(np.dtype(np.bool)),
-                             1)
+        to_filter = LazyResult(np.array([True, False, True, False], dtype=np.bool),
+                               numpy_to_weld_type(np.dtype(np.bool)),
+                               1)
         result = pdw.MultiIndex.from_product(levels, names)[to_filter]
 
-        expected_result = pdw.MultiIndex([LazyData(np.array([1, 2]), WeldLong(), 1),
-                                          LazyData(np.array([3, 4]), WeldLong(), 1)],
-                                         [LazyData(np.array([0, 1]), WeldLong(), 1),
-                                          LazyData(np.array([0, 0]), WeldLong(), 1)],
+        expected_result = pdw.MultiIndex([LazyResult(np.array([1, 2]), WeldLong(), 1),
+                                          LazyResult(np.array([3, 4]), WeldLong(), 1)],
+                                         [LazyResult(np.array([0, 1]), WeldLong(), 1),
+                                          LazyResult(np.array([0, 0]), WeldLong(), 1)],
                                          ['a', 'b'])
 
         test_equal_multiindex(expected_result, result)
 
     # noinspection PyMethodMayBeStatic
     def test_getitem_slice(self):
-        levels = [LazyData(np.array([1, 2]), WeldLong(), 1), LazyData(np.array([3, 4]), WeldLong(), 1)]
+        levels = [LazyResult(np.array([1, 2]), WeldLong(), 1), LazyResult(np.array([3, 4]), WeldLong(), 1)]
         names = ['a', 'b']
 
         result = pdw.MultiIndex.from_product(levels, names)[:]
 
-        expected_result = pdw.MultiIndex([LazyData(np.array([1, 2]), WeldLong(), 1),
-                                          LazyData(np.array([3, 4]), WeldLong(), 1)],
-                                         [LazyData(np.array([0, 0, 1, 1]), WeldLong(), 1),
-                                          LazyData(np.array([0, 1, 0, 1]), WeldLong(), 1)],
+        expected_result = pdw.MultiIndex([LazyResult(np.array([1, 2]), WeldLong(), 1),
+                                          LazyResult(np.array([3, 4]), WeldLong(), 1)],
+                                         [LazyResult(np.array([0, 0, 1, 1]), WeldLong(), 1),
+                                          LazyResult(np.array([0, 1, 0, 1]), WeldLong(), 1)],
                                          ['a', 'b'])
 
         test_equal_multiindex(expected_result, result)

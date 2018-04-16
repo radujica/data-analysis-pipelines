@@ -1,5 +1,5 @@
 import numpy_weld as npw
-from lazy_data import LazyData
+from lazy_result import LazyResult
 from collections import OrderedDict
 from grizzly.encoders import numpy_to_weld_type
 from pandas_weld.core.utils import evaluate_or_raw, get_expression_or_raw, get_weld_type, get_weld_info
@@ -60,7 +60,7 @@ class MultiIndex(object):
 
         weld_types = [get_weld_type(k) for k in arrays]
         arrays = [get_expression_or_raw(k) for k in arrays]
-        levels = [LazyData(weld_unique(arrays[k], weld_types[k]), weld_types[k], 1) for k in xrange(len(arrays))]
+        levels = [LazyResult(weld_unique(arrays[k], weld_types[k]), weld_types[k], 1) for k in xrange(len(arrays))]
 
         return cls.from_product(levels, names)
 
@@ -78,7 +78,7 @@ class MultiIndex(object):
 
         Parameters
         ----------
-        item : slice or LazyData of bool
+        item : slice or LazyResult of bool
             if slice, returns a sliced MultiIndex;
             if LazyData, returns a filtered MultiIndex only with the labels corresponding to
             True in the LazyData
@@ -91,7 +91,7 @@ class MultiIndex(object):
         if isinstance(item, slice):
             # TODO: figure out a way to lazily slice the index
             return MultiIndex(self.levels, self.labels, self.names)
-        elif isinstance(item, LazyData):
+        elif isinstance(item, LazyResult):
             if str(item.weld_type) != str(numpy_to_weld_type('bool')):
                 raise ValueError('expected series of bool to filter DataFrame rows')
 
@@ -100,10 +100,10 @@ class MultiIndex(object):
             for label in self.labels:
                 label, weld_type = get_weld_info(label, True, True)
 
-                new_labels.append(LazyData(weld_filter(label,
-                                                       item.expr),
-                                           weld_type,
-                                           1))
+                new_labels.append(LazyResult(weld_filter(label,
+                                                         item.expr),
+                                             weld_type,
+                                             1))
 
             return MultiIndex(self.levels, new_labels, self.names)
         else:

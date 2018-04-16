@@ -1,13 +1,13 @@
 import numpy as np
 from grizzly.encoders import numpy_to_weld_type
 from weld.types import WeldLong
-from lazy_data import LazyData
+from lazy_result import LazyResult
 from base import Index
 from pandas_weld.core.utils import replace_slice_defaults, subset
 from pandas_weld.weld import weld_range, weld_filter
 
 
-class RangeIndex(LazyData):
+class RangeIndex(LazyResult):
     """ Weld-ed 1-d Index over a range
 
     Parameters
@@ -46,7 +46,7 @@ class RangeIndex(LazyData):
 
         Parameters
         ----------
-        item : slice or LazyData
+        item : slice or LazyResult
             if slice, returns a sliced Index;
             if LazyData, returns a filtered Index only with the labels corresponding to
             True in the Series
@@ -60,17 +60,11 @@ class RangeIndex(LazyData):
         if isinstance(item, slice):
             item = replace_slice_defaults(item)
 
-            # update func_args so that less data is read from file
-            if isinstance(self, LazyData) and self.data_id is not None:
-                index = self.input_mapping.data_ids.index(self.data_id)
-                old_args = self.input_mapping.input_function_args[index]
-                slice_as_tuple = (slice(item.start, item.stop, item.step),)
-                new_args = old_args + (slice_as_tuple,)
-                self.input_mapping.update_input_function_args(index, new_args)
+            self.update_rows(item)
 
             return Index(subset(self, item).expr,
                          np.dtype(np.int64))
-        elif isinstance(item, LazyData):
+        elif isinstance(item, LazyResult):
             if str(item.weld_type) != str(numpy_to_weld_type('bool')):
                 raise ValueError('expected series of bool to filter Index elements')
 

@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 from grizzly.encoders import numpy_to_weld_type, WeldObject
-from lazy_data import LazyData
+from lazy_result import LazyResult
 from pandas_weld import Series, RangeIndex, MultiIndex, Index
 from indexes import test_equal_multiindex
 from ..utils import evaluate_if_necessary
@@ -21,7 +21,6 @@ def test_equal_series(series1, series2):
     """
     np.testing.assert_equal(series1.dtype, series2.dtype)
     np.testing.assert_equal(series1.name, series2.name)
-    np.testing.assert_equal(series1.data_id, series2.data_id)
     if isinstance(series1.index, MultiIndex):
         test_equal_multiindex(series1.index, series2.index)
     else:
@@ -45,7 +44,7 @@ class SeriesTests(unittest.TestCase):
     # noinspection PyMethodMayBeStatic
     def test_getitem_slice(self):
         weld_type = numpy_to_weld_type('int64')
-        data = LazyData(np.array([1, 2, 3]), weld_type, 1)
+        data = LazyResult(np.array([1, 2, 3]), weld_type, 1)
         series = Series(data.expr, np.dtype(np.int64), RangeIndex(0, 3, 1))
 
         expected_result = Series(np.array([1, 2]), np.dtype(np.int64), RangeIndex(0, 2, 1))
@@ -75,7 +74,7 @@ class SeriesTests(unittest.TestCase):
 
     # noinspection PyMethodMayBeStatic
     def test_head(self):
-        data = LazyData(np.array([1, 2, 3]), np.dtype(np.int64), 1)
+        data = LazyResult(np.array([1, 2, 3]), np.dtype(np.int64), 1)
         series = Series(data.expr, np.dtype(np.int64), RangeIndex(0, 2, 1))
 
         expected_result = np.array([1, 2])
@@ -100,6 +99,17 @@ class SeriesTests(unittest.TestCase):
 
         expected_result = Series(np.array([2, 4, 6]), np.dtype(np.int64), RangeIndex(0, 3, 1))
         result = series * 2
+
+        test_equal_series(expected_result, result)
+
+    # noinspection PyMethodMayBeStatic
+    def test_array_operation(self):
+        data = np.array([1, 2, 3])
+        series = Series(data, np.dtype(np.int64), RangeIndex(0, 3, 1))
+
+        expected_result = Series(np.array([3, 5, 7]), np.dtype(np.int64), RangeIndex(0, 3, 1))
+
+        result = series + Series(np.array([2, 3, 4]), np.dtype(np.int64), RangeIndex(0, 3, 1))
 
         test_equal_series(expected_result, result)
 

@@ -262,16 +262,63 @@ def weld_element_wise_op(array, scalar, operation, weld_type):
     weld_template = """
     result(
         for(%(array)s, 
-            appender[%(type)s], 
-            |b: appender[%(type)s], i: i64, n: %(type)s| 
-                merge(b, n %(operation)s %(value)s)
+            appender, 
+            |b, i, n| 
+                merge(b, n %(operation)s %(scalar)s)
         )
     )"""
 
     weld_obj.weld_code = weld_template % {'array': array_var,
-                                          'value': scalar,
-                                          'operation': operation,
-                                          'type': weld_type}
+                                          'scalar': scalar,
+                                          'operation': operation}
+
+    return weld_obj
+
+
+def weld_array_op(array1, array2, operation):
+    """ Applies operation to each element in the array with scalar
+
+    Their lengths and types are assumed to be the same.
+    TODO: what happens if not?
+
+    Parameters
+    ----------
+    array1 : np.ndarray / WeldObject
+        input array
+    array2 : np.ndarray / WeldObject
+        second input array
+    operation : {+, -, *, /}
+
+    Returns
+    -------
+    WeldObject
+        representation of this computation
+
+    """
+    weld_obj = WeldObject(_encoder, _decoder)
+
+    array1_var = weld_obj.update(array1)
+    if isinstance(array1, WeldObject):
+        array1_var = array1.obj_id
+        weld_obj.dependencies[array1_var] = array1
+
+    array2_var = weld_obj.update(array2)
+    if isinstance(array2, WeldObject):
+        array2_var = array2.obj_id
+        weld_obj.dependencies[array2_var] = array2
+
+    weld_template = """
+    result(
+        for(zip(%(array1)s, %(array2)s), 
+            appender, 
+            |b, i, n| 
+                merge(b, n.$0 %(operation)s n.$1)
+        )
+    )"""
+
+    weld_obj.weld_code = weld_template % {'array1': array1_var,
+                                          'array2': array2_var,
+                                          'operation': operation}
 
     return weld_obj
 

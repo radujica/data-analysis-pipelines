@@ -2,7 +2,7 @@ import unittest
 import pandas_weld as pdw
 import numpy as np
 from grizzly.encoders import numpy_to_weld_type
-from lazy_data import LazyData
+from lazy_result import LazyResult
 from pandas_weld.tests.utils import evaluate_if_necessary
 
 
@@ -32,9 +32,9 @@ class RangeIndexTests(unittest.TestCase):
 
     # noinspection PyMethodMayBeStatic
     def test_getitem_filter(self):
-        to_filter = LazyData(np.array([True, False, True], dtype=np.dtype(np.bool)),
-                             numpy_to_weld_type(np.dtype(np.bool)),
-                             1)
+        to_filter = LazyResult(np.array([True, False, True], dtype=np.dtype(np.bool)),
+                               numpy_to_weld_type(np.dtype(np.bool)),
+                               1)
         result = pdw.RangeIndex(0, 3, 1)[to_filter]
 
         expected_result = pdw.Index(np.array([0, 2]), np.dtype(np.int64))

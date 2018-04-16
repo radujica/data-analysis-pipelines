@@ -1,6 +1,6 @@
 from grizzly.encoders import numpy_to_weld_type
 from weld.types import *
-from lazy_data import LazyData
+from lazy_result import LazyResult
 from pandas_weld.weld import weld_subset
 import numpy as np
 
@@ -13,7 +13,8 @@ _weld_to_numpy_str_type_mapping = {
     str(WeldLong()): 'l',
     str(WeldFloat()): 'f',
     str(WeldDouble()): 'd',
-    str(WeldChar()): 'S'
+    str(WeldChar()): 'b',
+    str(WeldVec(WeldChar())): 'S'
 }
 
 
@@ -33,13 +34,13 @@ def subset(array, slice_):
 
     Returns
     -------
-    LazyData
+    LazyResult
 
     """
     if not isinstance(slice_, slice):
         raise TypeError('expected a slice in subset')
 
-    if isinstance(array, LazyData):
+    if isinstance(array, LazyResult):
         weld_type = array.weld_type
         array = array.expr
     elif isinstance(array, np.ndarray):
@@ -47,10 +48,10 @@ def subset(array, slice_):
     else:
         raise TypeError('expected array as LazyData or np.ndarray')
 
-    return LazyData(weld_subset(array,
-                                slice_),
-                    weld_type,
-                    1)
+    return LazyResult(weld_subset(array,
+                                  slice_),
+                      weld_type,
+                      1)
 
 
 # to replace the None with default values for use in weld code where None is not acceptable
@@ -76,7 +77,7 @@ def replace_slice_defaults(slice_, default_start=0, default_step=1):
 
 
 def get_expression_or_raw(data):
-    if isinstance(data, LazyData):
+    if isinstance(data, LazyResult):
         return data.expr
     elif isinstance(data, np.ndarray):
         return data
@@ -85,7 +86,7 @@ def get_expression_or_raw(data):
 
 
 def get_weld_type(data):
-    if isinstance(data, LazyData):
+    if isinstance(data, LazyResult):
         return data.weld_type
     elif isinstance(data, np.ndarray):
         return numpy_to_weld_type(data.dtype)
@@ -94,7 +95,7 @@ def get_weld_type(data):
 
 
 def get_dtype(data):
-    if isinstance(data, LazyData):
+    if isinstance(data, LazyResult):
         return weld_to_numpy_type(data.weld_type)
     elif isinstance(data, np.ndarray):
         return data.dtype
@@ -116,7 +117,7 @@ def get_weld_info(data, expression=False, weld_type=False, dtype=False):
 
 def evaluate_or_raw(data, verbose, decode, passes,
                     num_threads, apply_experimental_transforms):
-    if isinstance(data, LazyData):
+    if isinstance(data, LazyResult):
         return data.evaluate(verbose, decode, passes,
                              num_threads, apply_experimental_transforms)
     elif isinstance(data, np.ndarray):

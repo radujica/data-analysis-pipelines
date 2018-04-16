@@ -1,8 +1,8 @@
-from lazy_data import LazyData
+from lazy_result import LazyResult
 
 
 def evaluate_if_necessary(data):
-    if isinstance(data, LazyData):
+    if isinstance(data, LazyResult):
         data = data.evaluate(verbose=False)
 
     return data
