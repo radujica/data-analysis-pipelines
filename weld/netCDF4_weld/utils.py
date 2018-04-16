@@ -1,5 +1,5 @@
 # TODO: handle different start and step, not only stop
-def convert_row_to_nd_slices(tuple_slice, shape):
+def convert_row_to_nd_slices(slice_, shape):
     """ Convert from 1d slice to nd slices
 
     When first n rows are required, need to convert to
@@ -7,8 +7,8 @@ def convert_row_to_nd_slices(tuple_slice, shape):
 
     Parameters
     ----------
-    tuple_slice : ()
-        containing a single slice
+    slice_ : slice
+        desired on the data
     shape : ()
         the shape of the data
 
@@ -19,10 +19,10 @@ def convert_row_to_nd_slices(tuple_slice, shape):
         required to read the 1d slice of rows
 
     """
-    if len(tuple_slice) > 1 or not isinstance(tuple_slice[0], slice):
+    if not isinstance(slice_, slice):
         raise ValueError('expected a tuple with a single slice')
 
-    number_rows = tuple_slice[0].stop
+    number_rows = slice_.stop
     slices_list = []
     cumulative_dimension = 1
 
@@ -40,3 +40,13 @@ def convert_row_to_nd_slices(tuple_slice, shape):
         cumulative_dimension *= dimension
 
     return tuple(reversed(slices_list))
+
+
+def replace_slice_defaults(slice_):
+    if slice_.start is None:
+        slice_.start = 0
+    
+    if slice_.step is None:
+        slice_.step = 1
+        
+    return slice_

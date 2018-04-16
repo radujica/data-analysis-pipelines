@@ -1,18 +1,17 @@
 from collections import OrderedDict
-from weld.weldobject import WeldObject
-from lazy_data import LazyData
+from lazy_file import LazyFile
+from lazy_result import LazyResult
 from variable import Variable
-import pandas_weld as pdw
+import netCDF4
 
 
-class Dataset(object):
+class Dataset(LazyFile):
     """ Welded wrapper of netCDF4 Dataset
 
     Parameters
     ----------
-    read_file_func : func
-        func which when called reads the file; in this case, must return a netCDF4.Dataset which can be used to
-        read variables from
+    path : str
+        path to netcdf4 file
     variables : dict {name : netCDF4_weld.Variable}
         used when doing operations on the Dataset to create new result Dataset
     dimensions : dict {name : size}
@@ -23,13 +22,17 @@ class Dataset(object):
     netCDF4.Dataset
 
     """
+    _FILE_FORMAT = 'netcdf4'
 
-    def __init__(self, read_file_func, variables=None, dimensions=None):
-        self.read_file_func = read_file_func
-        self.ds = self.read_file_func()
+    def __init__(self, path, variables=None, dimensions=None):
+        self.file_id = LazyResult.generate_file_id(Dataset._FILE_FORMAT)
+        LazyResult.register_lazy_file(self.file_id, self)
+
+        self.path = path
+        self.ds = self.read_metadata()
 
         if variables is None:
-            self.variables = self._create_variables(read_file_func)
+            self.variables = self._create_variables()
         else:
             self.variables = variables
 
@@ -40,25 +43,27 @@ class Dataset(object):
 
         self._columns = [k for k in self.variables if k not in self.dimensions]
 
+    def read_metadata(self):
+        return netCDF4.Dataset(self.path)
+
+    def read_file(self):
+        # for netcdf4, the method happens to be the same
+        return self.read_metadata()
+
     # create OrderedDict of column_name -> Variable
-    def _create_variables(self, read_file_func):
+    def _create_variables(self):
         variables = OrderedDict()
 
         for kv in self.ds.variables.items():
-            # create weld object which will represent this data
-            weld_obj = WeldObject(Variable.encoder, Variable.decoder)
             # generate a data_id to act as placeholder to the data
-            data_id = LazyData.generate_id(kv[0])
-            # update the context of this WeldObject and retrieve the generated _inpX id; WeldObject._registry
-            # will hence link this data_id to the _inpX id
-            weld_input_id = weld_obj.update(data_id)
-            # should always be a new object, else there's a bug somewhere
-            assert weld_input_id is not None
-            # the code is just the input
-            weld_obj.weld_code = '%s' % weld_input_id
+            data_id = LazyResult.generate_data_id(kv[0])
+            weld_obj = LazyResult.generate_placeholder_weld_object(data_id, Variable.encoder, Variable.decoder)
 
-            variables[kv[0]] = Variable(read_file_func, kv[0], data_id, kv[1].dimensions,
-                                        kv[1].__dict__, weld_obj, kv[1].dtype)
+            variable = Variable(self.file_id, kv[0], kv[1].dimensions, kv[1].shape,
+                                kv[1].__dict__, weld_obj, kv[1].dtype)
+            LazyResult.register_lazy_data(data_id, variable)
+
+            variables[kv[0]] = variable
 
         return variables
 
@@ -84,33 +89,6 @@ class Dataset(object):
 
     # add number to each variable value; JUST for learning/testing purposes
     def add(self, value):
-        return Dataset(self.read_file_func,
-                       {k: v.add(value) for k, v in self.variables.iteritems()},
+        return Dataset(self.path,
+                       {k: v + value for k, v in self.variables.iteritems()},
                        self.dimensions)
-
-    def process_column(self, column_name):
-        return self.variables[column_name]
-
-    def process_dimension(self, name):
-        return self.variables[name]
-
-    def to_dataframe(self):
-        """ Convert Dataset to pandas_weld DataFrame
-
-        Returns
-        -------
-        pandas_weld.DataFrame
-
-        """
-        columns = [k for k in self.variables if k not in self.dimensions]
-        dimensions = OrderedDict(map(lambda kv: (kv[0], kv[1]),
-                                     OrderedDict(self.dimensions.items()).items()))
-
-        # columns data, either LazyData or raw
-        data = [self.process_column(k) for k in columns]
-        # the dimensions
-        indexes = [self.process_dimension(k) for k in dimensions]
-
-        index = pdw.MultiIndex.from_product(indexes, list(dimensions.keys()))
-
-        return pdw.DataFrame(dict(zip(columns, data)), index)
