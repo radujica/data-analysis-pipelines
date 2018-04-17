@@ -54,6 +54,7 @@ class Variable(LazyData, LazyResult):
         self.dtype = inferred_dtype
 
         # same as [:]
+        # the param used to lazy_slice_rows
         self.tuple_slices = slice(None)
 
     @staticmethod
@@ -99,9 +100,11 @@ class Variable(LazyData, LazyResult):
     def eager_head(self, n=10):
         tuple_slices = convert_row_to_nd_slices(slice(0, n, 1), self.shape)
 
+        # bypass the cache and call directly
         return self.eager_read(slice_=tuple_slices)
 
     def lazy_skip_columns(self, columns):
+        # nothing to do since netcdf is able to read specific columns only
         pass
 
     def lazy_slice_rows(self, slice_):

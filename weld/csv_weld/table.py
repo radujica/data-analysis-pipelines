@@ -15,6 +15,7 @@ class Table(LazyFile):
         header_df = self.read_metadata()
         self.columns = self._create_columns(header_df)
 
+        # the params used to lazy_slice_rows and lazy_skip_columns
         self.nrows = None
         self.usecols = self.columns.keys()
 

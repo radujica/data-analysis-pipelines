@@ -2,7 +2,6 @@ import unittest
 import numpy as np
 import os
 import netCDF4_weld
-import csv_weld
 import pandas_weld as pdw
 from lazy_result import LazyResult
 
@@ -20,11 +19,10 @@ class IntegrationTests(unittest.TestCase):
 
     def setUp(self):
         self.ds = netCDF4_weld.Dataset(self.PATH_NETCDF4)
-        #self.table = csv_weld.Table(self.PATH_CSV)
         self.df_netcdf4 = pdw.read_netcdf4(self.PATH_NETCDF4)
-        #self.df_csv = pdw.read_csv(self.PATH_CSV)
+        self.df_csv = pdw.read_csv(self.PATH_CSV)
         self.raw_data30 = np.arange(30, dtype=np.float32)
-        self.raw_data4 = np.arange(4, dtype=np.float32)
+        self.raw_data4 = np.arange(4, dtype=np.float64)
 
     def test_original_placeholders(self):
         # all data from file should be represented with placeholders
@@ -62,8 +60,11 @@ class IntegrationTests(unittest.TestCase):
     def test_evaluate_column_df_netcdf4(self):
         self._test_column(self.df_netcdf4['tg'])
 
+    def test_evaluate_column_df_csv(self):
+        self._test_column(self.df_csv['x'])
+
     # tests that an operation is recorded and data is read only on evaluate
-    def _test_operation_column(self, column):
+    def _test_operation_column(self, column, to_add):
         self.assertEqual(1, len(column.expr.context))
         data_id = column.expr.context.values()[0]
         weld_input_id = column.expr.context.keys()[0]
@@ -71,7 +72,7 @@ class IntegrationTests(unittest.TestCase):
         self.assertEqual(weld_input_id, column.expr.weld_code)
         self.assertNotIn(data_id, LazyResult.data_cache)
 
-        new_column = column + '2f'
+        new_column = column + to_add
 
         self.assertEqual(1, len(column.expr.context))
         new_data_id = new_column.expr.context.values()[0]
@@ -94,10 +95,13 @@ class IntegrationTests(unittest.TestCase):
         np.testing.assert_array_equal(replaced_placeholder, LazyResult.data_cache[data_id])
 
     def test_operation_column_ds(self):
-        self._test_operation_column(self.ds.variables['tg'])
+        self._test_operation_column(self.ds.variables['tg'], '2f')
 
     def test_operation_column_df_netcdf4(self):
-        self._test_operation_column(self.df_netcdf4['tg'])
+        self._test_operation_column(self.df_netcdf4['tg'], '2f')
+
+    def test_operation_column_df_csv(self):
+        self._test_operation_column(self.df_csv['x'], '2.0')
 
     # tests a column which relies on both raw and lazy input
     def _test_evaluate_column_mixed_df(self, column):
@@ -107,7 +111,7 @@ class IntegrationTests(unittest.TestCase):
         # new array must be raw, one from file a placeholder; don't really like this code
         placeholder_index = 0
         raw_index = 1
-        if isinstance(data_ids[raw_index], str):
+        if isinstance(data_ids[raw_index], (str, unicode)):
             raw_index = 0
             placeholder_index = 1
 
@@ -130,14 +134,20 @@ class IntegrationTests(unittest.TestCase):
 
         self._test_evaluate_column_mixed_df(self.df_netcdf4['mixed'])
 
-    def _test_head_column(self, column, expected_result):
+    def test_operation_column_mixed_df_csv(self):
+        raw_as_series = pdw.Series(self.raw_data4, np.dtype(np.float64), pdw.RangeIndex(0, 4, 1))
+        self.df_csv['mixed'] = self.df_csv['x'] + raw_as_series
+
+        self._test_evaluate_column_mixed_df(self.df_csv['mixed'])
+
+    def _test_head_column(self, column, expected_result, n):
         self.assertEqual(1, len(column.expr.context))
         data_id = column.expr.context.values()[0]
         weld_input_id = column.expr.context.keys()[0]
         self.assertNotIn(data_id, LazyResult.data_cache)
         self.is_placeholder(data_id)
 
-        data = column.head(5)
+        data = column.head(n)
 
         np.testing.assert_array_equal(expected_result, data)
 
@@ -153,23 +163,26 @@ class IntegrationTests(unittest.TestCase):
     def test_head_column_ds(self):
         column = self.ds.variables['tg']
         expected_result = np.array([-99.99, 10., 10.099999, -99.99, -99.99], dtype=np.float32)
-        self._test_head_column(column, expected_result)
+        self._test_head_column(column, expected_result, 5)
 
     def test_head_column_df_netcdf4(self):
         column = self.df_netcdf4['tg']
         expected_result = np.array([-99.99, 10., 10.099999, -99.99, -99.99], dtype=np.float32)
-        self._test_head_column(column, expected_result)
+        self._test_head_column(column, expected_result, 5)
 
-    def test_lazy_slice_rows_df_netcdf4(self):
-        column = self.df_netcdf4['tg']
+    def test_head_column_df_csv(self):
+        column = self.df_csv['x']
+        expected_result = np.array([-5.958191, -5.95224, -5.9950867], dtype=np.float64)
+        self._test_head_column(column, expected_result, 3)
 
+    def _test_lazy_slice_rows_df(self, column, expected_read_data, expected_result, slice_):
         self.assertEqual(1, len(column.expr.context))
         data_id = column.expr.context.values()[0]
         weld_input_id = column.expr.context.keys()[0]
         self.assertNotIn(data_id, LazyResult.data_cache)
         self.is_placeholder(data_id)
 
-        new_column = column[:5]
+        new_column = column[slice_]
 
         self.assertEqual(1, len(column.expr.context))
         new_data_id = new_column.expr.context.values()[0]
@@ -179,9 +192,6 @@ class IntegrationTests(unittest.TestCase):
         self.assertEqual(data_id, new_data_id)
         self.assertNotIn(new_data_id, LazyResult.data_cache)
 
-        # netcdf4 cannot read exactly 5 elements from a file with dimensions (1, 3, 2); it must read 6
-        expected_read_data = np.array([-99.99, 10., 10.099999, -99.99, -99.99, 10.2], dtype=np.float32)
-        expected_result = np.array([-99.99, 10., 10.099999, -99.99, -99.99], dtype=np.float32)
         result = new_column.evaluate()
 
         self.assertEqual(1, len(column.expr.context))
@@ -197,33 +207,49 @@ class IntegrationTests(unittest.TestCase):
         np.testing.assert_array_equal(expected_read_data, evaluated_data)
         np.testing.assert_array_equal(expected_result, result)
 
-    def test_lazy_skip_columns_df_netcdf4(self):
-        data_id_tg = self.df_netcdf4['tg'].expr.context.values()[0]
-        data_id_tg_ext = self.df_netcdf4['tg_ext'].expr.context.values()[0]
+    def test_lazy_slice_rows_df_netcdf4(self):
+        column = self.df_netcdf4['tg']
+        # netcdf4 cannot read exactly 5 elements from a file with dimensions (1, 3, 2); it must read 6
+        expected_read_data = np.array([-99.99, 10., 10.099999, -99.99, -99.99, 10.2], dtype=np.float32)
+        expected_result = np.array([-99.99, 10., 10.099999, -99.99, -99.99], dtype=np.float32)
+        self._test_lazy_slice_rows_df(column, expected_read_data, expected_result, slice(5))
 
-        self.assertNotIn(data_id_tg, LazyResult.data_cache)
-        self.assertNotIn(data_id_tg_ext, LazyResult.data_cache)
+    def test_lazy_slice_rows_df_csv(self):
+        column = self.df_csv['x']
+        # same as expected_result
+        expected_read_data = np.array([-5.958191, -5.95224, -5.9950867], dtype=np.float64)
+        self._test_lazy_slice_rows_df(column, expected_read_data, expected_read_data, slice(3))
 
-        new_df = self.df_netcdf4.drop('tg')
+    def _test_lazy_skip_columns_df(self, df, skipped_column_name, kept_column_name):
+        skipped_column = df[skipped_column_name].expr.context.values()[0]
+        kept_column = df[kept_column_name].expr.context.values()[0]
+
+        self.assertNotIn(skipped_column, LazyResult.data_cache)
+        self.assertNotIn(kept_column, LazyResult.data_cache)
+
+        new_df = df.drop(skipped_column_name)
         new_df.evaluate()
 
         # original placeholders still mapped
-        self.is_placeholder(data_id_tg)
-        self.is_placeholder(data_id_tg_ext)
+        self.is_placeholder(skipped_column)
+        self.is_placeholder(kept_column)
         # only one value is cached, so only one is read
-        self.assertNotIn(data_id_tg, LazyResult.data_cache)
-        self.assertIn(data_id_tg_ext, LazyResult.data_cache)
+        self.assertNotIn(skipped_column, LazyResult.data_cache)
+        self.assertIn(kept_column, LazyResult.data_cache)
         # old df context changed for tg_ext
-        new_data_id_tg = self.df_netcdf4['tg'].expr.context.values()[0]
-        new_data_id_tg_ext = self.df_netcdf4['tg_ext'].expr.context.values()[0]
-        self.assertEqual(data_id_tg, new_data_id_tg)
-        self.assertNotEqual(data_id_tg_ext, str(new_data_id_tg_ext))
+        new_data_id_tg = df[skipped_column_name].expr.context.values()[0]
+        new_data_id_tg_ext = df[kept_column_name].expr.context.values()[0]
+        self.assertEqual(skipped_column, new_data_id_tg)
+        self.assertNotEqual(kept_column, str(new_data_id_tg_ext))
         # and new df context changed
-        new_data_id_tg_ext = new_df['tg_ext']
-        self.assertNotEqual(data_id_tg_ext, new_data_id_tg_ext)
+        new_data_id_tg_ext = new_df[kept_column_name]
+        self.assertNotEqual(kept_column, new_data_id_tg_ext)
 
-    # TODO: lazy_skip_columns & lazy_slice_rows for netcdf4 Dataset
-    # TODO: all for df_csv
+    def test_lazy_skip_columns_df_netcdf4(self):
+        self._test_lazy_skip_columns_df(self.df_netcdf4, 'tg', 'tg_ext')
+
+    def test_lazy_skip_columns_df_csv(self):
+        self._test_lazy_skip_columns_df(self.df_csv, 'x', 'y')
 
 
 def main():
