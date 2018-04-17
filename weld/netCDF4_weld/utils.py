@@ -9,7 +9,7 @@ def convert_row_to_nd_slices(slice_, shape):
     ----------
     slice_ : slice
         desired on the data
-    shape : ()
+    shape : tuple
         the shape of the data
 
     Returns

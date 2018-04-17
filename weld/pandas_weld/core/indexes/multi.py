@@ -14,12 +14,9 @@ class MultiIndex(object):
 
     Parameters
     ----------
-    levels : list
-        np.arrays or LazyData
-    labels : list
-        np.arrays or LazyData
-    names : list
-        str
+    levels : list of np.ndarray or list of WeldObject
+    labels : list of np.ndarray or list of WeldObject
+    names : list of str
 
     Returns
     -------
@@ -41,10 +38,8 @@ class MultiIndex(object):
 
         Parameters
         ----------
-        levels : list
-            np.arrays or WeldObjects
-        names : list
-            names of the levels
+        levels : list of np.ndarray or list of WeldObject
+        names : list of str
 
         Returns
         -------
@@ -78,10 +73,10 @@ class MultiIndex(object):
 
         Parameters
         ----------
-        item : slice or LazyResult of bool
+        item : slice or LazyResult
             if slice, returns a sliced MultiIndex;
-            if LazyData, returns a filtered MultiIndex only with the labels corresponding to
-            True in the LazyData
+            if LazyResult, returns a filtered MultiIndex only with the labels corresponding to
+            True in the LazyResult
 
         Returns
         -------
@@ -107,7 +102,7 @@ class MultiIndex(object):
 
             return MultiIndex(self.levels, new_labels, self.names)
         else:
-            raise TypeError('expected slice or LazyData of bool in MultiIndex.__getitem__')
+            raise TypeError('expected slice or LazyResult of bool in MultiIndex.__getitem__')
 
     def evaluate(self, verbose=False, decode=True, passes=None, num_threads=1,
                  apply_experimental_transforms=False):
@@ -115,7 +110,7 @@ class MultiIndex(object):
 
         Parameters
         ----------
-        see LazyData
+        see LazyResult
 
         Returns
         -------

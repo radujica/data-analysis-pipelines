@@ -48,7 +48,7 @@ class RangeIndex(LazyResult):
         ----------
         item : slice or LazyResult
             if slice, returns a sliced Index;
-            if LazyData, returns a filtered Index only with the labels corresponding to
+            if LazyResult, returns a filtered Index only with the labels corresponding to
             True in the Series
 
         Returns

@@ -27,7 +27,7 @@ def subset(array, slice_):
 
     Parameters
     ----------
-    array : np.array / LazyData
+    array : np.array or LazyResult
         1-dimensional array
     slice_ : slice
         subset to return
@@ -46,7 +46,7 @@ def subset(array, slice_):
     elif isinstance(array, np.ndarray):
         weld_type = numpy_to_weld_type(array.dtype)
     else:
-        raise TypeError('expected array as LazyData or np.ndarray')
+        raise TypeError('expected array as LazyResult or np.ndarray')
 
     return LazyResult(weld_subset(array,
                                   slice_),
@@ -82,7 +82,7 @@ def get_expression_or_raw(data):
     elif isinstance(data, np.ndarray):
         return data
     else:
-        raise TypeError('expected LazyData or np.ndarray')
+        raise TypeError('expected LazyResult or np.ndarray')
 
 
 def get_weld_type(data):
@@ -91,7 +91,7 @@ def get_weld_type(data):
     elif isinstance(data, np.ndarray):
         return numpy_to_weld_type(data.dtype)
     else:
-        raise TypeError('expected LazyData or np.ndarray')
+        raise TypeError('expected LazyResult or np.ndarray')
 
 
 def get_dtype(data):
@@ -100,7 +100,7 @@ def get_dtype(data):
     elif isinstance(data, np.ndarray):
         return data.dtype
     else:
-        raise TypeError('expected LazyData or np.ndarray')
+        raise TypeError('expected LazyResult or np.ndarray')
 
 
 def get_weld_info(data, expression=False, weld_type=False, dtype=False):
@@ -123,4 +123,4 @@ def evaluate_or_raw(data, verbose, decode, passes,
     elif isinstance(data, np.ndarray):
         return data
     else:
-        raise TypeError('expected LazyData or np.ndarray')
+        raise TypeError('expected LazyResult or np.ndarray')

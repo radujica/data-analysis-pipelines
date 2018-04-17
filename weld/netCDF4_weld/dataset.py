@@ -12,9 +12,11 @@ class Dataset(LazyFile):
     ----------
     path : str
         path to netcdf4 file
-    variables : dict {name : netCDF4_weld.Variable}
+    variables : dict
+        name -> netCDF4_weld.Variable;
         used when doing operations on the Dataset to create new result Dataset
-    dimensions : dict {name : size}
+    dimensions : dict
+        name -> size;
         used when doing operations on the Dataset to create new result Dataset
 
     See also

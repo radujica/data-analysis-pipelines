@@ -12,7 +12,7 @@ def weld_aggregate(array, operation, weld_type):
 
     Arguments
     ---------
-    array : WeldObject / np.ndarray
+    array : WeldObject or np.ndarray
         input array
     operation : {'+', '*', 'min', 'max'}
         operation to apply
@@ -54,7 +54,7 @@ def weld_subset(array, slice_):
 
     Parameters
     ----------
-    array : np.array / WeldObject
+    array : np.array or WeldObject
         1-dimensional array
     slice_ : slice
         subset to return
@@ -105,7 +105,7 @@ def weld_filter(array, bool_array):
 
     Parameters
     ----------
-    array : np.ndarray / WeldObject
+    array : np.ndarray or WeldObject
         input array
     bool_array : np.ndarray / WeldObject
         array of bool with True for elements in array desired in the result array
@@ -151,7 +151,7 @@ def weld_compare(array, scalar, operation, weld_type):
 
     Parameters
     ----------
-    array : np.ndarray / WeldObject
+    array : np.ndarray or WeldObject
         input array
     scalar : str or scalar type
         value to compare with; must be same type as the values in the array. If not a str,
@@ -232,7 +232,7 @@ def weld_element_wise_op(array, scalar, operation, weld_type):
 
     Parameters
     ----------
-    array : np.ndarray / WeldObject
+    array : np.ndarray or WeldObject
         input array
     scalar : str or scalar type
         value to compare with; must be same type as the values in the array. If not a str,
@@ -283,9 +283,9 @@ def weld_array_op(array1, array2, operation):
 
     Parameters
     ----------
-    array1 : np.ndarray / WeldObject
+    array1 : np.ndarray or WeldObject
         input array
-    array2 : np.ndarray / WeldObject
+    array2 : np.ndarray or WeldObject
         second input array
     operation : {+, -, *, /}
 
@@ -328,7 +328,7 @@ def weld_count(array):
 
     Parameters
     ----------
-    array : np.ndarray / WeldObject
+    array : np.ndarray or WeldObject
         input array
 
     Returns
@@ -359,7 +359,7 @@ def weld_mean(array, weld_type):
 
     Parameters
     ----------
-    array : np.ndarray / WeldObject
+    array : np.ndarray or WeldObject
         input array
     weld_type : WeldType
         type of each element in the input array
@@ -398,7 +398,7 @@ def weld_standard_deviation(array, weld_type):
 
     Parameters
     ----------
-    array : np.ndarray / WeldObject
+    array : np.ndarray or WeldObject
         input array
     weld_type : WeldType
         type of each element in the input array
@@ -447,12 +447,12 @@ def weld_merge_single_index(indexes):
 
     Parameters
     ----------
-    indexes : list of np.array / WeldObject
+    indexes : list of np.array or WeldObject
         input array
 
     Returns
     -------
-    [WeldObject]
+    list of WeldObject
         representation of the computations
 
     Examples
@@ -460,9 +460,9 @@ def weld_merge_single_index(indexes):
     >>> index1 = np.array([1, 3, 4, 5, 6])
     >>> index2 = np.array([2, 3, 5])
     >>> result = weld_merge_single_index([index1, index2])
-    >>> LazyData(result[0], WeldBit(), 1).evaluate(verbose=False)
+    >>> LazyResult(result[0], WeldBit(), 1).evaluate(verbose=False)
     [False True False True False]
-    >>> LazyData(result[1], WeldBit(), 1).evaluate(verbose=False)
+    >>> LazyResult(result[1], WeldBit(), 1).evaluate(verbose=False)
     [False True True]
 
     """
@@ -538,9 +538,9 @@ def weld_index_to_values(levels, labels):
 
     Parameters
     ----------
-    levels : np.array / WeldObject
+    levels : np.array or WeldObject
         the possible values
-    labels : np.array / WeldObject
+    labels : np.array or WeldObject
         the indices to the levels for the actual index values
 
     Returns
@@ -552,7 +552,7 @@ def weld_index_to_values(levels, labels):
     --------
     >>> levels = np.array([1.0, 2.5, 3.0])
     >>> labels = np.array([0, 0, 1, 2])
-    >>> print(LazyData(weld_index_to_values(levels, labels), WeldDouble(), 1).evaluate(verbose=False))
+    >>> print(LazyResult(weld_index_to_values(levels, labels), WeldDouble(), 1).evaluate(verbose=False))
     [1. 1. 2.5 3.]
 
     """
@@ -592,13 +592,14 @@ def weld_merge_triple_index(indexes):
 
     Parameters
     ----------
-    indexes : list of list of np.array / WeldObject
+    indexes : list of list
+        of np.array or WeldObject
         list of len 2 with first and second elements being the labels in a list
         for the first and second DataFrame MultiIndex, respectively
 
     Returns
     -------
-    [WeldObject]
+    list of WeldObject
         representation of the computations, one for each DataFrame
 
     """
@@ -715,11 +716,11 @@ def weld_groupby(by, by_types, columns, columns_types):
 
     Parameters
     ----------
-    by : list of np.array / WeldObject
+    by : list of np.ndarray or list of WeldObject
         the data to group by
     by_types : list of WeldType
         corresponding to by
-    columns : list of np.array / WeldObject
+    columns : list of np.ndarray or list of WeldObject
         the data to group
     columns_types : list of WeldType
         corresponding to columns
@@ -888,7 +889,7 @@ def weld_unique(array, type):
 
     Parameters
     ----------
-    array : np.ndarray / WeldObject
+    array : np.ndarray or WeldObject
         input array
     type : WeldType
         of the input array
@@ -952,7 +953,7 @@ def weld_udf(weld_template, mapping):
     >>> weld_template = "map(%(array)s, |e| e + %(scalar)s)"
     >>> mapping = {'array': array, 'scalar': '2L'}
     >>> result = weld_udf(weld_template, mapping)
-    >>> LazyData(result, WeldLong(), 1).evaluate()
+    >>> LazyResult(result, WeldLong(), 1).evaluate()
     [3 5 6]
 
     """

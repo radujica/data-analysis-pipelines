@@ -48,17 +48,17 @@ def duplicate_elements_indices(array, n, cartesian=False):
 
     Parameters
     ----------
-    array : np.array / LazyData
+    array : np.ndarray or LazyResult
         the source data
     n : long
         how many times to repeat each element
-    cartesian : boolean
+    cartesian : bool
         True if used internally by cartesian_product to signify the operation
         has been done once already and hence must behave slightly different
 
     Returns
     -------
-    LazyData
+    LazyResult
         the expanded array containing the indices, not the elements
 
     Examples
@@ -117,17 +117,17 @@ def duplicate_array_indices(array, n, cartesian=False):
 
     Parameters
     ----------
-    array : np.array / LazyData
+    array : np.ndarray or LazyResult
         the source data
     n : long
         how many times to repeat the source array
-    cartesian : boolean
+    cartesian : bool
         True if used internally by cartesian_product to signify the operation
         has been done once already and hence must behave slightly different
 
     Returns
     -------
-    LazyData
+    LazyResult
         the expanded array containing the indices, not the elements
 
     Examples
@@ -232,12 +232,12 @@ def cartesian_product_indices(arrays):
 
     Parameters
     ----------
-    arrays : list of np.array or LazyData
+    arrays : list of np.ndarray or list of LazyResult
         list containing arrays that need to be in the product
 
     Returns
     -------
-    [LazyData]
+    list of LazyResult
 
     Examples
     --------
@@ -264,7 +264,7 @@ def cartesian_product_indices(arrays):
         elif isinstance(arrays_copied[i], np.ndarray):
             weld_type = numpy_to_weld_type(arrays_copied[i].dtype)
         else:
-            raise TypeError('expected LazyData or np.ndarray')
+            raise TypeError('expected LazyResult or np.ndarray')
 
         weld_types.append(weld_type)
 

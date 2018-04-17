@@ -1,4 +1,3 @@
-import csv
 import pandas as pd
 from column import Column
 from lazy_file import LazyFile
@@ -33,6 +32,7 @@ class Table(LazyFile):
         # pandas already does type inference which is neat
         return pd.read_csv(self.path, sep=',', engine='c', nrows=1)
 
+    # nrows as param used by Column.eager_head to bypass cache and not read everything
     def read_file(self, nrows=None):
         return pd.read_csv(self.path,
                            sep=',',

@@ -27,7 +27,7 @@ def read_netcdf4(path):
     dimensions = OrderedDict(map(lambda kv: (kv[0], kv[1]),
                                  OrderedDict(ds.dimensions.items()).items()))
 
-    # columns data, either LazyData or raw
+    # columns data, either LazyResult or raw
     data = [ds.variables[k] for k in columns]
     # the dimensions
     indexes = [ds.variables[k] for k in dimensions]

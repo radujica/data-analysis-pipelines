@@ -15,11 +15,11 @@ class Series(LazyResult):
 
     Parameters
     ----------
-    data : np.ndarray / WeldObject
+    data : np.ndarray or WeldObject
         raw data or weld expression
     dtype : np.dtype
         of the elements
-    index : Index, RangeIndex, or MultiIndex
+    index : Index or RangeIndex or MultiIndex
         index linked to the data; it is assumed to be of the same length
     name : str, optional
         name of the series
@@ -62,12 +62,12 @@ class Series(LazyResult):
 
         Parameters
         ----------
-        item : slice or Series
+        item : slice or LazyResult
             if slice, a slice of the data for the number of desired rows; currently
             must contain a stop value and will not work as expected for
             start != 0 and stride != 1;
-            if Series, returns a filtered Series only with the elements corresponding to
-            True in the item Series
+            if LazyResult, returns a filtered Series only with the elements corresponding to
+            True in the item LazyResult
 
         Returns
         -------
@@ -218,7 +218,7 @@ class Series(LazyResult):
         aggregations : list of str
             supported aggregations are = {'sum', 'prod', 'min', 'max', 'count', 'mean', 'std'}
         verbose, decode, passes, num_threads, apply_experimental_transforms
-            see LazyData
+            see LazyResult
 
         Returns
         -------

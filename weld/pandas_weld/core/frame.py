@@ -15,9 +15,9 @@ class DataFrame(object):
 
     Parameters
     ----------
-    data : {}
-        column names -> data array or LazyData
-    index : Index, MultiIndex, or RangeIndex
+    data : dict
+        column names -> data array or LazyResult
+    index : Index or MultiIndex or RangeIndex
 
     See also
     --------
@@ -27,7 +27,7 @@ class DataFrame(object):
     @staticmethod
     def _gather_dtypes(data):
         dtypes = {}
-        for k, v in data.items():
+        for k, v in data.iteritems():
             dtypes[k] = get_dtype(v)
 
         return dtypes
@@ -59,7 +59,7 @@ class DataFrame(object):
 
         Parameters
         ----------
-        see LazyData
+        see LazyResult
 
         Returns
         -------
@@ -88,12 +88,12 @@ class DataFrame(object):
 
         Parameters
         ----------
-        item : str, slice, or list of str, Series of bool
+        item : str or slice or list of str or LazyResult
             if str, returns a column as a Series;
             if slice, returns a sliced DataFrame;
             if list, returns a DataFrame with only the columns from the list;
-            if Series, returns a filtered DataFrame only with the rows corresponding to
-            True in the Series
+            if LazyResult, returns a filtered DataFrame only with the rows corresponding to
+            True in the LazyResult
 
         Returns
         -------
@@ -163,10 +163,10 @@ class DataFrame(object):
 
         Parameters
         ----------
-        n : int
+        n : int, optional
             how many rows to return
         verbose, decode, passes, num_threads, apply_experimental_transforms
-            see LazyData
+            see LazyResult
 
         Returns
         -------
@@ -199,14 +199,14 @@ class DataFrame(object):
         ----------
         key : str
             column name
-        value : np.ndarray / LazyData
+        value : np.ndarray or LazyResult
             note it does NOT check for the same length as the other columns
 
         """
         if not isinstance(key, str):
             raise TypeError('expected key as a str')
         elif not isinstance(value, LazyResult) and not isinstance(value, np.ndarray):
-            raise TypeError('expected value as LazyData or np.ndarray')
+            raise TypeError('expected value as LazyResult or np.ndarray')
 
         self.data[key] = value
 
@@ -337,7 +337,7 @@ class DataFrame(object):
         Parameters
         ----------
         verbose, decode, passes, num_threads, apply_experimental_transforms
-            see LazyData
+            see LazyResult
 
         Returns
         -------
@@ -355,7 +355,7 @@ class DataFrame(object):
         Parameters
         ----------
         verbose, decode, passes, num_threads, apply_experimental_transforms
-            see LazyData
+            see LazyResult
 
         Returns
         -------
@@ -373,7 +373,7 @@ class DataFrame(object):
         Parameters
         ----------
         verbose, decode, passes, num_threads, apply_experimental_transforms
-            see LazyData
+            see LazyResult
 
         Returns
         -------
@@ -391,7 +391,7 @@ class DataFrame(object):
         Parameters
         ----------
         verbose, decode, passes, num_threads, apply_experimental_transforms
-            see LazyData
+            see LazyResult
 
         Returns
         -------
@@ -409,7 +409,7 @@ class DataFrame(object):
         Parameters
         ----------
         verbose, decode, passes, num_threads, apply_experimental_transforms
-            see LazyData
+            see LazyResult
 
         Returns
         -------
@@ -438,7 +438,7 @@ class DataFrame(object):
         Parameters
         ----------
         verbose, decode, passes, num_threads, apply_experimental_transforms
-            see LazyData
+            see LazyResult
 
         Returns
         -------
@@ -467,7 +467,7 @@ class DataFrame(object):
         Parameters
         ----------
         verbose, decode, passes, num_threads, apply_experimental_transforms
-            see LazyData
+            see LazyResult
 
         Returns
         -------
@@ -562,7 +562,7 @@ class DataFrame(object):
             list of desired aggregations; currently supported are
             {'sum', 'prod', 'min', 'max', 'count', 'mean', 'std'}
         verbose, decode, passes, num_threads, apply_experimental_transforms
-            see LazyData
+            see LazyResult
 
         Returns
         -------

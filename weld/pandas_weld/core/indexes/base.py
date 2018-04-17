@@ -13,7 +13,7 @@ class Index(LazyResult):
 
     Parameters
     ----------
-    data : np.array / WeldObject
+    data : np.ndarray or WeldObject
         this allows arbitrary indexes to be created
     dtype : np.dtype
         type of the data
@@ -52,7 +52,7 @@ class Index(LazyResult):
         ----------
         item : slice or LazyResult
             if slice, returns a sliced Index;
-            if LazyData, returns a filtered Index only with the labels corresponding to
+            if LazyResult, returns a filtered Index only with the labels corresponding to
             True in the Series
 
         Returns
@@ -69,10 +69,10 @@ class Index(LazyResult):
                          self.dtype)
         elif isinstance(item, LazyResult):
             if str(item.weld_type) != str(numpy_to_weld_type('bool')):
-                raise ValueError('expected LazyData of bool to filter Index elements')
+                raise ValueError('expected LazyResult of bool to filter Index elements')
 
             return Index(weld_filter(self.expr,
                                      item.expr),
                          self.dtype)
         else:
-            raise TypeError('expected slice or LazyData of bool in Index.__getitem__')
+            raise TypeError('expected slice or LazyResult of bool in Index.__getitem__')

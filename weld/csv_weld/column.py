@@ -22,7 +22,9 @@ class Column(LazyData):
         return df[self.name][slice_].values
 
     def eager_head(self, n=10):
-        return self.eager_read(slice(0, n, 1))
+        df = self.table.read_file(n)
+
+        return df[self.name][n].values
 
     def lazy_skip_columns(self, columns):
         for column in columns:

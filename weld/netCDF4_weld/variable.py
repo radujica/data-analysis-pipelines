@@ -25,7 +25,7 @@ class Variable(LazyData, LazyResult):
         same as netCDF4.Variable.shape
     attributes : OrderedDict
         all Variable metadata
-    expression : str / WeldObject
+    expression : str or WeldObject
         str if created by netCDF4_weld.Dataset, else WeldObject tracking the computations created by operations
         on this variable; note that expression must be == column_name if created by Dataset!
     dtype : np.dtype
