@@ -263,7 +263,7 @@ class LazyResult(LazyOpResult):
         copy_expr = WeldObject(self.expr.encoder, self.expr.decoder)
         copy_expr.weld_code = self.expr.weld_code
         copy_expr.context = deepcopy(self.expr.context)
-        copy_expr.dependencies = deepcopy(self.expr.dependencies)
+        copy_expr.dependencies = self.expr.dependencies.copy()
         copy_expr.argtypes = deepcopy(self.expr.argtypes)
 
         return LazyResult(copy_expr, self.weld_type, self.dim)
