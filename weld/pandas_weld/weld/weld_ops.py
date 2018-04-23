@@ -287,7 +287,7 @@ def weld_array_op(array1, array2, operation):
         input array
     array2 : np.ndarray or WeldObject
         second input array
-    operation : {+, -, *, /}
+    operation : {+, -, *, /, &&, ||}
 
     Returns
     -------

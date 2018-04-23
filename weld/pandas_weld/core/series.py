@@ -133,6 +133,30 @@ class Series(LazyResult):
     def __gt__(self, other):
         return self._comparison(other, '>')
 
+    def _bitwise_operation(self, other, operation):
+        if not isinstance(other, Series):
+            raise TypeError('expected another Series')
+
+        if self.dtype.char != '?' or other.dtype.char != '?':
+            raise TypeError('binary operations currently supported only on bool Series')
+
+        assert isinstance(operation, (str, unicode))
+
+        other = get_expression_or_raw(other)
+
+        return Series(weld_array_op(self.expr,
+                                    other,
+                                    operation),
+                      np.dtype(np.bool),
+                      self.index,
+                      self.name)
+
+    def __and__(self, other):
+        return self._bitwise_operation(other, '&&')
+
+    def __or__(self, other):
+        return self._bitwise_operation(other, '||')
+
     # TODO: add type conversion(?); pandas works when e.g. column_of_ints - 2.0 => float result
     def _element_wise_operation(self, other, operation):
         assert isinstance(operation, (str, unicode))

@@ -93,6 +93,18 @@ class SeriesTests(unittest.TestCase):
         test_equal_series(expected_result, result)
 
     # noinspection PyMethodMayBeStatic
+    def test_bitwise_and(self):
+        data = np.array([True, True, False, False])
+        series = Series(data, np.dtype(np.bool), RangeIndex(0, 4, 1))
+        data_other = np.array([True, False, True, False])
+        series_other = Series(data_other, np.dtype(np.bool), RangeIndex(0, 4, 1))
+
+        expected_result = Series(np.array([True, False, False, False]), np.dtype(np.bool), RangeIndex(0, 4, 1))
+        result = series & series_other
+
+        test_equal_series(expected_result, result)
+
+    # noinspection PyMethodMayBeStatic
     def test_element_wise_operation(self):
         data = np.array([1, 2, 3])
         series = Series(data, np.dtype(np.int64), RangeIndex(0, 3, 1))
