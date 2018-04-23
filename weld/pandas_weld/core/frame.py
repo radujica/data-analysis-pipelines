@@ -181,8 +181,7 @@ class DataFrame(object):
             # making series because Series has the proper method to slice something; re-use the code above
             series = self[str(column_name)]
 
-            new_data[column_name] = Series(series.head(n, verbose, decode, passes,
-                                                       num_threads, apply_experimental_transforms),
+            new_data[column_name] = Series(series.head(n),
                                            series.dtype,
                                            series.index,
                                            series.name)
