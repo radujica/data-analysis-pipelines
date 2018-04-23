@@ -2,73 +2,58 @@ import xarray as xr
 import numpy as np
 import os
 
-PATH_HOME = os.getenv('HOME2', '/')
-PATH_DATASETS_ROOT = '/datasets/ECAD/original/small_sample/'
-FILES = ['tg', 'tg_err', 'tn', 'tn_err', 'tx', 'tx_err', 'pp', 'pp_err', 'rr', 'rr_err']
-PATH_EXTENSION = '.nc'
+# /export/scratch1/radujica/datasets/ECAD/original/small_sample/
+PATH_HOME = os.getenv('HOME2') + '/datasets/ECAD/original/small_sample/'
+df1 = xr.open_dataset(PATH_HOME + 'data1.nc', engine='netcdf4').to_dataframe()
+df2 = xr.open_dataset(PATH_HOME + 'data2.nc', engine='netcdf4').to_dataframe()
 
 
-def read_file_as_df(path):
-    """
-    :param path: str
-        Path to netCDF file
-    :return: Pandas DataFrame of :param path:
-    """
-    return xr.open_dataset(path).to_dataframe()
+"PIPELINE"
+# 1. join the 2 dataframes
+df = df1.join(df2, how='inner', sort=False)
 
+# 2. quick preview on the data
+print(df.head(10))
 
-# 1. read all data into 1 dataframe; note it is naively done before filtering nulls
-df = read_file_as_df(PATH_HOME + PATH_DATASETS_ROOT + FILES[0] + PATH_EXTENSION)
+# 3. want a subset of the data, here only latitude >= 42.25 & <= 60.25 (~ mainland Europe)
+# not a filter because we want to showcase the selection of a subset of rows within the dataset;
+# might as well be 123456:987654 but the values in that slice don't make much sense for this dataset
+df = df[709920:1482479]  # TODO: update values for larger datasets
 
-for file_name in FILES[1:]:
-    raw_df = read_file_as_df(PATH_HOME + PATH_DATASETS_ROOT + file_name + PATH_EXTENSION)
+# 4. drop rows with null values
+# could use ~np.isnan(column) (?)
+df = df[(df['tg'].notna()) & (df['pp'].notna()) & (df['rr'].notna())]
 
-    # the _err files have the same variable name as the non _err files, so fix it
-    # e.g. tg -> tg_err
-    if FILES.index(file_name) % 2 == 1:
-        raw_df = raw_df.rename(columns={FILES[FILES.index(file_name) - 1]: file_name})
-
-    # avoiding right join for performance; join = merge on index by default
-    df = df.join(raw_df, how='inner', sort=False)
-
-
-# 2. drop rows with null values
-df = df.dropna()
-
-
-# 3. drop pp_err and rr_err columns
+# 5. drop pp_err and rr_err columns
 df = df.drop(columns=['pp_err', 'rr_err'])
 
 
-# 4. explore the data through aggregations
-print(df.describe())    # EVALUATE STEP
-
-
-# 5. compute absolute difference between max and min values;
-# absolute assuming it might be the (unexpected) case than min > max
-def compute_abs_maxmin(series_min, series_max):
+# 6. UDF 1: compute absolute difference between max and min
+def compute_abs_maxmin(series_max, series_min):
     return np.abs(np.subtract(series_max, series_min))
 
 
 df['abs_diff'] = compute_abs_maxmin(df['tx'], df['tn'])
 
+# 7. explore the data through aggregations
+print(df.agg(['min', 'max', 'mean', 'std']))    # EVALUATE STEP
 
-# 6. compute std per month
-# need values as columns
+# 8. compute std per month
+# need index as columns
 df = df.reset_index()
-# the actual udf to convert from date to custom year+month format
+# UDF 2: compute custom year+month format
 df['year_month'] = df['time'].map(lambda x: x.year * 100 + x.month)
 # group by month and rename columns appropriately
 df_grouped = df[['latitude', 'longitude', 'year_month', 'tg', 'tn', 'tx', 'pp', 'rr']] \
     .groupby(['latitude', 'longitude', 'year_month']) \
-    .std() \
-    .rename(columns={'tg': 'tg_std', 'tn': 'tn_std', 'tx': 'tx_std', 'pp': 'pp_std', 'rr': 'rr_std'}) \
+    .mean() \
+    .rename(columns={'tg': 'tg_mean', 'tn': 'tn_mean', 'tx': 'tx_mean', 'pp': 'pp_mean', 'rr': 'rr_mean'}) \
     .reset_index()
-# merge the results
+# merge the results; TODO: this will probably be another EVALUATE STEP to avoid the merge
 df = df.merge(df_grouped, on=['latitude', 'longitude', 'year_month'], how='inner')
 # clean up
 del df_grouped
 df = df.drop('year_month', axis=1)
-df = df.set_index(['latitude', 'longitude', 'time'])
 
-print(df)   # EVALUATE STEP
+# 9. EVALUATE
+print(df)
