@@ -49,56 +49,6 @@ def weld_aggregate(array, operation, weld_type):
     return weld_obj
 
 
-def weld_subset(array, slice_):
-    """ Return a subset of the input array
-
-    Parameters
-    ----------
-    array : np.array or WeldObject
-        1-dimensional array
-    slice_ : slice
-        subset to return
-
-    Returns
-    -------
-    WeldObject
-        representation of this computation
-
-    """
-    weld_obj = WeldObject(_encoder, _decoder)
-
-    array_var = weld_obj.update(array)
-
-    if isinstance(array, WeldObject):
-        array_var = array.obj_id
-        weld_obj.dependencies[array_var] = array
-
-    if slice_.step == 1:
-        weld_template = """
-        slice(
-            %(array)s,
-            %(slice_start)s,
-            %(slice_stop)s
-        )"""
-    else:
-        weld_template = """
-        result(
-            for(
-                iter(%(array)s, %(slice_start)s, %(slice_stop)s, %(slice_step)s),
-                appender,
-                |b, i, n| 
-                    merge(b, n)
-            )  
-        )"""
-
-    weld_obj.weld_code = weld_template % {'array': array_var,
-                                          'slice_start': 'i64(%s)' % slice_.start,
-                                          'slice_stop': 'i64(%s)' % slice_.stop,
-                                          'slice_step': 'i64(%s)' % slice_.step}
-
-    return weld_obj
-
-
 def weld_filter(array, bool_array):
     """ Returns a new array only with the elements with a corresponding
     True in bool_array

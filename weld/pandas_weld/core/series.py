@@ -6,7 +6,7 @@ from lazy_result import LazyResult
 from indexes import Index
 from pandas_weld.weld import weld_aggregate, weld_compare, weld_filter, weld_element_wise_op, weld_count, weld_mean, \
     weld_standard_deviation, weld_udf, weld_array_op
-from utils import subset, replace_slice_defaults, get_expression_or_raw
+from utils import replace_slice_defaults, get_expression_or_raw
 import numpy as np
 
 
@@ -81,7 +81,7 @@ class Series(LazyResult):
 
             new_index = self.index[item]
 
-            return Series(subset(self, item).expr,
+            return Series(self.expr,
                           self.dtype,
                           new_index,
                           self.name)

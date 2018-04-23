@@ -1,5 +1,8 @@
 import numpy as np
-from grizzly.lazy_op import LazyOpResult, WeldObject
+from grizzly.encoders import NumPyDecoder, NumPyEncoder
+from grizzly.lazy_op import LazyOpResult
+from weld.weldobject import WeldObject
+
 from lazy_data import LazyData
 from lazy_file import LazyFile
 from copy import deepcopy
@@ -253,9 +256,9 @@ class LazyResult(LazyOpResult):
             which subset of the data/rows to read
 
         """
-        # if np.ndarray, eagerly slice the data (internally a mask over the data(?))
+        # if np.ndarray, lazily slice the data
         if isinstance(self.expr, np.ndarray):
-            self.expr = self.expr[slice_]
+            self.expr = weld_subset(self.expr, slice_)
         else:
             self._update_args('lazy_slice_rows', slice_)
 
@@ -297,3 +300,53 @@ class LazyResult(LazyOpResult):
                     copy.expr.context[key] = LazyResult.data_mapping[value].eager_head(n)
 
             return copy.evaluate()[:n]
+
+
+def weld_subset(array, slice_):
+    """ Return a subset of the input array
+
+    Parameters
+    ----------
+    array : np.array or WeldObject
+        1-dimensional array
+    slice_ : slice
+        subset to return
+
+    Returns
+    -------
+    WeldObject
+        representation of this computation
+
+    """
+    weld_obj = WeldObject(NumPyEncoder(), NumPyDecoder())
+
+    array_var = weld_obj.update(array)
+
+    if isinstance(array, WeldObject):
+        array_var = array.obj_id
+        weld_obj.dependencies[array_var] = array
+
+    if slice_.step == 1:
+        weld_template = """
+        slice(
+            %(array)s,
+            %(slice_start)s,
+            %(slice_stop)s
+        )"""
+    else:
+        weld_template = """
+        result(
+            for(
+                iter(%(array)s, %(slice_start)s, %(slice_stop)s, %(slice_step)s),
+                appender,
+                |b, i, n| 
+                    merge(b, n)
+            )  
+        )"""
+
+    weld_obj.weld_code = weld_template % {'array': array_var,
+                                          'slice_start': 'i64(%s)' % slice_.start,
+                                          'slice_stop': 'i64(%s)' % slice_.stop,
+                                          'slice_step': 'i64(%s)' % slice_.step}
+
+    return weld_obj

@@ -1,9 +1,9 @@
 import numpy as np
 from grizzly.encoders import numpy_to_weld_type
 from weld.types import WeldLong
-from lazy_result import LazyResult
+from lazy_result import LazyResult, weld_subset
 from base import Index
-from pandas_weld.core.utils import replace_slice_defaults, subset
+from pandas_weld.core.utils import replace_slice_defaults
 from pandas_weld.weld import weld_range, weld_filter
 
 
@@ -62,7 +62,7 @@ class RangeIndex(LazyResult):
 
             self.update_rows(item)
 
-            return Index(subset(self, item).expr,
+            return Index(weld_subset(self.expr, item),
                          np.dtype(np.int64))
         elif isinstance(item, LazyResult):
             if str(item.weld_type) != str(numpy_to_weld_type('bool')):

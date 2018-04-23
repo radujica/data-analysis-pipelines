@@ -2,7 +2,7 @@ import numpy as np
 from grizzly.encoders import numpy_to_weld_type
 from weld.weldobject import WeldObject
 from lazy_result import LazyResult
-from pandas_weld.core.utils import replace_slice_defaults, subset
+from pandas_weld.core.utils import replace_slice_defaults
 from pandas_weld.weld import weld_filter
 
 
@@ -65,7 +65,7 @@ class Index(LazyResult):
 
             self.update_rows(item)
 
-            return Index(subset(self, item).expr,
+            return Index(self.expr,
                          self.dtype)
         elif isinstance(item, LazyResult):
             if str(item.weld_type) != str(numpy_to_weld_type('bool')):

@@ -56,6 +56,7 @@ class Variable(LazyData, LazyResult):
         # same as [:]
         # the param used to lazy_slice_rows
         self.tuple_slices = slice(None)
+        self._slice = None
 
     @staticmethod
     def _infer_dtype(dtype, attributes):
@@ -95,7 +96,10 @@ class Variable(LazyData, LazyResult):
                                                                                    calendar=attributes['calendar'])],
                             dtype=np.str)
 
-        return data
+        if self._slice is not None:
+            return data[self._slice]
+        else:
+            return data
 
     def eager_head(self, n=10):
         tuple_slices = convert_row_to_nd_slices(slice(0, n, 1), self.shape)
@@ -111,6 +115,7 @@ class Variable(LazyData, LazyResult):
         # user wants a slice of rows, so convert to netCDF4 slices for all dimensions
         if isinstance(slice_, slice):
             slice_ = replace_slice_defaults(slice_)
+            self._slice = slice_
             self.tuple_slices = convert_row_to_nd_slices(slice_, self.shape)
         elif isinstance(slice_, tuple):  # assumed correct
             self.tuple_slices = slice_

@@ -1,7 +1,6 @@
 from grizzly.encoders import numpy_to_weld_type
 from weld.types import *
 from lazy_result import LazyResult
-from pandas_weld.weld import weld_subset
 import numpy as np
 
 
@@ -20,38 +19,6 @@ _weld_to_numpy_str_type_mapping = {
 
 def weld_to_numpy_type(weld_type):
     return np.dtype(_weld_to_numpy_str_type_mapping[str(weld_type)])
-
-
-def subset(array, slice_):
-    """ Return a subset of the input array
-
-    Parameters
-    ----------
-    array : np.array or LazyResult
-        1-dimensional array
-    slice_ : slice
-        subset to return
-
-    Returns
-    -------
-    LazyResult
-
-    """
-    if not isinstance(slice_, slice):
-        raise TypeError('expected a slice in subset')
-
-    if isinstance(array, LazyResult):
-        weld_type = array.weld_type
-        array = array.expr
-    elif isinstance(array, np.ndarray):
-        weld_type = numpy_to_weld_type(array.dtype)
-    else:
-        raise TypeError('expected array as LazyResult or np.ndarray')
-
-    return LazyResult(weld_subset(array,
-                                  slice_),
-                      weld_type,
-                      1)
 
 
 # to replace the None with default values for use in weld code where None is not acceptable

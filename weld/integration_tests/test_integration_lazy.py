@@ -1,6 +1,8 @@
 import unittest
 import numpy as np
 import os
+from weld.weldobject import WeldObject
+
 import netCDF4_weld
 import pandas_weld as pdw
 from lazy_result import LazyResult
@@ -210,7 +212,8 @@ class IntegrationTests(unittest.TestCase):
     def test_lazy_slice_rows_df_netcdf4(self):
         column = self.df_netcdf4['tg']
         # netcdf4 cannot read exactly 5 elements from a file with dimensions (1, 3, 2); it must read 6
-        expected_read_data = np.array([-99.99, 10., 10.099999, -99.99, -99.99, 10.2], dtype=np.float32)
+        # however, the implementation of eager_read filters the extra out before returning
+        expected_read_data = np.array([-99.99, 10., 10.099999, -99.99, -99.99], dtype=np.float32)
         expected_result = np.array([-99.99, 10., 10.099999, -99.99, -99.99], dtype=np.float32)
         self._test_lazy_slice_rows_df(column, expected_read_data, expected_result, slice(5))
 
@@ -250,6 +253,17 @@ class IntegrationTests(unittest.TestCase):
 
     def test_lazy_skip_columns_df_csv(self):
         self._test_lazy_skip_columns_df(self.df_csv, 'x', 'y')
+
+    def test_subset_raw(self):
+        data = np.array([1, 2, 3, 4])
+        series = pdw.Series(data, np.dtype(np.int64), pdw.RangeIndex(0, 4, 1))
+
+        series.update_rows(slice(0, 2, 1))
+
+        expected_result = np.array([1, 2])
+
+        self.assertIsInstance(series.expr, WeldObject)
+        np.testing.assert_array_equal(expected_result, series.evaluate())
 
 
 def main():
