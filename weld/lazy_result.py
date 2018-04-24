@@ -321,7 +321,6 @@ def weld_subset(array, slice_):
     weld_obj = WeldObject(NumPyEncoder(), NumPyDecoder())
 
     array_var = weld_obj.update(array)
-
     if isinstance(array, WeldObject):
         array_var = array.obj_id
         weld_obj.dependencies[array_var] = array
@@ -346,7 +345,7 @@ def weld_subset(array, slice_):
 
     weld_obj.weld_code = weld_template % {'array': array_var,
                                           'slice_start': 'i64(%s)' % slice_.start,
-                                          'slice_stop': 'i64(%s)' % slice_.stop,
+                                          'slice_stop': 'i64(%s)' % (slice_.stop - slice_.start),
                                           'slice_step': 'i64(%s)' % slice_.step}
 
     return weld_obj
