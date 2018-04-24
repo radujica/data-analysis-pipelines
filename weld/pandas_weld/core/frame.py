@@ -1,7 +1,9 @@
 from grizzly.encoders import numpy_to_weld_type
+from tabulate import tabulate
 from weld.types import WeldBit, WeldLong
 from lazy_result import LazyResult
 from indexes import Index, MultiIndex, RangeIndex
+from pandas_weld.core.indexes.multi import index_to_values
 from pandas_weld.weld import weld_filter, weld_element_wise_op, weld_aggregate, weld_merge_single_index, \
     weld_merge_triple_index, weld_index_to_values, weld_groupby, weld_count
 from series import Series
@@ -66,15 +68,14 @@ class DataFrame(object):
         str
 
         """
-        materialized_columns = {}
-        for k, v in self.data.items():
-            materialized_columns[k] = evaluate_or_raw(v, verbose, decode, passes,
-                                                      num_threads, apply_experimental_transforms)
+        columns = self.index.evaluate(verbose, decode, passes,
+                                      num_threads, apply_experimental_transforms, True)
 
-        return "{}\n> Index\n{}\n> Data\n{}".format(self.__class__.__name__,
-                                                    self.index.evaluate(verbose, decode, passes,
-                                                                        num_threads, apply_experimental_transforms),
-                                                    materialized_columns)
+        for k, v in self.data.items():
+            columns[k] = evaluate_or_raw(v, verbose, decode, passes,
+                                         num_threads, apply_experimental_transforms)
+
+        return tabulate(columns, headers="keys")
 
     def __iter__(self):
         for column_name in self.data:
@@ -496,19 +497,11 @@ class DataFrame(object):
         return [LazyResult(data[i], WeldBit(), 1) for i in xrange(2)]
 
     # noinspection PyMethodMayBeStatic
-    def _index_to_values(self, levels, labels):
-        levels, weld_type = get_weld_info(levels, expression=True, weld_type=True)
-
-        if isinstance(labels, LazyResult):
-            labels = labels.expr
-
-        return LazyResult(weld_index_to_values(levels, labels), weld_type, 1)
-
     def _merge_multi(self, index1, index2):
         assert len(index1.levels) == len(index2.levels) == 3
 
-        index1 = [self._index_to_values(index1.levels[i], index1.labels[i]) for i in xrange(3)]
-        index2 = [self._index_to_values(index2.levels[i], index2.labels[i]) for i in xrange(3)]
+        index1 = [index_to_values(index1.levels[i], index1.labels[i]) for i in xrange(3)]
+        index2 = [index_to_values(index2.levels[i], index2.labels[i]) for i in xrange(3)]
 
         data = weld_merge_triple_index([[get_expression_or_raw(index1[i]) for i in xrange(3)],
                                         [get_expression_or_raw(index2[i]) for i in xrange(3)]])

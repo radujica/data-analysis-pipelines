@@ -94,7 +94,7 @@ class MultiIndexTests(unittest.TestCase):
         levels = [LazyResult(np.array([1, 2]), WeldLong(), 1), LazyResult(np.array([3, 4]), WeldLong(), 1)]
         names = ['a', 'b']
 
-        result = pdw.MultiIndex.from_product(levels, names)[:]
+        result = pdw.MultiIndex.from_product(levels, names)[:4]
 
         expected_result = pdw.MultiIndex([LazyResult(np.array([1, 2]), WeldLong(), 1),
                                           LazyResult(np.array([3, 4]), WeldLong(), 1)],

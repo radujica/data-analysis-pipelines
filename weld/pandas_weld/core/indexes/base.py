@@ -1,9 +1,12 @@
-import numpy as np
+from collections import OrderedDict
 from grizzly.encoders import numpy_to_weld_type
+from tabulate import tabulate
 from weld.weldobject import WeldObject
 from lazy_result import LazyResult
 from pandas_weld.core.utils import replace_slice_defaults
 from pandas_weld.weld import weld_filter
+
+import numpy as np
 
 
 # TODO: this should be a superclass of the others to conform to pandas
@@ -44,6 +47,15 @@ class Index(LazyResult):
 
     def __str__(self):
         return str(self.data)
+
+    def evaluate(self, verbose=False, decode=True, passes=None, num_threads=1,
+                 apply_experimental_transforms=False, as_dict=False):
+        data = super(LazyResult, self).evaluate(verbose, decode, passes, num_threads, apply_experimental_transforms)
+
+        if as_dict:
+            return OrderedDict({self.__class__.__name__: data})
+        else:
+            return data
 
     def __getitem__(self, item):
         """ Retrieve a portion of the Index

@@ -23,7 +23,9 @@ class DataFrameTests(unittest.TestCase):
     def test_getitem_slice(self):
         data = {'col1': np.array([1, 2]),
                 'col2': np.array([5., 6.])}
-        index = pdw.MultiIndex.from_product([np.array([1, 2]), np.array([3, 4])], ['a', 'b'])
+        index = pdw.MultiIndex([np.array([1, 2]), np.array([3, 4])],
+                               [np.array([0, 0]), np.array([0, 1])],
+                               ['a', 'b'])
         expected_result = pdw.DataFrame(data, index)
 
         result = self.df[:2]

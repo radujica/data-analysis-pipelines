@@ -1,10 +1,12 @@
-import numpy_weld as npw
-from lazy_result import LazyResult, weld_subset
 from collections import OrderedDict
+from tabulate import tabulate
+from lazy_result import LazyResult, weld_subset
 from grizzly.encoders import numpy_to_weld_type
-from pandas_weld.core.utils import evaluate_or_raw, get_expression_or_raw, get_weld_type, get_weld_info, \
+from pandas_weld.core.utils import get_expression_or_raw, get_weld_type, get_weld_info, \
     replace_slice_defaults
-from pandas_weld.weld import weld_filter, weld_unique
+from pandas_weld.weld import weld_filter, weld_unique, weld_index_to_values
+
+import numpy_weld as npw
 
 
 class MultiIndex(object):
@@ -114,7 +116,7 @@ class MultiIndex(object):
             raise TypeError('expected slice or LazyResult of bool in MultiIndex.__getitem__')
 
     def evaluate(self, verbose=False, decode=True, passes=None, num_threads=1,
-                 apply_experimental_transforms=False):
+                 apply_experimental_transforms=False, as_dict=False):
         """ Evaluates by creating a str representation of the MultiIndex
 
         Parameters
@@ -126,15 +128,21 @@ class MultiIndex(object):
         str
 
         """
-        materialized_levels = OrderedDict()
-        materialized_labels = OrderedDict()
+        index_columns = [index_to_values(self.levels[i],
+                                         self.labels[i]).evaluate(verbose, decode, passes, num_threads,
+                                                                  apply_experimental_transforms)
+                         for i in xrange(len(self.levels))]
 
-        for i in xrange(len(self.names)):
-            materialized_levels[self.names[i]] = evaluate_or_raw(self.levels[i], verbose, decode, passes,
-                                                                 num_threads, apply_experimental_transforms)
-            materialized_labels[self.names[i]] = evaluate_or_raw(self.labels[i], verbose, decode, passes,
-                                                                 num_threads, apply_experimental_transforms)
+        if as_dict:
+            return OrderedDict(zip(self.names, index_columns))
+        else:
+            return tabulate(index_columns, headers=self.names)
 
-        return "{}\n>> Levels\n{}\n>> Labels\n{}".format(self.__class__.__name__,
-                                                         materialized_levels,
-                                                         materialized_labels)
+
+def index_to_values(levels, labels):
+    levels, weld_type = get_weld_info(levels, expression=True, weld_type=True)
+
+    if isinstance(labels, LazyResult):
+        labels = labels.expr
+
+    return LazyResult(weld_index_to_values(levels, labels), weld_type, 1)
