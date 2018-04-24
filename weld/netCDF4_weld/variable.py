@@ -96,7 +96,7 @@ class Variable(LazyData, LazyResult):
                                                                                    calendar=attributes['calendar'])],
                             dtype=np.str)
 
-        if self._slice is not None:
+        if self._slice is not None and self.column_name not in self.dimensions:
             return data[self._slice]
         else:
             return data
