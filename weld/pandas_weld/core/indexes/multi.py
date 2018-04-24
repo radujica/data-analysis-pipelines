@@ -1,8 +1,9 @@
 import numpy_weld as npw
-from lazy_result import LazyResult
+from lazy_result import LazyResult, weld_subset
 from collections import OrderedDict
 from grizzly.encoders import numpy_to_weld_type
-from pandas_weld.core.utils import evaluate_or_raw, get_expression_or_raw, get_weld_type, get_weld_info
+from pandas_weld.core.utils import evaluate_or_raw, get_expression_or_raw, get_weld_type, get_weld_info, \
+    replace_slice_defaults
 from pandas_weld.weld import weld_filter, weld_unique
 
 
@@ -14,8 +15,8 @@ class MultiIndex(object):
 
     Parameters
     ----------
-    levels : list of np.ndarray or list of WeldObject
-    labels : list of np.ndarray or list of WeldObject
+    levels : list of np.ndarray or list of LazyResult
+    labels : list of np.ndarray or list of LazyResult
     names : list of str
 
     Returns
@@ -27,6 +28,7 @@ class MultiIndex(object):
     pandas.MultiIndex
 
     """
+    # TODO: add some caching if columns were already expanded?
     def __init__(self, levels, labels, names):
         self.levels = levels
         self.labels = labels
@@ -38,7 +40,7 @@ class MultiIndex(object):
 
         Parameters
         ----------
-        levels : list of np.ndarray or list of WeldObject
+        levels : list of np.ndarray or list of LazyResult
         names : list of str
 
         Returns
@@ -83,14 +85,21 @@ class MultiIndex(object):
         MultiIndex
 
         """
+        # TODO: filter unnecessary levels too, both slice and LazyResult
         if isinstance(item, slice):
-            # TODO: figure out a way to lazily slice the index
-            return MultiIndex(self.levels, self.labels, self.names)
+            item = replace_slice_defaults(item)
+
+            new_labels = [LazyResult(weld_subset(get_expression_or_raw(label),
+                                                 item),
+                                     get_weld_type(label),
+                                     1)
+                          for label in self.labels]
+
+            return MultiIndex(self.levels, new_labels, self.names)
         elif isinstance(item, LazyResult):
             if str(item.weld_type) != str(numpy_to_weld_type('bool')):
                 raise ValueError('expected series of bool to filter DataFrame rows')
 
-            # TODO: filter unnecessary levels too
             new_labels = []
             for label in self.labels:
                 label, weld_type = get_weld_info(label, True, True)
