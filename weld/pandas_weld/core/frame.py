@@ -55,6 +55,7 @@ class DataFrame(object):
                                                     str(self.index),
                                                     str_dict(self.data))
 
+    # TODO: perhaps slice the arrays to avoid all the data being printed
     def evaluate(self, verbose=False, decode=True, passes=None, num_threads=1,
                  apply_experimental_transforms=False):
         """ Evaluates by creating a str representation of the DataFrame
