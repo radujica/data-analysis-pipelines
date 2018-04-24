@@ -1,3 +1,4 @@
+import numpy as np
 from grizzly.encoders import NumPyEncoder, NumPyDecoder
 from lazy_data import LazyData
 from lazy_result import LazyResult
@@ -20,7 +21,13 @@ class Column(LazyData):
         if slice_ is None:
             slice_ = slice(0, self.table.nrows, 1)
 
-        return df[self.name][slice_].values
+        data = df[self.name][slice_].values
+
+        # treat any object dtype as str
+        if self.dtype.char == 'O':
+            data = data.astype(np.str)
+
+        return data
 
     def eager_head(self, n=10):
         # skip the cache and re-use read_file method with param from Table
