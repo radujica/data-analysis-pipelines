@@ -43,7 +43,7 @@ class DataFrame(object):
     def dtypes(self):
         return Series(np.array(self._dtypes.values(), dtype=np.object),
                       np.dtype(np.object),
-                      Index(self._dtypes.keys(), dtype=np.dtype(np.str)))
+                      Index(np.array(self._dtypes.keys()), dtype=np.dtype(np.str)))
 
     def __repr__(self):
         return "{}(index={}, columns={})".format(self.__class__.__name__,
