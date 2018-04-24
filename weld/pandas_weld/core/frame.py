@@ -6,7 +6,7 @@ from pandas_weld.weld import weld_filter, weld_element_wise_op, weld_aggregate, 
     weld_merge_triple_index, weld_index_to_values, weld_groupby, weld_count
 from series import Series
 from utils import replace_slice_defaults, get_expression_or_raw, evaluate_or_raw, get_weld_type, \
-    get_dtype, get_weld_info
+    get_dtype, get_weld_info, str_dict
 import numpy as np
 
 
@@ -51,7 +51,7 @@ class DataFrame(object):
     def __str__(self):
         return "{}\n> Index\n{}\n> Data\n{}".format(self.__class__.__name__,
                                                     str(self.index),
-                                                    str(self.data))
+                                                    str_dict(self.data))
 
     def evaluate(self, verbose=False, decode=True, passes=None, num_threads=1,
                  apply_experimental_transforms=False):
@@ -71,10 +71,10 @@ class DataFrame(object):
             materialized_columns[k] = evaluate_or_raw(v, verbose, decode, passes,
                                                       num_threads, apply_experimental_transforms)
 
-        return "{}\n> Index\n{}\n> Columns\n{}".format(self.__class__.__name__,
-                                                       self.index.evaluate(verbose, decode, passes,
-                                                                           num_threads, apply_experimental_transforms),
-                                                       materialized_columns)
+        return "{}\n> Index\n{}\n> Data\n{}".format(self.__class__.__name__,
+                                                    self.index.evaluate(verbose, decode, passes,
+                                                                        num_threads, apply_experimental_transforms),
+                                                    materialized_columns)
 
     def __iter__(self):
         for column_name in self.data:
