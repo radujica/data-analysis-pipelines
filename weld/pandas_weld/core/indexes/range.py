@@ -1,6 +1,5 @@
 from collections import OrderedDict
 from grizzly.encoders import numpy_to_weld_type
-from tabulate import tabulate
 from weld.types import WeldLong
 from lazy_result import LazyResult, weld_subset
 from base import Index
@@ -46,7 +45,7 @@ class RangeIndex(LazyResult):
 
     def evaluate(self, verbose=False, decode=True, passes=None, num_threads=1,
                  apply_experimental_transforms=False, as_dict=False):
-        data = super(LazyResult, self).evaluate(verbose, decode, passes, num_threads, apply_experimental_transforms)
+        data = super(RangeIndex, self).evaluate(verbose, decode, passes, num_threads, apply_experimental_transforms)
 
         if as_dict:
             return OrderedDict({self.__class__.__name__: data})

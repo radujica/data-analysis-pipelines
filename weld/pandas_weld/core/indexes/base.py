@@ -1,6 +1,5 @@
 from collections import OrderedDict
 from grizzly.encoders import numpy_to_weld_type
-from tabulate import tabulate
 from weld.weldobject import WeldObject
 from lazy_result import LazyResult
 from pandas_weld.core.utils import replace_slice_defaults
@@ -50,7 +49,7 @@ class Index(LazyResult):
 
     def evaluate(self, verbose=False, decode=True, passes=None, num_threads=1,
                  apply_experimental_transforms=False, as_dict=False):
-        data = super(LazyResult, self).evaluate(verbose, decode, passes, num_threads, apply_experimental_transforms)
+        data = super(Index, self).evaluate(verbose, decode, passes, num_threads, apply_experimental_transforms)
 
         if as_dict:
             return OrderedDict({self.__class__.__name__: data})
