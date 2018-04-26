@@ -3,7 +3,8 @@
 - pipenv
 
 # Install
-`pipenv install`
+    cd python-libraries
+    pipenv install
 
 # Run
-`pipenv shell`
+    pipenv shell
