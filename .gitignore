@@ -9,3 +9,5 @@ __pycache__/
 # java
 *.jar
 .gradle
+out
+build
