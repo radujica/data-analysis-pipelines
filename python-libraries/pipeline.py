@@ -1,11 +1,11 @@
-import xarray as xr
 import numpy as np
 import os
+from netcdf_parser import to_dataframe
 
 # /export/scratch1/radujica/datasets/ECAD/original/small_sample/
 PATH_HOME = os.getenv('HOME2') + '/datasets/ECAD/original/small_sample/'
-df1 = xr.open_dataset(PATH_HOME + 'data1.nc', engine='netcdf4').to_dataframe()
-df2 = xr.open_dataset(PATH_HOME + 'data2.nc', engine='netcdf4').to_dataframe()
+df1 = to_dataframe(PATH_HOME + 'data1.nc')
+df2 = to_dataframe(PATH_HOME + 'data2.nc')
 
 
 "PIPELINE"
@@ -18,7 +18,7 @@ print(df.head(10))
 # 3. want a subset of the data, here only latitude >= 42.25 & <= 60.25 (~ mainland Europe)
 # not a filter because we want to showcase the selection of a subset of rows within the dataset;
 # might as well be 123456:987654 but the values in that slice don't make much sense for this dataset
-df = df[709920:1482479]  # TODO: update values for larger datasets
+df = df[709920:1482480]  # TODO: update values for larger datasets
 
 # 4. drop rows with null values
 # could use ~np.isnan(column) (?)

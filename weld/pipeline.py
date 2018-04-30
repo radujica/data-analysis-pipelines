@@ -15,12 +15,11 @@ print(df.head(10))
 # 3. want a subset of the data, here only latitude >= 42.25 & <= 60.25 (~ mainland Europe)
 # not a filter because we want to showcase the selection of a subset of rows within the dataset;
 # might as well be 123456:987654 but the values in that slice don't make much sense for this dataset
-# TODO: unlike through xarray, multiindex not sorted by names; check if correct rows filtered since longitude is first!
-df = df[709920:1482479]  # TODO: update values for larger datasets
+df = df[709920:1482480]  # TODO: update values for larger datasets
 
 # 4. drop rows with null values
 # could use ~np.isnan(column) (?)
-df = df[(df['tg'] != -99.99) & (df['pp'] != -999.9) & (df['rr'] != 999.9)]
+df = df[(df['tg'] != -99.99) & (df['pp'] != -999.9) & (df['rr'] != -999.9)]
 
 # 5. drop pp_err and rr_err columns
 df = df.drop(columns=['pp_err', 'rr_err'])

@@ -72,9 +72,7 @@ df = join(df1, df2, on=[:longitude, :latitude, :time], kind=:inner)
 println(DataFrames.head(df, 10))
 
 # 3. subset the data
-df = df[(df[:latitude] .>= 42.25f0) .& (df[:latitude] .<= 60.25f0), :]
-# added +1 because of index from 1 not 0; this does NOT work correctly for some reason
-# df = df[709921:1482480, :]
+df = df[709921:1482480, :]
 
 # 4. drop rows with null values
 df = df[(df[:tg] .!= -99.99f0) .& (df[:pp] .!= -999.9f0) .& (df[:rr] .!= -999.9f0), :]
