@@ -1,15 +1,29 @@
-import java.util.HashMap;
-import java.util.Map;
+import com.google.common.base.Joiner;
+import com.google.common.primitives.Floats;
+import ucar.nc2.time.CalendarDate;
+
+import java.util.*;
 
 public class DataFrame {
     private final Map<String, Object> data;
+    private final int size;
 
     DataFrame() {
         this.data = new HashMap<>();
+        this.size = 0;
+    }
+
+    DataFrame(int size) {
+        this.data = new HashMap<>();
+        this.size = size;
     }
 
     void add(String name, Object data) {
         this.data.put(name, data);
+    }
+
+    Map<String, Object> values() {
+        return this.data;
     }
 
     Object get(String name) {
@@ -18,6 +32,18 @@ public class DataFrame {
 
     void put(String name, Object data) {
         this.data.put(name, data);
+    }
+
+    Set<String> keys() {
+        return this.data.keySet();
+    }
+
+    void pop(String columnName){
+        this.data.remove(columnName);
+    }
+
+    int getSize() {
+        return this.size;
     }
 
     private void cartesianProductDimensions() {
@@ -40,18 +66,19 @@ public class DataFrame {
         }
 
         // outer + inner
-        float[] newLat = new float[newSize];
+        float[] newLatTemp = new float[lon.length * lat.length];
         times = lon.length;
         index = 0;
         for (int i = 0; i < times; i++) {
             for (float aLat : lat) {
-                newLat[index] = aLat;
+                newLatTemp[index] = aLat;
                 index++;
             }
         }
+        float[] newLat = new float[newSize];
         times = tim.length;
         index = 0;
-        for (float aLat : lat) {
+        for (float aLat : newLatTemp) {
             for (int j = 0; j < times; j++) {
                 newLat[index] = aLat;
                 index++;
@@ -74,29 +101,35 @@ public class DataFrame {
         this.put(dims[2], newTim);
     }
 
-    private int[] filterTime(String columnName, boolean[] indexes, int newSize) {
-        int[] column = (int[]) this.get(columnName);
-        int[] newColumn = new int[newSize];
-        int tgi = 0;
-        for (int i = 0; i < column.length; i++) {
-            if (indexes[i]) {
-                newColumn[tgi] = column[i];
-                tgi++;
+    private Object filterColumn(String columnName, boolean[] indexes, int newSize) {
+        Object data = this.get(columnName);
+        Object newColumn;
+        if (data.getClass().equals(float[].class)) {
+            float[] column = (float[]) this.get(columnName);
+            float[] newData = new float[newSize];
+            int tgi = 0;
+            for (int i = 0; i < column.length; i++) {
+                if (indexes[i]) {
+                    newData[tgi] = column[i];
+                    tgi++;
+                }
             }
-        }
 
-        return newColumn;
-    }
-
-    private float[] filterColumn(String columnName, boolean[] indexes, int newSize) {
-        float[] column = (float[]) this.get(columnName);
-        float[] newColumn = new float[newSize];
-        int tgi = 0;
-        for (int i = 0; i < column.length; i++) {
-            if (indexes[i]) {
-                newColumn[tgi] = column[i];
-                tgi++;
+            newColumn = newData;
+        } else if (data.getClass().equals(int[].class)) {
+            int[] column = (int[]) this.get(columnName);
+            int[] newData = new int[newSize];
+            int tgi = 0;
+            for (int i = 0; i < column.length; i++) {
+                if (indexes[i]) {
+                    newData[tgi] = column[i];
+                    tgi++;
+                }
             }
+
+            newColumn = newData;
+        } else {
+            throw new RuntimeException("neither float nor int data!");
         }
 
         return newColumn;
@@ -181,14 +214,14 @@ public class DataFrame {
             index2++;
         }
 
-        DataFrame df = new DataFrame();
+        DataFrame df = new DataFrame(newSize);
 
         String[] df1Cols = {"tg", "tg_err", "pp", "pp_err", "rr", "rr_err"};
         String[] df2Cols = {"tn", "tn_err", "tx", "tx_err"};
 
-        df.put(joinOn[0], this.filterColumn(joinOn[0], df1NewIndex, newSize));
-        df.put(joinOn[1], this.filterColumn(joinOn[1], df1NewIndex, newSize));
-        df.put(joinOn[2], this.filterTime(joinOn[2], df1NewIndex, newSize));
+        for (String columnName : joinOn) {
+            df.put(columnName, this.filterColumn(columnName, df1NewIndex, newSize));
+        }
 
         for (String columnName : df1Cols) {
             df.put(columnName, this.filterColumn(columnName, df1NewIndex, newSize));
@@ -199,5 +232,215 @@ public class DataFrame {
         }
 
         return df;
+    }
+
+    // Time kept as original int so use this method to convert to string.
+    // Note both datasets have the same starting date, otherwise the join would require
+    // conversion before
+    static String intTimeToString(int time, String calendar, String units) {
+        String udunits = String.valueOf(time) + " " + units;
+
+        return CalendarDate.parseUdunits(calendar, udunits).toString().substring(0, 10);
+    }
+
+    // print if desire to print this to Sys.out; will format it
+    DataFrame subset(int start, int end, boolean print) {
+        int numberRows = end - start;
+        DataFrame subsetData = new DataFrame(numberRows);
+
+        for (String column : this.keys()) {
+            Object data = this.get(column);
+
+            if (data.getClass().equals(float[].class)) {
+                float[] dataRaw = (float[]) data;
+                float[] subset = new float[numberRows];
+                System.arraycopy(dataRaw, start, subset, 0, numberRows);
+
+                if (print) {
+                    subsetData.put(column, Joiner.on(", ").join(Floats.asList(subset)));
+                } else {
+                    subsetData.put(column, subset);
+                }
+            // only time is int
+            } else if (data.getClass().equals(int[].class)) {
+                int[] dataRaw = (int[]) data;
+                int[] subset = new int[numberRows];
+                System.arraycopy(dataRaw, start, subset, 0, numberRows);
+
+                if (print) {
+                    String[] dates = new String[numberRows];
+                    for (int i = 0; i < numberRows; i++) {
+                        dates[i] = intTimeToString(subset[i], Pipeline.CALENDAR, Pipeline.UNITS);
+                    }
+                    subsetData.put(column, Joiner.on(", ").join(dates));
+                } else {
+                    subsetData.put(column, subset);
+                }
+
+            }
+        }
+
+        return subsetData;
+    }
+
+    // yes, hardcoded..
+    DataFrame filter() {
+        boolean[] finalFilter = new boolean[this.size];
+        float[] rawTg = (float[]) this.get("tg");
+        float[] rawPp = (float[]) this.get("pp");
+        float[] rawRr = (float[]) this.get("rr");
+        float tgFilter = -99.99f;
+        float ppFilter = -999.9f;
+        float rrFilter = -999.9f;
+        int newSize = 0;
+
+        for (int i = 0; i < this.size; i++) {
+            boolean toKeep = rawTg[i] != tgFilter & rawPp[i] != ppFilter & rawRr[i] != rrFilter;
+            if (toKeep) {
+                newSize++;
+            }
+            finalFilter[i] = toKeep;
+        }
+
+        DataFrame newDf = new DataFrame(newSize);
+        for (String columnName : this.keys()) {
+            newDf.put(columnName, filterColumn(columnName, finalFilter, newSize));
+        }
+
+        return newDf;
+    }
+
+    DataFrame aggregations() {
+        DataFrame df = new DataFrame(this.size);
+
+        // make sure the keys are copied to not remove from dataset
+        Set<String> keys = new HashSet<>(this.keys());
+        keys.removeAll(Arrays.asList("longitude", "latitude", "time"));
+
+        for (String columnName : keys) {
+            Map<String, Float> columnAggregations = new HashMap<>();
+
+            float[] data = (float[]) this.get(columnName);
+
+            float max = Float.MIN_VALUE;
+            float min = Float.MAX_VALUE;
+            float sum = 0f;
+            for (float number : data) {
+                if (number > max) {
+                    max = number;
+                }
+                if (number < min) {
+                    min = number;
+                }
+                sum += number;
+            }
+            columnAggregations.put("max", max);
+            columnAggregations.put("min", min);
+
+            float mean = sum / ((float) data.length);
+
+            float numerator = 0;
+            for (float number : data) {
+                numerator += Math.pow(number - mean, 2);
+            }
+            float std = (float) Math.sqrt(numerator / ((float) (data.length - 1)));
+
+            columnAggregations.put("mean", mean);
+            columnAggregations.put("std", std);
+
+            df.put(columnName, columnAggregations);
+        }
+
+        return df;
+    }
+
+    private float computeMean(float[] columnData, List<Integer> groupMembers) {
+        float sum = 0;
+        for (int i : groupMembers) {
+            sum += columnData[i];
+        }
+        return sum / ((float) groupMembers.size());
+    }
+
+    DataFrame groupBy() {
+        DataFrame result = new DataFrame(this.size);
+        for (Map.Entry<String, Object> entry : this.data.entrySet()) {
+            result.put(entry.getKey(), entry.getValue());
+        }
+
+        String[] groupOn = {"longitude", "latitude", "year_month"};
+        String[] aggregateOn = {"tg", "tn", "tx", "pp", "rr"};
+
+        float[] lon = (float[]) this.get(groupOn[0]);
+        float[] lat = (float[]) this.get(groupOn[1]);
+        String[] tim = (String[]) this.get(groupOn[2]);
+
+        float[] tg = (float[]) this.get(aggregateOn[0]);
+        float[] tn = (float[]) this.get(aggregateOn[1]);
+        float[] tx = (float[]) this.get(aggregateOn[2]);
+        float[] pp = (float[]) this.get(aggregateOn[3]);
+        float[] rr = (float[]) this.get(aggregateOn[4]);
+
+        Map<Integer, List<Integer>> groups = new HashMap<>();
+        int newGroupIndex = 0;
+
+        // we know the groups are ordered so just need to keep track of previous value;
+        // otherwise, would need the groupOn as map key
+        float prevLon = -1f;
+        float prevLat = -1f;
+        String prevTim = "";
+        for (int i = 0; i < lon.length; i++) {
+            // we know that time is first to change, before lat and long
+            if (tim[i].equals(prevTim) && lat[i] == prevLat && lon[i] == prevLon) {
+                List<Integer> groupMembers = groups.get(newGroupIndex - 1);
+                groupMembers.add(i);
+            } else {
+                List<Integer> newGroup = new ArrayList<>();
+                newGroup.add(i);
+                groups.put(newGroupIndex, newGroup);
+                newGroupIndex++;
+            }
+
+            prevLon = lon[i];
+            prevLat = lat[i];
+            prevTim = tim[i];
+        }
+
+        // can already store the means in the new column; fake join
+        float[] meansTg = new float[lon.length];
+        float[] meansTn = new float[lon.length];
+        float[] meansTx = new float[lon.length];
+        float[] meansPp = new float[lon.length];
+        float[] meansRr = new float[lon.length];
+        for (Map.Entry entry : groups.entrySet()) {
+            List<Integer> groupMembers = (List<Integer>) entry.getValue();
+            float mean = computeMean(tg, groupMembers);
+            for (int i : groupMembers) {
+                meansTg[i] = mean;
+            }
+            mean = computeMean(tn, groupMembers);
+            for (int i : groupMembers) {
+                meansTn[i] = mean;
+            }
+            mean = computeMean(tx, groupMembers);
+            for (int i : groupMembers) {
+                meansTx[i] = mean;
+            }
+            mean = computeMean(pp, groupMembers);
+            for (int i : groupMembers) {
+                meansPp[i] = mean;
+            }
+            mean = computeMean(rr, groupMembers);
+            for (int i : groupMembers) {
+                meansRr[i] = mean;
+            }
+        }
+        result.put("tg_mean", meansTg);
+        result.put("tn_mean", meansTn);
+        result.put("tx_mean", meansTx);
+        result.put("pp_mean", meansPp);
+        result.put("rr_mean", meansRr);
+
+        return result;
     }
 }
