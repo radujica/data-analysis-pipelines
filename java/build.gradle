@@ -5,7 +5,6 @@ plugins {
 }
 
 dependencies {
-    implementation 'com.google.guava:guava:25.0-jre'
     implementation 'edu.ucar:netcdf:4.3.22'
     testImplementation 'junit:junit:4.12'
 }

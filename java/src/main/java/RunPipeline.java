@@ -5,7 +5,7 @@ public class RunPipeline {
         try {
             new Pipeline().start();
         } catch (IOException e) {
-            System.out.println("NOOOOOO");
+            System.out.println(e.getMessage());
         }
     }
 }
