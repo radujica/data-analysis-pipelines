@@ -91,7 +91,8 @@ df[:abs_diff] = compute_abs_maxmin(df[:tx], df[:tn])
 # TODO: maybe  could use aggregate(df, <no_column>, [min...])?
 function aggregations(df::DataFrame, aggregations::Array{String})
     dict = OrderedDict()
-    columns_without_time = [k for k in names(df) if !(k == :time)]
+    exclude = [:longitude, :latitude, :time]
+    columns_without_time = [k for k in names(df) if !(k in exclude)]
     # add the columns to the dataframe
     dict["columns"] = columns_without_time
 
