@@ -3,3 +3,6 @@
 
 # Install
     julia setup.jl
+
+# Run
+    julia pipeline.jl

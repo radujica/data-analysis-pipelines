@@ -7,4 +7,4 @@
     pipenv install
 
 # Run
-    pipenv shell
+    pipenv run python pipeline.py

@@ -8,3 +8,6 @@
     # edit Pipfile with correct paths for pyweld and grizzly
     # since installing them with pip didn't work
     pipenv install
+
+# Run
+    pipenv run python pipeline.py
