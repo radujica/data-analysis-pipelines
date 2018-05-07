@@ -11,3 +11,6 @@ __pycache__/
 .gradle
 out
 build
+
+# scala
+target
