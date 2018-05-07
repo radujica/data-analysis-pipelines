@@ -1,5 +1,3 @@
-import com.google.common.base.Joiner;
-import com.google.common.primitives.Floats;
 import ucar.nc2.time.CalendarDate;
 
 import java.util.*;
@@ -243,8 +241,7 @@ public class DataFrame {
         return CalendarDate.parseUdunits(calendar, udunits).toString().substring(0, 10);
     }
 
-    // print if desire to print this to Sys.out; will format it
-    DataFrame subset(int start, int end, boolean print) {
+    DataFrame subset(int start, int end) {
         int numberRows = end - start;
         DataFrame subsetData = new DataFrame(numberRows);
 
@@ -256,34 +253,20 @@ public class DataFrame {
                 float[] subset = new float[numberRows];
                 System.arraycopy(dataRaw, start, subset, 0, numberRows);
 
-                if (print) {
-                    subsetData.put(column, Joiner.on(", ").join(Floats.asList(subset)));
-                } else {
-                    subsetData.put(column, subset);
-                }
+                subsetData.put(column, subset);
             // only time is int
             } else if (data.getClass().equals(int[].class)) {
                 int[] dataRaw = (int[]) data;
                 int[] subset = new int[numberRows];
                 System.arraycopy(dataRaw, start, subset, 0, numberRows);
 
-                if (print) {
-                    String[] dates = new String[numberRows];
-                    for (int i = 0; i < numberRows; i++) {
-                        dates[i] = intTimeToString(subset[i], Pipeline.CALENDAR, Pipeline.UNITS);
-                    }
-                    subsetData.put(column, Joiner.on(", ").join(dates));
-                } else {
-                    subsetData.put(column, subset);
-                }
-
+                subsetData.put(column, subset);
             }
         }
 
         return subsetData;
     }
 
-    // yes, hardcoded..
     DataFrame filter() {
         boolean[] finalFilter = new boolean[this.size];
         float[] rawTg = (float[]) this.get("tg");
@@ -363,6 +346,7 @@ public class DataFrame {
     }
 
     private class Key {
+        // key to group on
         private final float lon;
         private final float lat;
         private final String tim;
@@ -416,7 +400,6 @@ public class DataFrame {
         // same length
         for (int i = 0; i < lon.length; i++) {
             Key key = new Key(lon[i], lat[i], tim[i]);
-            // we know that time is first to change, before lat and long
             if (groups.containsKey(key)) {
                 List<Integer> groupMembers = groups.get(key);
                 groupMembers.add(i);

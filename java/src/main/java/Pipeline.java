@@ -1,4 +1,5 @@
 import com.google.common.base.Joiner;
+import com.google.common.primitives.Floats;
 import ucar.nc2.Attribute;
 import ucar.nc2.NetcdfFile;
 import ucar.nc2.Variable;
@@ -9,8 +10,7 @@ import java.util.Map;
 // TODO: convert for loops to streams? no native support for floats though
 // https://stackoverflow.com/questions/26951431/how-to-get-an-observablefloatarray-from-a-stream/26970398#26970398
 public class Pipeline  {
-    //private static final String PATH = System.getenv("HOME2") + "/datasets/ECAD/original/small_sample/";
-    private static final String PATH = "/export/scratch1/radujica/datasets/ECAD/original/small_sample/";
+    private static final String PATH = System.getenv("HOME2") + "/datasets/ECAD/original/small_sample/";
     static final String CALENDAR = "proleptic_gregorian";
     static final String UNITS = "days since 1950-01-01";
 
@@ -46,13 +46,35 @@ public class Pipeline  {
         return df;
     }
 
-    private void head(DataFrame df, int numberRows) {
-        DataFrame head = df.subset(0, numberRows, true);
+    private void print(DataFrame df) {
+        DataFrame printData = new DataFrame(df.getSize());
+
+        for (String column : df.keys()) {
+            Object data = df.get(column);
+
+            if (data.getClass().equals(float[].class)) {
+                float[] dataRaw = (float[]) data;
+                printData.put(column, Joiner.on(", ").join(Floats.asList(dataRaw)));
+            } else if (data.getClass().equals(int[].class)) {
+                int[] dataRaw = (int[]) data;
+                String[] dates = new String[df.getSize()];
+                for (int i = 0; i < df.getSize(); i++) {
+                    dates[i] = DataFrame.intTimeToString(dataRaw[i], Pipeline.CALENDAR, Pipeline.UNITS);
+                }
+                printData.put(column, Joiner.on(", ").join(dates));
+            }
+        }
 
         Joiner.MapJoiner mapJoiner = Joiner.on("\n").withKeyValueSeparator("=");
 
-        System.out.println(mapJoiner.join(head.values()));
+        System.out.println(mapJoiner.join(printData.values()));
         System.out.println("");
+    }
+
+    private void head(DataFrame df, int numberRows) {
+        DataFrame head = df.subset(0, numberRows);
+
+        print(head);
     }
 
     private void printAggregations(DataFrame df) {
@@ -105,7 +127,7 @@ public class Pipeline  {
         head(df, 10);
 
         // 3. subset the data
-        df = df.subset(709920, 1482480, false);
+        df = df.subset(709920, 1482480);
 
         // 4. drop rows with null values
         df = df.filter();
@@ -128,7 +150,6 @@ public class Pipeline  {
         df.pop("year_month");
 
         // careful with this! prints all
-        //TODO: make separate print method
         head(df, df.getSize());
     }
 }
