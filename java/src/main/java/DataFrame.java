@@ -362,6 +362,36 @@ public class DataFrame {
         return sum / ((float) groupMembers.size());
     }
 
+    private class Key {
+        private final float lon;
+        private final float lat;
+        private final String tim;
+
+        Key(float lon, float lat, String tim) {
+            this.lon = lon;
+            this.lat = lat;
+            this.tim = tim;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null) return false;
+            if (!(o instanceof Key)) return false;
+
+            Key other = (Key) o;
+
+            return this.tim.equals(other.tim) &&
+                    this.lat == other.lat &&
+                    this.lon == other.lon;
+        }
+
+        @Override
+        public int hashCode() {
+             return Objects.hash(this.tim, this.lat, this.lon);
+        }
+    }
+
     DataFrame groupBy() {
         DataFrame result = new DataFrame(this.size);
         for (Map.Entry<String, Object> entry : this.data.entrySet()) {
@@ -381,29 +411,20 @@ public class DataFrame {
         float[] pp = (float[]) this.get(aggregateOn[3]);
         float[] rr = (float[]) this.get(aggregateOn[4]);
 
-        Map<Integer, List<Integer>> groups = new HashMap<>();
-        int newGroupIndex = 0;
+        Map<Key, List<Integer>> groups = new HashMap<>();
 
-        // we know the groups are ordered so just need to keep track of previous value;
-        // otherwise, would need the groupOn as map key
-        float prevLon = -1f;
-        float prevLat = -1f;
-        String prevTim = "";
+        // same length
         for (int i = 0; i < lon.length; i++) {
+            Key key = new Key(lon[i], lat[i], tim[i]);
             // we know that time is first to change, before lat and long
-            if (tim[i].equals(prevTim) && lat[i] == prevLat && lon[i] == prevLon) {
-                List<Integer> groupMembers = groups.get(newGroupIndex - 1);
+            if (groups.containsKey(key)) {
+                List<Integer> groupMembers = groups.get(key);
                 groupMembers.add(i);
             } else {
                 List<Integer> newGroup = new ArrayList<>();
                 newGroup.add(i);
-                groups.put(newGroupIndex, newGroup);
-                newGroupIndex++;
+                groups.put(key, newGroup);
             }
-
-            prevLon = lon[i];
-            prevLat = lat[i];
-            prevTim = tim[i];
         }
 
         // can already store the means in the new column; fake join
