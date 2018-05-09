@@ -10,7 +10,9 @@ import ucar.nc2.{NetcdfFile, Variable}
 import collection.JavaConversions._
 
 
-// TODO: fat jar http://blog.prabeeshk.com/blog/2014/04/08/creating-uber-jar-for-spark-project-using-sbt-assembly/
+// TODO: update readme
+// TODO: setup spark-submit https://www.apache.org/dyn/closer.lua/spark/spark-2.3.0/spark-2.3.0-bin-hadoop2.7.tgz
+// TODO: make .sh work: https://spark.apache.org/docs/latest/submitting-applications.html
 object Main {
   private val PATH: String = "/export/scratch1/radujica/datasets/ECAD/original/small_sample/"
   //private val PATH: String = System.getenv("HOME2") + "/datasets/ECAD/original/small_sample/"
