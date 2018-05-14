@@ -1,13 +1,15 @@
 import java.io.IOException
+import java.util
 
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.types.{FloatType, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SparkSession}
-import org.apache.spark.sql.functions.{udf, abs}
+import org.apache.spark.sql.functions.{abs, udf}
 import ucar.nc2.time.CalendarDate
 import ucar.nc2.{NetcdfFile, Variable}
 
 import collection.JavaConversions._
+import scala.collection.mutable.ListBuffer
 
 
 // TODO: update readme
@@ -19,7 +21,7 @@ object Main {
   private val CALENDAR: String = "proleptic_gregorian"
   private val UNITS: String = "days since 1950-01-01"
 
-  // read everything as floats to allow easy transpose
+  // TODO: read directly as required type
   @throws[IOException]
   private def readVariable(variable: Variable) : Array[Float] = {
     val data: Array[Float] = variable.read.get1DJavaArray(classOf[Float]).asInstanceOf[Array[Float]]
@@ -94,12 +96,55 @@ object Main {
     Array(newLon, newLat, newTim)
   }
 
-  // TODO: generalize this
-  // TODO: create rdd for each column and union? this avoids having all the data in driver memory at once
-  // but shuffles data to workers n columns times; 1) do we have setup small cluster to use? pointless otherwise
-  // 2. is transpose more or less costly than this?
+  // actually expects 3 dimensions; TODO: generalize
+  private def readData(path: String, ss: SparkSession, dims: List[String], createIndex: Boolean): DataFrame = {
+    val file: NetcdfFile = NetcdfFile.open(path)
+    val vars: util.List[Variable] = file.getVariables
+    // split variables into dimensions and regular data
+    val dimVars: Map[String, Variable] = vars.filter(v => dims.contains(v.getShortName)).map(v => v.getShortName -> v).toMap
+    val colVars: Map[String, Variable] = vars.filter(v => !dims.contains(v.getShortName)).map(v => v.getShortName -> v).toMap
+
+    // prepare for cartesian product
+    val lon: Array[Float] = readVariable(dimVars(dims(0)))
+    val lat: Array[Float] = readVariable(dimVars(dims(1)))
+    val tim: Array[Float] = readVariable(dimVars(dims(2)))
+    val dimsCartesian: Array[Array[Float]] = cartesianProductDimensions(lon, lat, tim)
+
+    // create the rdd with the dimensions (by transposing the cartesian product)
+    var tempRDD: RDD[ListBuffer[_]] = ss.sparkContext.parallelize(dimsCartesian.transpose.map(t => ListBuffer(t: _*)))
+    // gather the names of the columns (in order)
+    val names: ListBuffer[String] = ListBuffer(dims: _*)
+
+    // read the columns and zip with the rdd
+    for (col <- colVars) {
+      tempRDD = tempRDD.zip(ss.sparkContext.parallelize(readVariable(col._2))).map(t => t._1 ++ Seq(t._2))
+      names.add(col._1)
+    }
+
+    // add the index column
+    if (createIndex) {
+      tempRDD = tempRDD.zipWithIndex().map(t => t._1 ++ Seq(t._2.asInstanceOf[Float]))
+      names.add("index")
+    }
+
+    // create final RDD[Row] and use it to make the DataFrame
+    val finalRDD: RDD[Row] = tempRDD.map(Row.fromSeq(_))
+    // TODO: case class is probably the best idea here
+    val df: DataFrame = ss.createDataFrame(finalRDD, StructType(names.map(StructField(_, FloatType, nullable = false))))
+
+    // convert time from float to String
+    val floatTimeToString = udf((time: Float) => {
+      val udunits = String.valueOf(time.asInstanceOf[Int]) + " " + UNITS
+
+      CalendarDate.parseUdunits(CALENDAR, udunits).toString.substring(0, 10)
+    })
+    // return final df
+    df.withColumn("time", floatTimeToString(df("time")))
+  }
+
+  // this loads everything on driver
   @throws[IOException]
-  private def readData(path: String, ss: SparkSession, size: Int, addIndex: Boolean): DataFrame = {
+  private def readDataDriver(path: String, ss: SparkSession, size: Int, addIndex: Boolean): DataFrame = {
     val file = NetcdfFile.open(path)
     var sizeF = size
     if (addIndex) sizeF += 1
@@ -149,13 +194,13 @@ object Main {
       .config("spark.driver.maxResultSize", "10g")
       .getOrCreate()
 
-    // TODO: optimize partitioning ~ same partitioner in paralellize
-    val df1: DataFrame = readData(PATH + "data1.nc", spark, 9, addIndex = true)
-    val df2: DataFrame = readData(PATH + "data2.nc", spark, 7, addIndex = false)
+    val dimensions: List[String] = List("longitude", "latitude", "time")
+    val df1: DataFrame = readData(PATH + "data1.nc", spark, dimensions, true)
+    val df2: DataFrame = readData(PATH + "data2.nc", spark, dimensions, false)
 
     // PIPELINE
     // 1. join the 2 dataframes
-    var df: DataFrame = df1.join(df2, Seq("longitude", "latitude", "time"), "inner")
+    var df: DataFrame = df1.join(df2, dimensions, "inner")
 
     // 2. quick preview on the data
     println(df.show(10))
