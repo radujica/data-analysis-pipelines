@@ -34,62 +34,8 @@ object Main {
     data
   }
 
-  // TODO: this is VERY ugly
-  private def cartesianProductDimensions(lon: Array[Float], lat: Array[Float], tim: Array[Float]) = {
-    val dims = Array("longitude", "latitude", "time")
-    val newSize = lon.length * lat.length * tim.length
-
-    // inner x2
-    val newLon = new Array[Float](newSize)
-    var times = lat.length * tim.length
-    var index = 0
-    for (aLon <- lon) {
-      var j = 0
-      while (j < times) {
-        newLon(index) = aLon
-        index += 1
-        j += 1
-      }
-    }
-
-    // outer + inner
-    val newLatTemp = new Array[Float](lon.length * lat.length)
-    times = lon.length
-    index = 0
-    var i = 0
-    while (i < times) {
-      for (aLat <- lat) {
-        newLatTemp(index) = aLat
-        index += 1
-      }
-      i += 1
-    }
-    val newLat = new Array[Float](newSize)
-    times = tim.length
-    index = 0
-    for (aLat <- newLatTemp) {
-      var j = 0
-      while (j < times) {
-        newLat(index) = aLat
-        index += 1
-        j += 1
-      }
-    }
-
-    // outer x2
-    val newTim = new Array[Float](newSize)
-    times = lon.length * lat.length
-    index = 0
-    i = 0
-    while (i < times) {
-      for (aTim <- tim) {
-        newTim(index) = aTim
-        index += 1
-      }
-      i += 1
-    }
-
-    Array(newLon, newLat, newTim)
+  def cartesian[X, Y, Z](a: Array[X], b: Array[Y], c: Array[Z]): Array[(X, Y, Z)] = {
+    for { x <- a; y <- b; z <- c } yield (x, y, z)
   }
 
   // actually expects 3 dimensions; TODO: generalize
@@ -104,10 +50,10 @@ object Main {
     val lon: Array[Float] = readVariable(dimVars(dims(0)))
     val lat: Array[Float] = readVariable(dimVars(dims(1)))
     val tim: Array[Float] = readVariable(dimVars(dims(2)))
-    val dimsCartesian: Array[Array[Float]] = cartesianProductDimensions(lon, lat, tim)
+    val dimsCartesian: Array[(Float, Float, Float)] = cartesian(lon, lat, tim)
 
     // create the rdd with the dimensions (by transposing the cartesian product)
-    var tempRDD: RDD[ListBuffer[_]] = ss.sparkContext.parallelize(dimsCartesian.transpose.map(t => ListBuffer(t: _*)), numPartitions)
+    var tempRDD: RDD[ListBuffer[_]] = ss.sparkContext.parallelize(dimsCartesian.map(t => ListBuffer(t._1, t._2, t._3)), numPartitions)
     // gather the names of the columns (in order)
     val names: ListBuffer[String] = ListBuffer(dims: _*)
 
@@ -190,8 +136,8 @@ object Main {
       .getOrCreate()
 
     val dimensions: List[String] = List("longitude", "latitude", "time")
-    val df1: DataFrame = readData(PATH + "data1.nc", spark, dimensions, true, Int(args(0)))
-    val df2: DataFrame = readData(PATH + "data2.nc", spark, dimensions, false, Int(args(0)))
+    val df1: DataFrame = readData(PATH + "data1.nc", spark, dimensions, true, args(0).toInt)
+    val df2: DataFrame = readData(PATH + "data2.nc", spark, dimensions, false, args(0).toInt)
 
     // PIPELINE
     // 1. join the 2 dataframes
