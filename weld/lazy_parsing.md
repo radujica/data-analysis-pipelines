@@ -52,3 +52,14 @@ by generating a new id whenever a new subset is required; this is prerequisite t
 into one, e.g. rows 3-7, 4-9, 15-20 would be combined into 3-9, 15-20 and read in a single pass
 - caching should be smarter, e.g. allow different subsets of the data to be read in one go
 
+# Intermediate Result Caching
+With table joins as an example, one would like to store the intermediate result of which rows to keep from each
+table. This is (naively) achieved by caching the result in memory after the first triggered computation, inspired
+by Spark's .cache(). To implement weld operations with caching, one needs to generate an id for it with
+`LazyResult.generate_intermediate_id`, register it with `LazyResult.register_intermediate_result`, and
+probably `LazyResult.generate_placeholder_weld_object` which will only contain the result of this intermediate
+result.
+
+Turned on by default. Can be disabled by setting the environment variable `LAZY_WELD_CACHE` to `'False'`, i.e.
+
+    export LAZY_WELD_CACHE='False'
