@@ -1,8 +1,8 @@
 import numpy as np
+import os
 from grizzly.encoders import NumPyDecoder, NumPyEncoder
 from grizzly.lazy_op import LazyOpResult
 from weld.weldobject import WeldObject
-
 from lazy_data import LazyData
 from lazy_file import LazyFile
 from copy import deepcopy
@@ -36,6 +36,8 @@ class LazyResult(LazyOpResult):
     # stores weld_ids (e.g. _inpX) -> WeldObject or raw; naive caching similar to Spark's .cache()
     _intermediate_counter = 0
     intermediate_mapping = {}
+    # to be able to set it globally (and compare with vs without)
+    _cache_flag = False if os.getenv("LAZY_WELD_CACHE") == 'False' else True
 
     def __init__(self, expr, weld_type, dim):
         super(LazyResult, self).__init__(expr, weld_type, dim)
@@ -272,8 +274,10 @@ class LazyResult(LazyOpResult):
                 value = str(value)
                 if value in LazyResult.data_mapping:
                     self.expr.context[key] = LazyResult.retrieve_data(value)
-                elif value in LazyResult.intermediate_mapping:
-                    self.expr.context[key] = LazyResult.fetch_intermediate_result(value)
+
+                if LazyResult._cache_flag:
+                    if value in LazyResult.intermediate_mapping:
+                        self.expr.context[key] = LazyResult.fetch_intermediate_result(value)
 
             return super(LazyResult, self).evaluate(verbose, decode, passes, num_threads, apply_experimental_transforms)
         else:
@@ -327,7 +331,6 @@ class LazyResult(LazyOpResult):
 
         return LazyResult(copy_expr, self.weld_type, self.dim)
 
-    # TODO: update this with intermediate case!
     def head(self, n=10):
         """ Eagerly read the first n rows of the data.
 

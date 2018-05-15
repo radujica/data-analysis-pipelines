@@ -10,6 +10,7 @@ from series import Series
 from utils import replace_slice_defaults, get_expression_or_raw, evaluate_or_raw, get_weld_type, \
     get_dtype, get_weld_info, str_dict
 import numpy as np
+import os
 
 
 class DataFrame(object):
@@ -26,6 +27,8 @@ class DataFrame(object):
     pandas.DataFrame
 
     """
+    _cache_flag = False if os.getenv("LAZY_WELD_CACHE") == 'False' else True
+
     @staticmethod
     def _gather_dtypes(data):
         dtypes = {}
@@ -493,7 +496,7 @@ class DataFrame(object):
     def _merge_single(self, index1, index2):
         data = [get_expression_or_raw(index1), get_expression_or_raw(index2)]
 
-        data = weld_merge_single_index(data)
+        data = weld_merge_single_index(data, DataFrame._cache_flag)
 
         return [LazyResult(data[i], WeldBit(), 1) for i in xrange(2)]
 
@@ -505,7 +508,7 @@ class DataFrame(object):
         index2 = [index_to_values(index2.levels[i], index2.labels[i]) for i in xrange(3)]
 
         data = weld_merge_triple_index([[get_expression_or_raw(index1[i]) for i in xrange(3)],
-                                        [get_expression_or_raw(index2[i]) for i in xrange(3)]])
+                                        [get_expression_or_raw(index2[i]) for i in xrange(3)]], DataFrame._cache_flag)
 
         return [LazyResult(data[i], WeldBit(), 1) for i in xrange(2)]
 
