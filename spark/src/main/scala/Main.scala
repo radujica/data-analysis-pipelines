@@ -12,9 +12,6 @@ import collection.JavaConversions._
 import scala.collection.mutable.ListBuffer
 
 
-// TODO: update readme
-// TODO: setup spark-submit https://www.apache.org/dyn/closer.lua/spark/spark-2.3.0/spark-2.3.0-bin-hadoop2.7.tgz
-// TODO: make .sh work: https://spark.apache.org/docs/latest/submitting-applications.html
 object Main {
   private val PATH: String = "/export/scratch1/radujica/datasets/ECAD/original/small_sample/"
   //private val PATH: String = System.getenv("HOME2") + "/datasets/ECAD/original/small_sample/"
@@ -97,7 +94,7 @@ object Main {
   }
 
   // actually expects 3 dimensions; TODO: generalize
-  private def readData(path: String, ss: SparkSession, dims: List[String], createIndex: Boolean): DataFrame = {
+  private def readData(path: String, ss: SparkSession, dims: List[String], createIndex: Boolean, numPartitions: Int): DataFrame = {
     val file: NetcdfFile = NetcdfFile.open(path)
     val vars: util.List[Variable] = file.getVariables
     // split variables into dimensions and regular data
@@ -111,13 +108,13 @@ object Main {
     val dimsCartesian: Array[Array[Float]] = cartesianProductDimensions(lon, lat, tim)
 
     // create the rdd with the dimensions (by transposing the cartesian product)
-    var tempRDD: RDD[ListBuffer[_]] = ss.sparkContext.parallelize(dimsCartesian.transpose.map(t => ListBuffer(t: _*)))
+    var tempRDD: RDD[ListBuffer[_]] = ss.sparkContext.parallelize(dimsCartesian.transpose.map(t => ListBuffer(t: _*)), numPartitions)
     // gather the names of the columns (in order)
     val names: ListBuffer[String] = ListBuffer(dims: _*)
 
     // read the columns and zip with the rdd
     for (col <- colVars) {
-      tempRDD = tempRDD.zip(ss.sparkContext.parallelize(readVariable(col._2))).map(t => t._1 ++ Seq(t._2))
+      tempRDD = tempRDD.zip(ss.sparkContext.parallelize(readVariable(col._2), numPartitions)).map(t => t._1 ++ Seq(t._2))
       names.add(col._1)
     }
 
@@ -185,18 +182,17 @@ object Main {
   }
 
   def main(args: Array[String]): Unit = {
+    if (args.length != 1) {
+      throw new RuntimeException("expected exactly 1 argument for number of partitions")
+    }
+
     val spark: SparkSession = SparkSession.builder
       .appName("Spark Pipeline")
-      .master("local[*]")  // local or local[4]
-      //.config("spark.executor.heartbeatInterval", 20)
-      .config("spark.executor.memory", "2g")
-      .config("spark.driver.memory", "16g")
-      .config("spark.driver.maxResultSize", "10g")
       .getOrCreate()
 
     val dimensions: List[String] = List("longitude", "latitude", "time")
-    val df1: DataFrame = readData(PATH + "data1.nc", spark, dimensions, true)
-    val df2: DataFrame = readData(PATH + "data2.nc", spark, dimensions, false)
+    val df1: DataFrame = readData(PATH + "data1.nc", spark, dimensions, true, Int(args(0)))
+    val df2: DataFrame = readData(PATH + "data2.nc", spark, dimensions, false, Int(args(0)))
 
     // PIPELINE
     // 1. join the 2 dataframes
