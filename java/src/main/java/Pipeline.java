@@ -11,8 +11,8 @@ import java.util.Map;
 // https://stackoverflow.com/questions/26951431/how-to-get-an-observablefloatarray-from-a-stream/26970398#26970398
 public class Pipeline  {
     private static final String PATH = System.getenv("HOME2") + "/datasets/ECAD/original/small_sample/";
-    static final String CALENDAR = "proleptic_gregorian";
-    static final String UNITS = "days since 1950-01-01";
+    private static final String CALENDAR = "proleptic_gregorian";
+    private static final String UNITS = "days since 1950-01-01";
 
     private Object readVariable(Variable variable) throws IOException {
         Class<?> dataType = variable.getDataType().getPrimitiveClassType();
@@ -107,6 +107,7 @@ public class Pipeline  {
         int[] timeRaw = (int[]) time;
         String[] yearMonth = new String[timeRaw.length];
         for (int i = 0; i < timeRaw.length; i++) {
+            // TODO: optimize the replace since we know it's only one - at a specific index
             yearMonth[i] = DataFrame.intTimeToString(timeRaw[i], CALENDAR, UNITS)
                     .substring(0, 7)
                     .replace("-", "");
@@ -142,7 +143,7 @@ public class Pipeline  {
         // 7. explore the data through aggregations
         printAggregations(df.aggregations());
 
-        // 8. compute std per month
+        // 8. compute mean per month
         // UDF 2: compute custom year+month format
         df.put("year_month", computeYearMonth(df.get("time")));
         // also handles the join back

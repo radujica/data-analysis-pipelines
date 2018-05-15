@@ -2,7 +2,6 @@ import numpy as np
 import os
 from netcdf_parser import to_dataframe
 
-# /export/scratch1/radujica/datasets/ECAD/original/small_sample/
 PATH_HOME = os.getenv('HOME2') + '/datasets/ECAD/original/small_sample/'
 df1 = to_dataframe(PATH_HOME + 'data1.nc')
 df2 = to_dataframe(PATH_HOME + 'data2.nc')

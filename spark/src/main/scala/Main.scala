@@ -13,8 +13,7 @@ import scala.collection.mutable.ListBuffer
 
 
 object Main {
-  private val PATH: String = "/export/scratch1/radujica/datasets/ECAD/original/small_sample/"
-  //private val PATH: String = System.getenv("HOME2") + "/datasets/ECAD/original/small_sample/"
+  private val PATH: String = System.getenv("HOME2") + "/datasets/ECAD/original/small_sample/"
   private val CALENDAR: String = "proleptic_gregorian"
   private val UNITS: String = "days since 1950-01-01"
 

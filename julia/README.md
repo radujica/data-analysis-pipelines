@@ -1,5 +1,5 @@
 # Requirements
-- julia 0.*
+- julia 0.6
 
 # Install
     julia setup.jl
