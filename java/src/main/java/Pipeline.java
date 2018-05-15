@@ -107,10 +107,9 @@ public class Pipeline  {
         int[] timeRaw = (int[]) time;
         String[] yearMonth = new String[timeRaw.length];
         for (int i = 0; i < timeRaw.length; i++) {
-            // TODO: optimize the replace since we know it's only one - at a specific index
             yearMonth[i] = DataFrame.intTimeToString(timeRaw[i], CALENDAR, UNITS)
                     .substring(0, 7)
-                    .replace("-", "");
+                    .replaceFirst("-", "");
         }
 
         return yearMonth;
