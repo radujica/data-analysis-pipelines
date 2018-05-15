@@ -1,6 +1,9 @@
 import numpy as np
 from grizzly.encoders import NumPyEncoder, NumPyDecoder
+from weld.types import WeldBit
 from weld.weldobject import WeldObject
+
+from lazy_result import LazyResult
 
 _encoder = NumPyEncoder()
 _decoder = NumPyDecoder()
@@ -392,7 +395,7 @@ def weld_standard_deviation(array, weld_type):
 
 
 # does NOT work correctly with duplicate elements; indexes MUST be sorted
-def weld_merge_single_index(indexes):
+def weld_merge_single_index(indexes, cache=True):
     """ Returns bool arrays for which indexes shall be kept
 
     Parameters
@@ -480,7 +483,17 @@ def weld_merge_single_index(indexes):
     weld_objects[1].weld_code = 'result(' + weld_template % {'array1': weld_ids[0],
                                                              'array2': weld_ids[1]} + '.$3)'
 
-    return weld_objects
+    if cache:
+        # register these as intermediate results to avoid re-computing them every time a column is needed
+        results = []
+        for i in range(2):
+            id_ = LazyResult.generate_intermediate_id('mindex_merge')
+            LazyResult.register_intermediate_result(id_, LazyResult(weld_objects[i], WeldBit(), 1))
+            results.append(LazyResult.generate_placeholder_weld_object(id_, _encoder, _decoder))
+
+        return results
+    else:
+        return weld_objects
 
 
 def weld_index_to_values(levels, labels):
@@ -535,7 +548,7 @@ def weld_index_to_values(levels, labels):
 
 
 # TODO: generify this
-def weld_merge_triple_index(indexes):
+def weld_merge_triple_index(indexes, cache=True):
     """ Returns bool arrays for which indexes shall be kept
 
     Note it does NOT work correctly with duplicate elements; indexes MUST be already sorted
@@ -658,7 +671,17 @@ def weld_merge_triple_index(indexes):
                                                              'array5': weld_ids[4],
                                                              'array6': weld_ids[5]} + '.$3)'
 
-    return [weld_objects[0], weld_objects[3]]
+    if cache:
+        # register these as intermediate results to avoid re-computing them every time a column is needed
+        results = []
+        for i in [0, 3]:
+            id_ = LazyResult.generate_intermediate_id('mindex_merge')
+            LazyResult.register_intermediate_result(id_, LazyResult(weld_objects[i], WeldBit(), 1))
+            results.append(LazyResult.generate_placeholder_weld_object(id_, _encoder, _decoder))
+
+        return results
+    else:
+        return [weld_objects[0], weld_objects[3]]
 
 
 def weld_groupby(by, by_types, columns, columns_types):
