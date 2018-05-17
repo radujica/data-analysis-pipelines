@@ -8,8 +8,6 @@ from lazy_file import LazyFile
 from copy import deepcopy
 
 
-# TODO: better solutions for recurring problem of having to always check LazyResult or raw;
-# maybe make container for all input, i.e. all raw data is wrapped in LazyOpResult?
 class LazyResult(LazyOpResult):
     """ Extension of LazyOpResult adding lazy data reading
 
@@ -180,7 +178,7 @@ class LazyResult(LazyOpResult):
 
     @staticmethod
     def retrieve_file(file_id):
-        """ Returns the LazyFile instance associated with the file_id
+        """ Returns the raw data associated with the file_id
 
         Intended to be used by a parser when reading a fragment of its data, such as a column.
         Using this method ensures the file once read is cached, especially for formats such as csv
@@ -204,7 +202,7 @@ class LazyResult(LazyOpResult):
 
     @staticmethod
     def retrieve_data(data_id):
-        """ Returns the LazyData instance associated with the data_id
+        """ Returns the raw data associated with the data_id
 
         Used within evaluate; enables caching of the data read.
 
@@ -224,15 +222,30 @@ class LazyResult(LazyOpResult):
             return data
 
     @staticmethod
-    def fetch_intermediate_result(intermediate_id):
+    def fetch_intermediate_result(intermediate_id, n=None):
+        """ Returns the raw data associated with the intermediate_id
+
+        Parameters
+        ----------
+        intermediate_id : str
+            the id generated through LazyResult.generate_intermediate_id
+        n : int, optional
+            if desiring the head of the data, n must be the number of rows
+            required. If passed, there is no caching of the evaluated result
+
+        """
         entry = LazyResult.intermediate_mapping[intermediate_id]
 
         # so has not yet been evaluated
         if isinstance(entry, LazyResult):
-            entry = entry.evaluate()
+            # so we want eager subset of data, no cache!
+            if n is not None:
+                entry = entry.head(n)
+            else:
+                entry = entry.evaluate()
+                # also store the evaluated result
+                LazyResult.intermediate_mapping[intermediate_id] = entry
 
-            # also store the evaluated result
-            LazyResult.intermediate_mapping[intermediate_id] = entry
             return entry
         else:
             return entry
@@ -253,6 +266,7 @@ class LazyResult(LazyOpResult):
         -------
         WeldObject
             with weld_code which would evaluate to the data itself
+
         """
         # create weld object which will represent this data
         weld_obj = WeldObject(encoder, decoder)
@@ -274,8 +288,7 @@ class LazyResult(LazyOpResult):
                 value = str(value)
                 if value in LazyResult.data_mapping:
                     self.expr.context[key] = LazyResult.retrieve_data(value)
-
-                if LazyResult._cache_flag:
+                elif LazyResult._cache_flag:
                     if value in LazyResult.intermediate_mapping:
                         self.expr.context[key] = LazyResult.fetch_intermediate_result(value)
 
@@ -354,10 +367,18 @@ class LazyResult(LazyOpResult):
 
             # loop through context to identify placeholders AND replace with the take_n values
             for key, value in copy.expr.context.items():
-                value = str(value)
-                # so if value is a data_id, update the args of its read function
-                if value in LazyResult.data_mapping:
-                    copy.expr.context[key] = LazyResult.data_mapping[value].eager_head(n)
+                # intermediate results return the n needed, however other raw data has not been sliced yet
+                # which leads to different array lengths in the context; therefore, make sure they're the same length
+                if isinstance(value, np.ndarray):
+                    copy.expr.context[key] = value[:n]
+                else:
+                    value = str(value)
+                    # so if value is a data_id, update the args of its read function
+                    if value in LazyResult.data_mapping:
+                        copy.expr.context[key] = LazyResult.data_mapping[value].eager_head(n)
+                    elif LazyResult._cache_flag:
+                        if value in LazyResult.intermediate_mapping:
+                            copy.expr.context[key] = LazyResult.fetch_intermediate_result(value, n)
 
             return copy.evaluate()[:n]
 

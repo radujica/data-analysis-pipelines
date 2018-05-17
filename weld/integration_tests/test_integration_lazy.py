@@ -1,13 +1,13 @@
 import unittest
 import numpy as np
 import os
-from weld.weldobject import WeldObject
-
 import netCDF4_weld
 import pandas_weld as pdw
+from weld.weldobject import WeldObject
 from lazy_result import LazyResult
 
 
+# TODO: tests with intermediate results
 class IntegrationTests(unittest.TestCase):
     DIR_PATH = (os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) + '/pandas_weld/tests/io'
     PATH_NETCDF4 = DIR_PATH + '/sample_ext.nc'
