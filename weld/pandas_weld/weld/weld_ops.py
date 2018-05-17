@@ -2,14 +2,12 @@ import numpy as np
 from grizzly.encoders import NumPyEncoder, NumPyDecoder
 from weld.types import WeldBit
 from weld.weldobject import WeldObject
-
 from lazy_result import LazyResult
 
 _encoder = NumPyEncoder()
 _decoder = NumPyDecoder()
 
 
-# TODO: improve weld code, e.g. tovec -> vecmerger?
 def weld_aggregate(array, operation, weld_type):
     """ Returns operation on the elements in the array.
 
@@ -331,14 +329,16 @@ def weld_mean(array, weld_type):
         weld_obj.dependencies[array_var] = array
 
     weld_template = """
-    let sum = 
-        for(
-            %(array)s,
-            merger[%(type)s, +],
-            |b, i, n|
-                merge(b, n)
-        );
-    f64(result(sum)) / f64(len(%(array)s))"""
+    f64(
+        result(
+            for(
+                %(array)s,
+                merger[%(type)s, +],
+                |b, i, n|
+                    merge(b, n)
+            )
+        )
+    ) / f64(len(%(array)s))"""
 
     weld_obj.weld_code = weld_template % {'array': array_var,
                                           'type': weld_type}
@@ -377,15 +377,16 @@ def weld_standard_deviation(array, weld_type):
     weld_obj.dependencies[mean_var] = mean_obj
 
     weld_template = """
-    let numer = 
-        for(
-            %(array)s,
-            merger[f64, +],
-            |b, i, n|
-                merge(b, pow(f64(n) - %(mean)s, 2.0))
-        );
-    let denom = len(%(array)s) - 1L;
-    sqrt(result(numer) / f64(denom))"""
+    sqrt(
+        result(
+            for(
+                %(array)s,
+                merger[f64, +],
+                |b, i, n|
+                    merge(b, pow(f64(n) - %(mean)s, 2.0))
+            )
+        ) / f64(len(%(array)s) - 1L)
+    )"""
 
     weld_obj.weld_code = weld_template % {'array': array_var,
                                           'type': weld_type,
@@ -402,6 +403,8 @@ def weld_merge_single_index(indexes, cache=True):
     ----------
     indexes : list of np.array or WeldObject
         input array
+    cache : bool
+        flag to indicate whether to cache result as intermediate result
 
     Returns
     -------
@@ -419,28 +422,20 @@ def weld_merge_single_index(indexes, cache=True):
     [False True True]
 
     """
-    weld_objects = []
+    weld_obj = WeldObject(_encoder, _decoder)
     weld_ids = []
-
-    for i in xrange(len(indexes)):
-        weld_obj = WeldObject(_encoder, _decoder)
-
-        array_var = weld_obj.update(indexes[i])
-        if isinstance(indexes[i], WeldObject):
-            array_var = indexes[i].obj_id
-            weld_obj.dependencies[array_var] = indexes[i]
-
-        weld_objects.append(weld_obj)
+    for array in indexes:
+        array_var = weld_obj.update(array)
+        if isinstance(array, WeldObject):
+            array_var = array.obj_id
+            weld_obj.dependencies[array_var] = array
         weld_ids.append(array_var)
-
-    weld_objects[0].update(weld_objects[1])
-    weld_objects[0].dependencies[weld_ids[1]] = weld_objects[1]
-    weld_objects[1].update(weld_objects[0])
-    weld_objects[1].dependencies[weld_ids[0]] = weld_objects[0]
 
     weld_template = """
     let len1 = len(%(array1)s);
     let len2 = len(%(array2)s);
+    # bool arrays shall be padded until maxLen so that result can be cached as np.ndarray of ndim=2
+    let maxlen = if(len1 > len2, len1, len2);
     let res = iterate({0L, 0L, appender[bool], appender[bool]},
             |p|
                 let val1 = lookup(%(array1)s, p.$0);
@@ -461,39 +456,74 @@ def weld_merge_single_index(indexes, cache=True):
                 }
     );
     # iterate over remaining un-checked elements in both arrays
-    let res = if (res.$0 < len1, iterate(res,
+    let res = if (res.$0 < maxlen, iterate(res,
             |p|
                 {
                     {p.$0 + 1L, p.$1, merge(p.$2, false), p.$3},
-                    p.$0 + 1L < len1
+                    p.$0 + 1L < maxlen
                 }
     ), res);
-    let res = if (res.$1 < len2, iterate(res,
+    let res = if (res.$1 < maxlen, iterate(res,
             |p|
                 {
                     {p.$0, p.$1 + 1L, p.$2, merge(p.$3, false)},
-                    p.$1 + 1L < len2
+                    p.$1 + 1L < maxlen
                 }
     ), res);
-    res"""
+    let b = appender[vec[bool]];
+    let c = merge(b, result(res.$2));
+    result(merge(c, result(res.$3)))"""
 
-    weld_objects[0].weld_code = 'result(' + weld_template % {'array1': weld_ids[0],
-                                                             'array2': weld_ids[1]} + '.$2)'
+    weld_obj.weld_code = weld_template % {'array1': weld_ids[0],
+                                          'array2': weld_ids[1]}
+    # this has both required bool arrays into 1 ndarray; note that arrays have been padded with False until of same len
+    result = LazyResult(weld_obj, WeldBit(), 2)
 
-    weld_objects[1].weld_code = 'result(' + weld_template % {'array1': weld_ids[0],
-                                                             'array2': weld_ids[1]} + '.$3)'
+    # creating the actual results to return
+    weld_objects = []
+    weld_ids = []
+    weld_col_ids = []
 
     if cache:
-        # register these as intermediate results to avoid re-computing them every time a column is needed
-        results = []
-        for i in range(2):
-            id_ = LazyResult.generate_intermediate_id('mindex_merge')
-            LazyResult.register_intermediate_result(id_, LazyResult(weld_objects[i], WeldBit(), 1))
-            results.append(LazyResult.generate_placeholder_weld_object(id_, _encoder, _decoder))
+        id_ = LazyResult.generate_intermediate_id('sindex_merge')
+        LazyResult.register_intermediate_result(id_, result)
 
-        return results
+        for i in range(2):
+            weld_obj = WeldObject(_encoder, _decoder)
+
+            result_var = weld_obj.update(id_)
+            assert result_var is not None
+
+            weld_objects.append(weld_obj)
+            weld_ids.append(result_var)
     else:
-        return weld_objects
+        for i in range(2):
+            weld_obj = WeldObject(_encoder, _decoder)
+
+            result_var = weld_obj.update(result.expr)
+            assert result_var is None
+            result_var = result.expr.obj_id
+            weld_obj.dependencies[result_var] = result.expr
+
+            weld_objects.append(weld_obj)
+            weld_ids.append(result_var)
+
+    # need 1 array from each resulting tables to get actual length
+    for i in range(2):
+        array_var = weld_objects[i].update(indexes[i])
+        if isinstance(indexes[i], WeldObject):
+            array_var = indexes[i].obj_id
+            weld_objects[i].dependencies[array_var] = indexes[i]
+        weld_col_ids.append(array_var)
+
+    weld_templ = """slice(lookup(%(array)s, %(i)s), 0L, len(%(col)s))"""
+
+    for i in range(2):
+        weld_objects[i].weld_code = weld_templ % {'array': weld_ids[i],
+                                                  'i': str(i) + 'L',
+                                                  'col': weld_col_ids[i]}
+
+    return weld_objects
 
 
 def weld_index_to_values(levels, labels):
@@ -559,6 +589,8 @@ def weld_merge_triple_index(indexes, cache=True):
         of np.array or WeldObject
         list of len 2 with first and second elements being the labels in a list
         for the first and second DataFrame MultiIndex, respectively
+    cache : bool
+        flag to indicate whether to cache result as intermediate result
 
     Returns
     -------
@@ -566,44 +598,30 @@ def weld_merge_triple_index(indexes, cache=True):
         representation of the computations, one for each DataFrame
 
     """
-    # TODO: 6 WeldObjects are not actually needed here; 2 is enough
-    weld_objects = []
-    weld_ids = []
-
     assert len(indexes) == 2
     assert len(indexes[0]) == len(indexes[1]) == 3
 
-    # make lists of len 6 with all input
-    for i in xrange(2):
-        for j in xrange(3):
-            weld_obj = WeldObject(_encoder, _decoder)
+    # flatten the list
+    indexes = [elem for sublist in indexes for elem in sublist]
 
-            array_var = weld_obj.update(indexes[i][j])
-            if isinstance(indexes[i][j], WeldObject):
-                array_var = indexes[i][j].obj_id
-                weld_obj.dependencies[array_var] = indexes[i][j]
+    # create final weld objects of what will be the bool arrays
+    # also save the weld_ids for the inputs
+    weld_obj = WeldObject(_encoder, _decoder)
+    weld_ids = []
 
-            weld_objects.append(weld_obj)
-            weld_ids.append(array_var)
+    for array in indexes:
+        array_var = weld_obj.update(array)
+        if isinstance(array, WeldObject):
+            array_var = array.obj_id
+            weld_obj.dependencies[array_var] = array
 
-    # only objects 0 and 3 are going to follow the large computation below, so update their context & dependencies
-    for i in xrange(1, 6):
-        array_var = weld_objects[0].update(weld_objects[i])
-        assert array_var is None
-        weld_objects[0].dependencies[weld_ids[i]] = weld_objects[i]
-
-    for i in [0, 1, 2, 4, 5]:
-        array_var = weld_objects[3].update(weld_objects[i])
-        assert array_var is None
-        weld_objects[3].dependencies[weld_ids[i]] = weld_objects[i]
-
-    # apart from objects 0 and 3, the others are only themselves
-    for i in [1, 2, 4, 5]:
-        weld_objects[i].weld_code = '%s' % weld_ids[i]
+        weld_ids.append(array_var)
 
     weld_template = """
     let len1 = len(%(array1)s);
     let len2 = len(%(array4)s);
+    # bool arrays shall be padded until maxLen so that result can be cached as np.ndarray of ndim=2
+    let maxlen = if(len1 > len2, len1, len2);
     let indexes1 = {%(array1)s, %(array2)s, %(array3)s};
     let indexes2 = {%(array4)s, %(array5)s, %(array6)s};
     let res = if(len1 > 0L && len2 > 0L,
@@ -640,48 +658,78 @@ def weld_merge_triple_index(indexes, cache=True):
                 ),
                 {0L, 0L, appender[bool], appender[bool]}
     );
-    # iterate over remaining un-checked elements in both arrays
-    let res = if(res.$0 < len1, iterate(res,
+    # iterate over remaining un-checked elements in both arrays and append False until maxLen
+    let res = if(res.$0 < maxlen, iterate(res,
             |p|
                 {
                     {p.$0 + 1L, p.$1, merge(p.$2, false), p.$3},
-                    p.$0 + 1L < len1
+                    p.$0 + 1L < maxlen
                 }
     ), res);
-    let res = if(res.$1 < len2, iterate(res,
+    let res = if(res.$1 < maxlen, iterate(res,
             |p|
                 {
                     {p.$0, p.$1 + 1L, p.$2, merge(p.$3, false)},
-                    p.$1 + 1L < len2
+                    p.$1 + 1L < maxlen
                 }
     ), res);
-    res"""
+    let b = appender[vec[bool]];
+    let c = merge(b, result(res.$2));
+    result(merge(c, result(res.$3)))"""
 
-    weld_objects[0].weld_code = 'result(' + weld_template % {'array1': weld_ids[0],
-                                                             'array2': weld_ids[1],
-                                                             'array3': weld_ids[2],
-                                                             'array4': weld_ids[3],
-                                                             'array5': weld_ids[4],
-                                                             'array6': weld_ids[5]} + '.$2)'
+    weld_obj.weld_code = weld_template % {'array1': weld_ids[0],
+                                          'array2': weld_ids[1],
+                                          'array3': weld_ids[2],
+                                          'array4': weld_ids[3],
+                                          'array5': weld_ids[4],
+                                          'array6': weld_ids[5]}
 
-    weld_objects[3].weld_code = 'result(' + weld_template % {'array1': weld_ids[0],
-                                                             'array2': weld_ids[1],
-                                                             'array3': weld_ids[2],
-                                                             'array4': weld_ids[3],
-                                                             'array5': weld_ids[4],
-                                                             'array6': weld_ids[5]} + '.$3)'
+    result = LazyResult(weld_obj, WeldBit(), 2)
+
+    weld_objects = []
+    weld_ids = []
+    weld_col_ids = []
 
     if cache:
-        # register these as intermediate results to avoid re-computing them every time a column is needed
-        results = []
-        for i in [0, 3]:
-            id_ = LazyResult.generate_intermediate_id('mindex_merge')
-            LazyResult.register_intermediate_result(id_, LazyResult(weld_objects[i], WeldBit(), 1))
-            results.append(LazyResult.generate_placeholder_weld_object(id_, _encoder, _decoder))
+        id_ = LazyResult.generate_intermediate_id('mindex_merge')
+        LazyResult.register_intermediate_result(id_, result)
 
-        return results
+        for i in range(2):
+            weld_obj = WeldObject(_encoder, _decoder)
+
+            result_var = weld_obj.update(id_)
+            assert result_var is not None
+
+            weld_objects.append(weld_obj)
+            weld_ids.append(result_var)
     else:
-        return [weld_objects[0], weld_objects[3]]
+        for i in range(2):
+            weld_obj = WeldObject(_encoder, _decoder)
+
+            result_var = weld_obj.update(result.expr)
+            assert result_var is None
+            result_var = result.expr.obj_id
+            weld_obj.dependencies[result_var] = result.expr
+
+            weld_objects.append(weld_obj)
+            weld_ids.append(result_var)
+
+    # need 1 array from each resulting tables to get actual length
+    for i in range(2):
+        array_var = weld_objects[i].update(indexes[i * 3])
+        if isinstance(indexes[i * 3], WeldObject):
+            array_var = indexes[i * 3].obj_id
+            weld_objects[i].dependencies[array_var] = indexes[i * 3]
+        weld_col_ids.append(array_var)
+
+    weld_templ = """slice(lookup(%(array)s, %(i)s), 0L, len(%(col)s))"""
+
+    for i in range(2):
+        weld_objects[i].weld_code = weld_templ % {'array': weld_ids[i],
+                                                  'i': str(i) + 'L',
+                                                  'col': weld_col_ids[i]}
+
+    return weld_objects
 
 
 def weld_groupby(by, by_types, columns, columns_types):

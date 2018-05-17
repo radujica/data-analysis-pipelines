@@ -513,6 +513,8 @@ class DataFrame(object):
         return [LazyResult(data[i], WeldBit(), 1) for i in xrange(2)]
 
     # TODO: check for same column_names in both DataFrames!
+    # TODO: currently a merge join implementation which works well if there are no duplicates, sorted data, and
+    # the lengths of the dataframes are similar; should provide a hashjoin implementation (Weld dictmerger) otherwise
     def merge(self, right):
         """ Join this DataFrame with another
 
