@@ -1,4 +1,5 @@
 import pandas as pd
+
 from column import Column
 from lazy_file import LazyFile
 from lazy_result import LazyResult

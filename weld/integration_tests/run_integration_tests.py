@@ -1,4 +1,5 @@
 from unittest import TestLoader, TestSuite, TextTestRunner
+
 from test_integration_lazy import IntegrationTests
 
 if __name__ == '__main__':

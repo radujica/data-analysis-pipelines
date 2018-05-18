@@ -1,5 +1,7 @@
 from collections import OrderedDict
+
 from grizzly.encoders import numpy_to_weld_type
+
 from pandas_weld import DataFrame, Index, Series, MultiIndex
 from pandas_weld.weld import weld_groupby_aggregate, weld_get_column
 

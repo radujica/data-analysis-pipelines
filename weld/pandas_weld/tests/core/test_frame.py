@@ -1,6 +1,8 @@
 import unittest
-import pandas_weld as pdw
+
 import numpy as np
+
+import pandas_weld as pdw
 from indexes.test_multi import test_equal_multiindex
 from pandas_weld.tests.core.test_series import test_equal_series
 from pandas_weld.tests.utils import evaluate_if_necessary

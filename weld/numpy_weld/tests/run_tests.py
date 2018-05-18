@@ -1,4 +1,5 @@
 from unittest import TestLoader, TestSuite, TextTestRunner
+
 from numpy_weld.tests import DuplicateElementsTests, DuplicateArrayTests, CartesianProductTests
 
 # TODO: this could be extended a bit to have such a script in each sub-package

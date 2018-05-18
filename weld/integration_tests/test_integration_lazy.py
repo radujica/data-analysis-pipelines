@@ -1,9 +1,11 @@
 import unittest
+
 import numpy as np
 import os
+from weld.weldobject import WeldObject
+
 import netCDF4_weld
 import pandas_weld as pdw
-from weld.weldobject import WeldObject
 from lazy_result import LazyResult
 
 

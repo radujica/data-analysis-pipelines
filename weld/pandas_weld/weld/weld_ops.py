@@ -2,6 +2,7 @@ import numpy as np
 from grizzly.encoders import NumPyEncoder, NumPyDecoder
 from weld.types import WeldBit
 from weld.weldobject import WeldObject
+
 from lazy_result import LazyResult
 
 _encoder = NumPyEncoder()

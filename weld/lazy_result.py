@@ -1,11 +1,13 @@
+from copy import deepcopy
+
 import numpy as np
 import os
 from grizzly.encoders import NumPyDecoder, NumPyEncoder
 from grizzly.lazy_op import LazyOpResult
 from weld.weldobject import WeldObject
+
 from lazy_data import LazyData
 from lazy_file import LazyFile
-from copy import deepcopy
 
 
 class LazyResult(LazyOpResult):

@@ -1,12 +1,13 @@
 from collections import OrderedDict
-from grizzly.encoders import numpy_to_weld_type
-from weld.types import WeldLong
-from lazy_result import LazyResult, weld_subset
-from base import Index
-from pandas_weld.core.utils import replace_slice_defaults
-from pandas_weld.weld import weld_range, weld_filter
 
 import numpy as np
+from grizzly.encoders import numpy_to_weld_type
+from weld.types import WeldLong
+
+from base import Index
+from lazy_result import LazyResult, weld_subset
+from pandas_weld.core.utils import replace_slice_defaults
+from pandas_weld.weld import weld_range, weld_filter
 
 
 class RangeIndex(LazyResult):

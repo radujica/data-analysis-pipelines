@@ -1,8 +1,10 @@
 from collections import OrderedDict
+
+import netCDF4
+
 from lazy_file import LazyFile
 from lazy_result import LazyResult
 from variable import Variable
-import netCDF4
 
 
 class Dataset(LazyFile):

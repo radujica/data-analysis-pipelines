@@ -1,8 +1,8 @@
+import numpy as np
 from grizzly.encoders import numpy_to_weld_type
 from weld.types import *
-from lazy_result import LazyResult
-import numpy as np
 
+from lazy_result import LazyResult
 
 # assuming the keys are cached; could just replace with i32, etc
 _weld_to_numpy_str_type_mapping = {

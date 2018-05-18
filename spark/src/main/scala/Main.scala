@@ -2,13 +2,13 @@ import java.io.IOException
 import java.util
 
 import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.functions.{abs, udf}
 import org.apache.spark.sql.types.{FloatType, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SparkSession}
-import org.apache.spark.sql.functions.{abs, udf}
 import ucar.nc2.time.CalendarDate
 import ucar.nc2.{NetcdfFile, Variable}
 
-import collection.JavaConversions._
+import scala.collection.JavaConversions._
 import scala.collection.mutable.ListBuffer
 
 

@@ -2,6 +2,7 @@ import numpy as np
 from grizzly.encoders import NumPyEncoder, NumPyDecoder, numpy_to_weld_type
 from weld.types import WeldLong
 from weld.weldobject import WeldObject
+
 from lazy_result import LazyResult
 
 # the methods are only intended to work with numpy, so have a single encoder/decoder

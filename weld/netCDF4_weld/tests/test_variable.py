@@ -1,7 +1,9 @@
 import unittest
-import netCDF4_weld
+
 import numpy as np
 import os
+
+import netCDF4_weld
 
 
 class VariableTests(unittest.TestCase):

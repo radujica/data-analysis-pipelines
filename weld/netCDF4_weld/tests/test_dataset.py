@@ -1,6 +1,8 @@
 import unittest
-import netCDF4_weld
+
 import os
+
+import netCDF4_weld
 
 
 class DatasetTests(unittest.TestCase):

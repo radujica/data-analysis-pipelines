@@ -1,4 +1,5 @@
 from unittest import TestLoader, TestSuite, TextTestRunner
+
 from netCDF4_weld.tests import VariableTests, DatasetTests, UtilsTests
 
 if __name__ == '__main__':

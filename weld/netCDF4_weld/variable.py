@@ -1,11 +1,12 @@
-from grizzly.encoders import NumPyEncoder, NumPyDecoder, numpy_to_weld_type
-from lazy_result import LazyResult
-from weld.weldobject import WeldObject
-from lazy_data import LazyData
-from netCDF4_weld.utils import convert_row_to_nd_slices, replace_slice_defaults
+import netCDF4
 import numpy as np
 import pandas as pd
-import netCDF4
+from grizzly.encoders import NumPyEncoder, NumPyDecoder, numpy_to_weld_type
+from weld.weldobject import WeldObject
+
+from lazy_data import LazyData
+from lazy_result import LazyResult
+from netCDF4_weld.utils import convert_row_to_nd_slices, replace_slice_defaults
 
 
 class Variable(LazyData, LazyResult):

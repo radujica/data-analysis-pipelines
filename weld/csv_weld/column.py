@@ -1,5 +1,6 @@
 import numpy as np
 from grizzly.encoders import NumPyEncoder, NumPyDecoder
+
 from lazy_data import LazyData
 from lazy_result import LazyResult
 

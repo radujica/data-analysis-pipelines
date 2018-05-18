@@ -1,9 +1,11 @@
 import unittest
+
 import numpy as np
 from grizzly.encoders import numpy_to_weld_type, WeldObject
+
+from indexes import test_equal_multiindex
 from lazy_result import LazyResult
 from pandas_weld import Series, RangeIndex, MultiIndex, Index
-from indexes import test_equal_multiindex
 from ..utils import evaluate_if_necessary
 
 

@@ -1,4 +1,4 @@
 from frame import DataFrame
-from series import Series
 from indexes import *
+from series import Series
 from utils import *

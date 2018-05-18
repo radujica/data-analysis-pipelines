@@ -1,7 +1,9 @@
 import unittest
-import pandas_weld as pdw
+
 import numpy as np
 from grizzly.encoders import numpy_to_weld_type
+
+import pandas_weld as pdw
 from lazy_result import LazyResult
 from pandas_weld.tests.utils import evaluate_if_necessary
 

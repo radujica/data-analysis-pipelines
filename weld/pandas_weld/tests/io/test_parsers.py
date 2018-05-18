@@ -1,9 +1,11 @@
 import unittest
-import os
+from datetime import date
+
 import numpy as np
+import os
+
 import pandas_weld as pdw
 from pandas_weld.tests import test_equal_multiindex
-from datetime import date
 
 
 class ParserTests(unittest.TestCase):

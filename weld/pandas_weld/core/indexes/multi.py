@@ -1,13 +1,14 @@
 from collections import OrderedDict
-from tabulate import tabulate
-from lazy_result import LazyResult, weld_subset
+
+import os
 from grizzly.encoders import numpy_to_weld_type
+from tabulate import tabulate
+
+import numpy_weld as npw
+from lazy_result import LazyResult, weld_subset
 from pandas_weld.core.utils import get_expression_or_raw, get_weld_type, get_weld_info, \
     replace_slice_defaults
 from pandas_weld.weld import weld_filter, weld_unique, weld_index_to_values
-
-import numpy_weld as npw
-import os
 
 
 class MultiIndex(object):

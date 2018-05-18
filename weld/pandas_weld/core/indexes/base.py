@@ -1,11 +1,12 @@
 from collections import OrderedDict
+
+import numpy as np
 from grizzly.encoders import numpy_to_weld_type
 from weld.weldobject import WeldObject
+
 from lazy_result import LazyResult
 from pandas_weld.core.utils import replace_slice_defaults
 from pandas_weld.weld import weld_filter
-
-import numpy as np
 
 
 # TODO: this should be a superclass of the others to conform to pandas

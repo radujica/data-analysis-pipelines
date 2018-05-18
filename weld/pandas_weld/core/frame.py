@@ -1,16 +1,17 @@
+import numpy as np
+import os
 from grizzly.encoders import numpy_to_weld_type
 from tabulate import tabulate
 from weld.types import WeldBit, WeldLong
-from lazy_result import LazyResult
+
 from indexes import Index, MultiIndex, RangeIndex
+from lazy_result import LazyResult
 from pandas_weld.core.indexes.multi import index_to_values
 from pandas_weld.weld import weld_filter, weld_element_wise_op, weld_aggregate, weld_merge_single_index, \
     weld_merge_triple_index, weld_index_to_values, weld_groupby, weld_count
 from series import Series
 from utils import replace_slice_defaults, get_expression_or_raw, evaluate_or_raw, get_weld_type, \
     get_dtype, get_weld_info, str_dict
-import numpy as np
-import os
 
 
 class DataFrame(object):

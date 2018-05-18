@@ -1,8 +1,10 @@
+from collections import OrderedDict
+
+import numpy as np
 from grizzly.encoders import numpy_to_weld_type
+
 import csv_weld
 import netCDF4_weld
-import numpy as np
-from collections import OrderedDict
 from lazy_result import LazyResult
 from pandas_weld import MultiIndex, DataFrame, Index
 from pandas_weld.weld import weld_range
