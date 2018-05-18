@@ -20,6 +20,14 @@ def _duplicate_elements_indices(array, n, weld_type, cartesian=False):
         array_var = array.obj_id
         weld_obj.dependencies[array_var] = array
 
+    if isinstance(n, WeldObject):
+        weld_obj.update(n)
+        weld_obj.dependencies[n.obj_id] = n
+        n = 'len(%s)' % n.obj_id
+    elif isinstance(n, np.ndarray):
+        array_var = weld_obj.update(n)
+        n = 'len(%s)' % array_var
+
     weld_template = """
     result(
         for(
@@ -36,7 +44,7 @@ def _duplicate_elements_indices(array, n, weld_type, cartesian=False):
     )"""
 
     weld_obj.weld_code = weld_template % {'array': array_var,
-                                          'n': '%sL' % n if type(n) is long else n,
+                                          'n': 'i64(%s)' % n,
                                           'index_or_value': 'n' if cartesian else 'i',
                                           'type': 'i64' if cartesian else weld_type}
 
@@ -50,11 +58,12 @@ def duplicate_elements_indices(array, n, cartesian=False):
     ----------
     array : np.ndarray or LazyResult
         the source data
-    n : long
-        how many times to repeat each element
+    n : long or LazyResult
+        how many times to repeat each element; if LazyResult, will use its length
     cartesian : bool
         True if used internally by cartesian_product to signify the operation
-        has been done once already and hence must behave slightly different
+        has been done once already and hence must behave slightly different by using the number
+        in the array instead of the index of that number (since at this point the array already contains indexes)
 
     Returns
     -------
@@ -75,6 +84,13 @@ def duplicate_elements_indices(array, n, cartesian=False):
     else:
         raise NotImplementedError
 
+    if isinstance(n, LazyResult):
+        n = n.expr
+    elif isinstance(n, np.ndarray):
+        n = len(n)
+    elif not isinstance(n, long):
+        raise TypeError('expected either a long value or a LazyResult to use its length')
+
     return LazyResult(_duplicate_elements_indices(array, n, weld_type, cartesian),
                       WeldLong(),
                       1)
@@ -88,6 +104,14 @@ def _duplicate_array_indices(array, n, weld_type, cartesian=False):
     if isinstance(array, WeldObject):
         array_var = array.obj_id
         weld_obj.dependencies[array_var] = array
+
+    if isinstance(n, WeldObject):
+        weld_obj.update(n)
+        weld_obj.dependencies[n.obj_id] = n
+        n = 'len(%s)' % n.obj_id
+    elif isinstance(n, np.ndarray):
+        array_var = weld_obj.update(n)
+        n = 'len(%s)' % array_var
 
     weld_template = """   
     result(
@@ -105,7 +129,7 @@ def _duplicate_array_indices(array, n, weld_type, cartesian=False):
     )"""
 
     weld_obj.weld_code = weld_template % {'array': array_var,
-                                          'n': '%sL' % n if type(n) is long else n,
+                                          'n': 'i64(%s)' % n,
                                           'index_or_value': 'n' if cartesian else 'i',
                                           'type': 'i64' if cartesian else weld_type}
 
@@ -119,11 +143,12 @@ def duplicate_array_indices(array, n, cartesian=False):
     ----------
     array : np.ndarray or LazyResult
         the source data
-    n : long
-        how many times to repeat the source array
+    n : long or LazyResult
+        how many times to repeat the source array; if LazyResult, will use its length
     cartesian : bool
         True if used internally by cartesian_product to signify the operation
-        has been done once already and hence must behave slightly different
+        has been done once already and hence must behave slightly different by using the number
+        in the array instead of the index of that number (since at this point the array already contains indexes)
 
     Returns
     -------
@@ -144,96 +169,69 @@ def duplicate_array_indices(array, n, cartesian=False):
     else:
         raise NotImplementedError
 
+    if isinstance(n, LazyResult):
+        n = n.expr
+    elif isinstance(n, np.ndarray):
+        n = len(n)
+    elif not isinstance(n, long):
+        raise TypeError('expected either a long value or a LazyResult to use its length')
+
     return LazyResult(_duplicate_array_indices(array, n, weld_type, cartesian),
                       WeldLong(),
                       1)
 
 
-# helper class to name pair elements in _cartesian_product_indices
-# need to keep track of the original arrays obj_id
-class _WeldObjectIdPair(object):
-    def __init__(self, weld_object, object_id):
-        self.weld_object = weld_object
-        self.object_id = object_id
+def _cartesian_product_indices(arrays):
+    # compute (lazily) the x resulting columns
+    results = [0] * len(arrays)
+    results[0] = duplicate_elements_indices(arrays[0], arrays[1])
+    results[1] = duplicate_array_indices(arrays[1], arrays[0])
 
-    def __repr__(self):
-        return str(self.weld_object) + ' - ' + str(self.object_id)
+    for i in range(2, len(arrays)):
+        for j in range(0, i):
+            results[j] = duplicate_elements_indices(results[j], arrays[i], cartesian=True)
 
+        results[i] = duplicate_array_indices(arrays[i], arrays[0])
 
-def _cartesian_product_indices(arrays, arrays_types, number_of_arrays):
-    # need to first register the objects since they rely on each other on the length
-    # so build a list of [weld_obj, id] where the id will be used in len(id)
-    # the weld_objects 'are' now the arrays
-    weld_objects = []
-    for i in xrange(number_of_arrays):
-        weld_obj = WeldObject(_encoder, _decoder)
-        array_var = weld_obj.update(arrays[i])
+        for j in range(1, i):
+            results[i] = duplicate_array_indices(results[i], arrays[j], cartesian=True)
 
-        if isinstance(arrays[i], WeldObject):
-            array_var = arrays[i].obj_id
-            weld_obj.dependencies[array_var] = arrays[i]
+    # final object
+    weld_obj = WeldObject(_encoder, _decoder)
+    # add the columns as dependencies to the final output
+    for result in results:
+        weld_obj.update(result.expr)
+        weld_obj.dependencies[result.expr.obj_id] = result.expr
 
-        if array_var is not None:
-            weld_obj.weld_code = array_var
+    # construct the template for a single vec[vec[i64]] which will result in a np.ndarray of ndim=2
+    weld_template = 'let res = {%s};\n' % ', '.join([res.expr.obj_id for res in results])
+    for i in range(len(results) + 1):
+        line = 'let a_%s = ' % str(i)
+        if i == 0:
+            line += 'appender[vec[i64]];\n'
+        else:
+            index = str(i - 1)
+            line += 'merge(a_%s, res.$%s);\n' % (index, index)
+        weld_template += line
+    weld_template += 'result(a_%s)\n' % str(len(results))
 
-        weld_objects.append(_WeldObjectIdPair(weld_obj, array_var))
+    # no other replacements needed
+    weld_obj.weld_code = weld_template
 
-    # update and add dependencies to the other objects
-    for i in xrange(number_of_arrays):
-        for j in xrange(0, i):
-            array_var = weld_objects[i].weld_object.update(weld_objects[j].weld_object)
-            assert array_var is None
-            weld_objects[i].weld_object.dependencies[weld_objects[j].object_id] = weld_objects[j].weld_object
-        for j in xrange(i + 1, number_of_arrays):
-            array_var = weld_objects[i].weld_object.update(weld_objects[j].weld_object)
-            assert array_var is None
-            weld_objects[i].weld_object.dependencies[weld_objects[j].object_id] = weld_objects[j].weld_object
-
-    # first 2 arrays are cartesian-produced by default
-    weld_objects[0].weld_object = \
-        _duplicate_elements_indices(weld_objects[0].weld_object,
-                                    'len(%s)' % weld_objects[1].object_id,
-                                    arrays_types[0])
-    weld_objects[1].weld_object = \
-        _duplicate_array_indices(weld_objects[1].weld_object,
-                                 'len(%s)' % weld_objects[0].object_id,
-                                 arrays_types[1])
-
-    # handle the remaining arrays, i.e. for index > 2
-    # the arrays up to i need to be _duplicate_elements_indices once while the ith array needs to
-    # be _duplicate_array_indices i times
-    for i in xrange(2, number_of_arrays):
-        for j in xrange(0, i):
-            weld_objects[j].weld_object = \
-                _duplicate_elements_indices(weld_objects[j].weld_object,
-                                            'len(%s)' % weld_objects[i].object_id,
-                                            arrays_types[j],
-                                            cartesian=True)
-
-        weld_objects[i].weld_object = \
-            _duplicate_array_indices(weld_objects[i].weld_object,
-                                     'len(%s)' % weld_objects[0].object_id,
-                                     arrays_types[i])
-
-        for j in xrange(1, i):
-            weld_objects[i].weld_object = \
-                _duplicate_array_indices(weld_objects[i].weld_object,
-                                         'len(%s)' % weld_objects[j].object_id,
-                                         arrays_types[i],
-                                         cartesian=True)
-
-    return [k.weld_object for k in weld_objects]
+    return weld_obj
 
 
-def cartesian_product_indices(arrays):
+def cartesian_product_indices(arrays, cache=True):
     """ Performs cartesian product between all arrays
 
     Returns the indices instead of the actual values
 
     Parameters
     ----------
-    arrays : list of np.ndarray or list of LazyResult
+    arrays : list of (np.ndarray or LazyResult)
         list containing arrays that need to be in the product
+    cache : bool, optional
+        flag to indicate whether to cache result as intermediate result
 
     Returns
     -------
@@ -249,25 +247,43 @@ def cartesian_product_indices(arrays):
     pandas.MultiIndex
 
     """
-    number_of_arrays = len(arrays)
-
-    if number_of_arrays < 2:
+    if len(arrays) < 2:
         raise ValueError('expected at least 2 arrays')
 
-    arrays_copied = arrays[:]
-    weld_types = []
+    weld_object = _cartesian_product_indices(arrays)
+    # this now contains the entire np.ndarray with all results of cartesian product
+    result = LazyResult(weld_object, WeldLong(), 2)
 
-    for i in xrange(number_of_arrays):
-        if isinstance(arrays_copied[i], LazyResult):
-            weld_type = arrays_copied[i].weld_type
-            arrays_copied[i] = arrays_copied[i].expr
-        elif isinstance(arrays_copied[i], np.ndarray):
-            weld_type = numpy_to_weld_type(arrays_copied[i].dtype)
-        else:
-            raise TypeError('expected LazyResult or np.ndarray')
+    # construct the actual weld_objects corresponding to single result columns/arrays
+    weld_objects = []
+    weld_ids = []
+    if cache:
+        id_ = LazyResult.generate_intermediate_id('cartesian_product')
+        LazyResult.register_intermediate_result(id_, result)
 
-        weld_types.append(weld_type)
+        for i in range(len(arrays)):
+            weld_obj = WeldObject(_encoder, _decoder)
 
-    weld_objects = _cartesian_product_indices(arrays_copied, weld_types, number_of_arrays)
+            result_var = weld_obj.update(id_)
+            assert result_var is not None
 
-    return [LazyResult(weld_objects[k], WeldLong(), 1) for k in xrange(number_of_arrays)]
+            weld_objects.append(weld_obj)
+            weld_ids.append(result_var)
+    else:
+        for i in range(len(arrays)):
+            weld_obj = WeldObject(_encoder, _decoder)
+
+            result_var = weld_obj.update(result.expr)
+            assert result_var is None
+            result_var = result.expr.obj_id
+            weld_obj.dependencies[result_var] = result.expr
+
+            weld_objects.append(weld_obj)
+            weld_ids.append(result_var)
+
+    weld_template = """lookup(%(array)s, %(i)sL)"""
+    for i in range(len(arrays)):
+        weld_objects[i].weld_code = weld_template % {'array': weld_ids[i],
+                                                     'i': str(i)}
+
+    return [LazyResult(obj, WeldLong(), 1) for obj in weld_objects]

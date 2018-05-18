@@ -7,6 +7,7 @@ from pandas_weld.core.utils import get_expression_or_raw, get_weld_type, get_wel
 from pandas_weld.weld import weld_filter, weld_unique, weld_index_to_values
 
 import numpy_weld as npw
+import os
 
 
 class MultiIndex(object):
@@ -30,6 +31,8 @@ class MultiIndex(object):
     pandas.MultiIndex
 
     """
+    _cache_flag = False if os.getenv("LAZY_WELD_CACHE") == 'False' else True
+
     # TODO: add some caching if columns were already expanded?
     def __init__(self, levels, labels, names):
         self.levels = levels
@@ -50,13 +53,12 @@ class MultiIndex(object):
         MultiIndex
 
         """
-        labels = npw.cartesian_product_indices(levels)
+        labels = npw.cartesian_product_indices(levels, MultiIndex._cache_flag)
 
         return cls(levels, labels, names)
 
     @classmethod
     def from_arrays(cls, arrays, names):
-
         weld_types = [get_weld_type(k) for k in arrays]
         arrays = [get_expression_or_raw(k) for k in arrays]
         levels = [LazyResult(weld_unique(arrays[k], weld_types[k]), weld_types[k], 1) for k in xrange(len(arrays))]
