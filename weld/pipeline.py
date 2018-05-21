@@ -1,12 +1,33 @@
+import argparse
+import sys
+
 import os
 
 import pandas_weld as pdw
 
-PATH_HOME = os.getenv('HOME2') + '/datasets/ECAD/original/small_sample/'
-df1 = pdw.read_netcdf4(PATH_HOME + 'data1.nc')
-df2 = pdw.read_netcdf4(PATH_HOME + 'data2.nc')
+parser = argparse.ArgumentParser(description='Weld Pipeline')
+parser.add_argument('-e', '--eager', default='nope')
+parser.add_argument('-f', '--file', default=None)
+args = parser.parse_args()
+
+PATH_HOME = args.file
+if PATH_HOME is None:
+    raise ValueError('expected directory path of files as arg')
+PATH1 = PATH_HOME + 'data1.nc'
+PATH2 = PATH_HOME + 'data2.nc'
+
+if args.eager is 'nope':
+    df1 = pdw.read_netcdf4(PATH1)
+    df2 = pdw.read_netcdf4(PATH2)
+else:
+    df1 = pdw.read_netcdf4_eager(PATH1)
+    df2 = pdw.read_netcdf4_eager(PATH2)
+
+# direct output to null
+sys.stdout = open(os.devnull, 'w')
 
 
+# PIPELINE
 # 1. join the 2 dataframes
 df = df1.merge(df2)
 
