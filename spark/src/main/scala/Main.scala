@@ -13,7 +13,6 @@ import scala.collection.mutable.ListBuffer
 
 
 object Main {
-  private val PATH: String = System.getenv("HOME2") + "/datasets/ECAD/original/small_sample/"
   private val CALENDAR: String = "proleptic_gregorian"
   private val UNITS: String = "days since 1950-01-01"
 
@@ -84,64 +83,39 @@ object Main {
     df.withColumn("time", floatTimeToString(df("time")))
   }
 
-  // this loads everything on driver
-  @throws[IOException]
-  private def readDataDriver(path: String, ss: SparkSession, size: Int, addIndex: Boolean): DataFrame = {
-    val file = NetcdfFile.open(path)
-    var sizeF = size
-    if (addIndex) sizeF += 1
-    val data: Array[Array[Float]] = new Array[Array[Float]](sizeF)
-    val names: Array[String] = new Array[String](sizeF)
-    var i = 0
-    for (variable : Variable <- file.getVariables) {
-      data(i) = readVariable(variable)
-      names(i) = variable.getShortName
-      i += 1
+  type ArgsMap = Map[Symbol, Any]
+  @throws(classOf[RuntimeException])
+  def parseArgs(map : ArgsMap, list: List[String]) : ArgsMap = {
+    list match {
+      case Nil => map
+      case "--path" :: value :: tail =>
+        parseArgs(map ++ Map('path -> value), tail)
+      case "--partitions" :: value :: tail =>
+        parseArgs(map ++ Map('partitions -> value.toInt), tail)
+        //stop parsing here and catch in main
+      case string => throw new RuntimeException("invalid argument: " + string)
     }
-
-    // cartesian product for dimensions
-    val dimensions = cartesianProductDimensions(data(names.indexOf("longitude")),
-      data(names.indexOf("latitude")),
-      data(names.indexOf("time")))
-    data(names.indexOf("longitude")) = dimensions(0)
-    data(names.indexOf("latitude")) = dimensions(1)
-    data(names.indexOf("time")) = dimensions(2)
-
-    // add index column (needed for subset by row numbers)
-    if (addIndex) {
-      data(i) = Array.tabulate(data(0).length)(_ + 1)
-      names(i) = "index"
-    }
-
-    val rdd: RDD[Row] = ss.sparkContext.parallelize(data.transpose.toSeq.map(x => Row.fromSeq(x.toSeq)))
-
-    val df: DataFrame = ss.createDataFrame(rdd, StructType(names.map(StructField(_, FloatType, nullable = false)).toSeq))
-
-    // convert time from float to String
-    val floatTimeToString = udf((time: Float) => {
-      val udunits = String.valueOf(time.asInstanceOf[Int]) + " " + UNITS
-
-      CalendarDate.parseUdunits(CALENDAR, udunits).toString.substring(0, 10)
-    })
-    df.withColumn("time", floatTimeToString(df("time")))
   }
 
   def main(args: Array[String]): Unit = {
-    if (args.length != 1) {
-      throw new RuntimeException("expected exactly 1 argument for number of partitions")
+    if (args.length != 4) {
+      throw new RuntimeException("Usage: --path <path> --partitions <number_partitions>")
     }
+    val options = parseArgs(Map(), args.toList)
 
     val spark: SparkSession = SparkSession.builder
       .appName("Spark Pipeline")
       .getOrCreate()
 
     val dimensions: List[String] = List("longitude", "latitude", "time")
-    val df1: DataFrame = readData(PATH + "data1.nc", spark, dimensions, true, args(0).toInt)
-    val df2: DataFrame = readData(PATH + "data2.nc", spark, dimensions, false, args(0).toInt)
+    val df1: DataFrame = readData(options('path) + "data1.nc", spark, dimensions,
+                                  createIndex = true, options('partitions).asInstanceOf[Int])
+    val df2: DataFrame = readData(options('path) + "data2.nc", spark, dimensions,
+                                  createIndex = false, options('partitions).asInstanceOf[Int])
 
     // PIPELINE
     // 1. join the 2 dataframes
-    var df: DataFrame = df1.join(df2, dimensions, "inner")
+    var df: DataFrame = df1.join(df2, dimensions, "inner").cache()
 
     // 2. quick preview on the data
     println(df.show(10))
