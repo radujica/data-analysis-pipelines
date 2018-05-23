@@ -1,20 +1,17 @@
 import argparse
-import sys
-
-import os
 
 import pandas_weld as pdw
 
 parser = argparse.ArgumentParser(description='Weld Pipeline')
 parser.add_argument('-e', '--eager', default='nope')
-parser.add_argument('-f', '--file', default=None)
+parser.add_argument('-p', '--path', default=None)
 args = parser.parse_args()
 
-PATH_HOME = args.file
-if PATH_HOME is None:
+PATH = args.path
+if PATH is None:
     raise ValueError('expected directory path of files as arg')
-PATH1 = PATH_HOME + 'data1.nc'
-PATH2 = PATH_HOME + 'data2.nc'
+PATH1 = PATH + 'data1.nc'
+PATH2 = PATH + 'data2.nc'
 
 if args.eager is 'nope':
     df1 = pdw.read_netcdf4(PATH1)
@@ -22,9 +19,6 @@ if args.eager is 'nope':
 else:
     df1 = pdw.read_netcdf4_eager(PATH1)
     df2 = pdw.read_netcdf4_eager(PATH2)
-
-# direct output to null
-sys.stdout = open(os.devnull, 'w')
 
 
 # PIPELINE
