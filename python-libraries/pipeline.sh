@@ -1,3 +1,5 @@
 #!/bin/bash
 
-pipenv run time python pipeline.py
+path="$HOME2"
+path+="/datasets/ECAD/original/small_sample/"
+pipenv run python pipeline.py --path ${path}

@@ -1,11 +1,21 @@
+import argparse
+
 import numpy as np
-import os
 
 from netcdf_parser import to_dataframe
 
-PATH_HOME = os.getenv('HOME2') + '/datasets/ECAD/original/small_sample/'
-df1 = to_dataframe(PATH_HOME + 'data1.nc')
-df2 = to_dataframe(PATH_HOME + 'data2.nc')
+parser = argparse.ArgumentParser(description='Weld Pipeline')
+parser.add_argument('-p', '--path', default=None)
+args = parser.parse_args()
+
+PATH = args.path
+if PATH is None:
+    raise ValueError('expected directory path of files as arg')
+PATH1 = PATH + 'data1.nc'
+PATH2 = PATH + 'data2.nc'
+
+df1 = to_dataframe(PATH1)
+df2 = to_dataframe(PATH2)
 
 
 "PIPELINE"
