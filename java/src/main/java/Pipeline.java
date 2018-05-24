@@ -10,7 +10,6 @@ import java.util.Map;
 // TODO: convert for loops to streams? no native support for floats though
 // https://stackoverflow.com/questions/26951431/how-to-get-an-observablefloatarray-from-a-stream/26970398#26970398
 public class Pipeline  {
-    private static final String PATH = System.getenv("HOME2") + "/datasets/ECAD/original/small_sample/";
     private static final String CALENDAR = "proleptic_gregorian";
     private static final String UNITS = "days since 1950-01-01";
 
@@ -115,9 +114,9 @@ public class Pipeline  {
         return yearMonth;
     }
 
-    public void start() throws IOException {
-        DataFrame df1 = readData(PATH + "data1.nc");
-        DataFrame df2 = readData(PATH + "data2.nc");
+    public void start(String path) throws IOException {
+        DataFrame df1 = readData(path + "data1.nc");
+        DataFrame df2 = readData(path + "data2.nc");
 
         // PIPELINE
         // 1. join the 2 dataframes

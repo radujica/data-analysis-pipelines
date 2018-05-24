@@ -1,5 +1,4 @@
 plugins {
-    id 'application'
     id 'java'
     id 'idea'
 }
@@ -7,10 +6,9 @@ plugins {
 dependencies {
     implementation 'edu.ucar:netcdf:4.3.22'
     implementation 'com.google.guava:guava:23.0'
+    implementation 'commons-cli:commons-cli:1.4'
     testImplementation 'junit:junit:4.12'
 }
-
-mainClassName = 'RunPipeline'
 
 repositories {
     mavenCentral()
@@ -23,7 +21,11 @@ repositories {
 jar {
     manifest {
         attributes(
-                'Main-Class': mainClassName
+                'Main-Class': 'RunPipeline',
+                'Class-Path': configurations.compileClasspath.files.collect {"$it.name"}.join(' ')
         )
+    }
+    from {
+        configurations.compileClasspath.collect { it.isDirectory() ? it : zipTree(it) }
     }
 }
