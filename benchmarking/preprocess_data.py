@@ -1,14 +1,14 @@
+import argparse
+
 import xarray as xr
-import os
 
 """
 Join and convert the NETCDF3_CLASSIC files into a large NETCDF4 file (with full HDF5 API)
-
-Note: this uses the same dependencies as in python-libraries
 """
 
-PATH_HOME = os.getenv('HOME2')
-PATH_DATASETS_ROOT = '/datasets/ECAD/original/small_sample/'
+parser = argparse.ArgumentParser(description='Combine data')
+parser.add_argument('-i', '--input', required=True, help='Path to folder containing input files; also output folder')
+args = parser.parse_args()
 
 
 def combine(path, files, output):
@@ -33,5 +33,5 @@ def combine(path, files, output):
                         engine='netcdf4')
 
 
-combine(PATH_HOME + PATH_DATASETS_ROOT, ['tg', 'tg_err', 'pp', 'pp_err', 'rr', 'rr_err'], 'data1')
-combine(PATH_HOME + PATH_DATASETS_ROOT, ['tn', 'tn_err', 'tx', 'tx_err'], 'data2')
+combine(args.input, ['tg', 'tg_stderr', 'pp', 'pp_stderr', 'rr', 'rr_stderr'], 'data1')
+combine(args.input, ['tn', 'tn_stderr', 'tx', 'tx_stderr'], 'data2')

@@ -10,6 +10,7 @@ name = "pypi"
 xarray = "*"
 numpy = "*"
 pandas = "*"
+"netcdf4" = "*"
 
 
 [dev-packages]
