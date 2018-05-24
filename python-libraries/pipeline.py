@@ -5,14 +5,11 @@ import numpy as np
 from netcdf_parser import to_dataframe
 
 parser = argparse.ArgumentParser(description='Weld Pipeline')
-parser.add_argument('-p', '--path', default=None)
+parser.add_argument('-p', '--path', required=True)
 args = parser.parse_args()
 
-PATH = args.path
-if PATH is None:
-    raise ValueError('expected directory path of files as arg')
-PATH1 = PATH + 'data1.nc'
-PATH2 = PATH + 'data2.nc'
+PATH1 = args.path + 'data1.nc'
+PATH2 = args.path + 'data2.nc'
 
 df1 = to_dataframe(PATH1)
 df2 = to_dataframe(PATH2)
