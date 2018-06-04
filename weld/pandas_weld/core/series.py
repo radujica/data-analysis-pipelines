@@ -56,6 +56,12 @@ class Series(LazyResult):
     def __str__(self):
         return str(self.data)
 
+    def evaluate(self, verbose=False, decode=True, passes=None, num_threads=1,
+                 apply_experimental_transforms=False):
+        data = super(Series, self).evaluate(verbose, decode, passes, num_threads, apply_experimental_transforms)
+
+        return Series(data, self.dtype, self.index, self.name)
+
     def __getitem__(self, item):
         """ Lazy operation to select a subset of the series
 

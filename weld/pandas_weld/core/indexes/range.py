@@ -51,7 +51,8 @@ class RangeIndex(LazyResult):
         if as_dict:
             return OrderedDict({self.__class__.__name__: data})
         else:
-            return data
+            # once evaluated, it is no longer a RangeIndex (which is encoded through a start, stop, and step)
+            return Index(data, np.dtype(np.int64))
 
     def __getitem__(self, item):
         """ Retrieve a portion of the RangeIndex

@@ -3,7 +3,11 @@ from lazy_result import LazyResult
 
 def evaluate_if_necessary(data):
     if isinstance(data, LazyResult):
-        data = data.evaluate(verbose=False)
+        # e.g. for Series this will return a Series with raw data
+        data = data.evaluate()
+        # so want the np.ndarray within
+        if isinstance(data, LazyResult):
+            data = data.expr
 
     return data
 

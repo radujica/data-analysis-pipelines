@@ -15,8 +15,8 @@ class IndexTests(unittest.TestCase):
 
         expected_result = pdw.Index(np.array([1, 2]), np.dtype(np.int64))
 
-        np.testing.assert_array_equal(evaluate_if_necessary(expected_result),
-                                      evaluate_if_necessary(result))
+        np.testing.assert_array_equal(evaluate_if_necessary(expected_result).data,
+                                      evaluate_if_necessary(result).data)
 
     # noinspection PyMethodMayBeStatic
     def test_getitem_filter(self):
@@ -27,8 +27,8 @@ class IndexTests(unittest.TestCase):
 
         expected_result = pdw.Index(np.array([1, 3]), np.dtype(np.int64))
 
-        np.testing.assert_array_equal(evaluate_if_necessary(expected_result),
-                                      evaluate_if_necessary(result))
+        np.testing.assert_array_equal(evaluate_if_necessary(expected_result).data,
+                                      evaluate_if_necessary(result).data)
 
 
 def main():

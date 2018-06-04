@@ -91,7 +91,3 @@ def evaluate_or_raw(data, verbose, decode, passes,
         return data
     else:
         raise TypeError('expected LazyResult or np.ndarray')
-
-
-def str_dict(d):
-    return '{' + ', '.join(["'{}': {}".format(str(k), str(v)) for k, v in d.iteritems()]) + '}'

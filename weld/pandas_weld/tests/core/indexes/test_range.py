@@ -15,8 +15,8 @@ class RangeIndexTests(unittest.TestCase):
 
         expected_result = pdw.Index(np.array([0, 1, 2]), np.dtype(np.int64))
 
-        np.testing.assert_array_equal(evaluate_if_necessary(expected_result),
-                                      evaluate_if_necessary(result))
+        np.testing.assert_array_equal(evaluate_if_necessary(expected_result).data,
+                                      evaluate_if_necessary(result).data)
 
         np.testing.assert_equal(result.start, 0)
         np.testing.assert_equal(result.stop, 3)
@@ -29,8 +29,8 @@ class RangeIndexTests(unittest.TestCase):
 
         expected_result = pdw.Index(np.array([0, 1]), np.dtype(np.int64))
 
-        np.testing.assert_array_equal(evaluate_if_necessary(expected_result),
-                                      evaluate_if_necessary(result))
+        np.testing.assert_array_equal(evaluate_if_necessary(expected_result).data,
+                                      evaluate_if_necessary(result).data)
 
     # noinspection PyMethodMayBeStatic
     def test_getitem_filter(self):
@@ -41,8 +41,8 @@ class RangeIndexTests(unittest.TestCase):
 
         expected_result = pdw.Index(np.array([0, 2]), np.dtype(np.int64))
 
-        np.testing.assert_array_equal(evaluate_if_necessary(expected_result),
-                                      evaluate_if_necessary(result))
+        np.testing.assert_array_equal(evaluate_if_necessary(expected_result).data,
+                                      evaluate_if_necessary(result).data)
 
 
 def main():

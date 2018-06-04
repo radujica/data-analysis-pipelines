@@ -6,12 +6,11 @@ from weld.types import WeldBit, WeldLong
 
 from indexes import Index, MultiIndex, RangeIndex
 from lazy_result import LazyResult
-from pandas_weld.core.indexes.multi import index_to_values
 from pandas_weld.weld import weld_filter, weld_element_wise_op, weld_aggregate, weld_merge_single_index, \
     weld_merge_triple_index, weld_index_to_values, weld_groupby, weld_count
 from series import Series
 from utils import replace_slice_defaults, get_expression_or_raw, evaluate_or_raw, get_weld_type, \
-    get_dtype, get_weld_info, str_dict
+    get_dtype, get_weld_info
 
 
 class DataFrame(object):
@@ -54,12 +53,29 @@ class DataFrame(object):
                                                  repr(self.index),
                                                  repr(self.data.keys()))
 
-    def __str__(self):
-        return "{}\n> Index\n{}\n> Data\n{}".format(self.__class__.__name__,
-                                                    str(self.index),
-                                                    str_dict(self.data))
-
     # TODO: perhaps slice the arrays to avoid all the data being printed
+    def __str__(self):
+        str_data = []
+        columns = []
+
+        # NOTE: an evaluate step for MultiIndex to convert from labels & levels to actual values!
+        if isinstance(self.index, MultiIndex):
+            for column in self.index.expand():
+                str_data.append(column)
+            for column_name in self.index.names:
+                columns.append(column_name)
+        else:
+            # there is no guarantee at this point that it has been evaluated
+            # TODO: perhaps make more user friendly check to avoid tabulate throwing an exception if not evaluated
+            str_data.append(str(self.index))
+            columns.append(self.index.name)
+
+        for column in self.data:
+            str_data.append(self[column])
+            columns.append(column)
+
+        return tabulate(str_data, headers=columns)
+
     def evaluate(self, verbose=False, decode=True, passes=None, num_threads=1,
                  apply_experimental_transforms=False):
         """ Evaluates by creating a str representation of the DataFrame
@@ -73,14 +89,14 @@ class DataFrame(object):
         str
 
         """
-        columns = self.index.evaluate(verbose, decode, passes,
-                                      num_threads, apply_experimental_transforms, True)
-
+        evaluated_index = self.index.evaluate(verbose, decode, passes,
+                                              num_threads, apply_experimental_transforms)
+        evaluated_data = {}
         for k, v in self.data.items():
-            columns[k] = evaluate_or_raw(v, verbose, decode, passes,
-                                         num_threads, apply_experimental_transforms)
+            evaluated_data[k] = evaluate_or_raw(v, verbose, decode, passes,
+                                                num_threads, apply_experimental_transforms)
 
-        return tabulate(columns, headers="keys")
+        return DataFrame(evaluated_data, evaluated_index)
 
     def __iter__(self):
         for column_name in self.data:
@@ -505,8 +521,8 @@ class DataFrame(object):
     def _merge_multi(self, index1, index2):
         assert len(index1.levels) == len(index2.levels) == 3
 
-        index1 = [index_to_values(index1.levels[i], index1.labels[i]) for i in xrange(3)]
-        index2 = [index_to_values(index2.levels[i], index2.labels[i]) for i in xrange(3)]
+        index1 = index1.expand()
+        index2 = index2.expand()
 
         data = weld_merge_triple_index([[get_expression_or_raw(index1[i]) for i in xrange(3)],
                                         [get_expression_or_raw(index2[i]) for i in xrange(3)]], DataFrame._cache_flag)

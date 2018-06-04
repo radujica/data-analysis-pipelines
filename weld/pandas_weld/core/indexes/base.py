@@ -55,7 +55,7 @@ class Index(LazyResult):
         if as_dict:
             return OrderedDict({self.__class__.__name__: data})
         else:
-            return data
+            return Index(data, self.dtype, self.name)
 
     def __getitem__(self, item):
         """ Retrieve a portion of the Index

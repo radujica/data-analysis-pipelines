@@ -1,8 +1,5 @@
-from collections import OrderedDict
-
 import os
 from grizzly.encoders import numpy_to_weld_type
-from tabulate import tabulate
 
 import numpy_weld as npw
 from lazy_result import LazyResult, weld_subset
@@ -58,6 +55,8 @@ class MultiIndex(object):
 
         return cls(levels, labels, names)
 
+    # TODO: currently bugged as sortedness is lost in weld_unique
+    # TODO: when ^ == fixed, cache the input arrays in _expanded
     @classmethod
     def from_arrays(cls, arrays, names):
         weld_types = [get_weld_type(k) for k in arrays]
@@ -71,9 +70,41 @@ class MultiIndex(object):
                                      self.names)
 
     def __str__(self):
-        return "{}\n>> Levels\n{}\n>> Labels\n{}".format(self.__class__.__name__,
-                                                         str(self.levels),
-                                                         str(self.labels))
+        return "{}(levels={}\nlabels={}\nnames={})".format(self.__class__.__name__,
+                                                           str(self.levels),
+                                                           str(self.labels),
+                                                           str(self.names))
+
+    @staticmethod
+    def _evaluate_if_necessary(data, verbose=False, decode=True, passes=None, num_threads=1,
+                               apply_experimental_transforms=False):
+        if isinstance(data, LazyResult):
+            return data.evaluate(verbose=verbose, decode=decode, passes=passes, num_threads=num_threads,
+                                 apply_experimental_transforms=apply_experimental_transforms)
+        else:
+            return data
+
+    def evaluate(self, verbose=False, decode=True, passes=None, num_threads=1,
+                 apply_experimental_transforms=False):
+        """ Evaluates by creating a str representation of the MultiIndex
+
+        Parameters
+        ----------
+        see LazyResult
+
+        Returns
+        -------
+        str
+
+        """
+        evaluated_levels = [self._evaluate_if_necessary(level, verbose, decode, passes,
+                                                        num_threads, apply_experimental_transforms)
+                            for level in self.levels]
+        evaluated_labels = [self._evaluate_if_necessary(label, verbose, decode, passes,
+                                                        num_threads, apply_experimental_transforms)
+                            for label in self.labels]
+
+        return MultiIndex(evaluated_levels, evaluated_labels, self.names)
 
     def __getitem__(self, item):
         """ Retrieve a portion of the MultiIndex
@@ -118,34 +149,15 @@ class MultiIndex(object):
         else:
             raise TypeError('expected slice or LazyResult of bool in MultiIndex.__getitem__')
 
-    def evaluate(self, verbose=False, decode=True, passes=None, num_threads=1,
-                 apply_experimental_transforms=False, as_dict=False):
-        """ Evaluates by creating a str representation of the MultiIndex
+    # NOTE: this is an EAGER operation, evaluating the actual values of the index
+    # TODO: cache the expanded format to avoid re-computation when needed (?)
+    def expand(self):
+        return [self._index_to_values(self.levels[i], self.labels[i]).evaluate()
+                for i in xrange(len(self.levels))]
 
-        Parameters
-        ----------
-        see LazyResult
+    @staticmethod
+    def _index_to_values(levels, labels):
+        levels, weld_type = get_weld_info(levels, expression=True, weld_type=True)
+        labels = get_expression_or_raw(labels)
 
-        Returns
-        -------
-        str
-
-        """
-        index_columns = [index_to_values(self.levels[i],
-                                         self.labels[i]).evaluate(verbose, decode, passes, num_threads,
-                                                                  apply_experimental_transforms)
-                         for i in xrange(len(self.levels))]
-
-        if as_dict:
-            return OrderedDict(zip(self.names, index_columns))
-        else:
-            return tabulate(index_columns, headers=self.names)
-
-
-def index_to_values(levels, labels):
-    levels, weld_type = get_weld_info(levels, expression=True, weld_type=True)
-
-    if isinstance(labels, LazyResult):
-        labels = labels.expr
-
-    return LazyResult(weld_index_to_values(levels, labels), weld_type, 1)
+        return LazyResult(weld_index_to_values(levels, labels), weld_type, 1)
