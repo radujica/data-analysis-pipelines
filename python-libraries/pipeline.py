@@ -5,14 +5,25 @@ import numpy as np
 from netcdf_parser import to_dataframe
 
 parser = argparse.ArgumentParser(description='Weld Pipeline')
-parser.add_argument('-p', '--path', required=True)
+parser.add_argument('-i', '--input', required=True, help='Path to folder containing input files')
+parser.add_argument('-o', '--output', help='Path to output folder')
+parser.add_argument('-c', '--check', action='store_true', default=False,
+                    help='If passed, create output to check correctness of the pipeline, so output is saved '
+                         'to csv files in --output folder. Otherwise, prints to stdout')
 args = parser.parse_args()
 
-PATH1 = args.path + 'data1.nc'
-PATH2 = args.path + 'data2.nc'
+if args.check and args.output is None:
+    raise RuntimeError('--check requires an output folder path')
+
+PATH1 = args.input + 'data1.nc'
+PATH2 = args.input + 'data2.nc'
 
 df1 = to_dataframe(PATH1)
 df2 = to_dataframe(PATH2)
+
+
+def save_csv(dataframe, name, index=True):
+    dataframe.to_csv(path_or_buf=args.output + name + '.csv', sep=',', header=True, index=index)
 
 
 "PIPELINE"
@@ -20,7 +31,11 @@ df2 = to_dataframe(PATH2)
 df = df1.join(df2, how='inner', sort=False)
 
 # 2. quick preview on the data
-print(df.head(10))
+df_head = df.head(10)
+if args.check:
+    save_csv(df_head, 'head')
+else:
+    print(df_head)
 
 # 3. want a subset of the data, here only latitude >= 42.25 & <= 60.25 (~ mainland Europe)
 # not a filter because we want to showcase the selection of a subset of rows within the dataset;
@@ -43,7 +58,13 @@ def compute_abs_maxmin(series_max, series_min):
 df['abs_diff'] = compute_abs_maxmin(df['tx'], df['tn'])
 
 # 7. explore the data through aggregations
-print(df.agg(['min', 'max', 'mean', 'std']))    # EVALUATE STEP
+df_agg = df.agg(['min', 'max', 'mean', 'std'])\
+    .reset_index()\
+    .rename(columns={'index': 'agg'})
+if args.check:
+    save_csv(df_agg, 'agg', index=False)    # EVALUATE STEP
+else:
+    print(df_agg)
 
 # 8. compute std per month
 # need index as columns
@@ -63,4 +84,7 @@ del df_grouped
 df = df.drop('year_month', axis=1)
 
 # 9. EVALUATE
-print(df)
+if args.check:
+    save_csv(df, 'result', index=False)
+else:
+    print(df)
