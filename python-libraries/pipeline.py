@@ -4,7 +4,7 @@ import numpy as np
 
 from netcdf_parser import to_dataframe
 
-parser = argparse.ArgumentParser(description='Weld Pipeline')
+parser = argparse.ArgumentParser(description='Python-libraries Pipeline')
 parser.add_argument('-i', '--input', required=True, help='Path to folder containing input files')
 parser.add_argument('-o', '--output', help='Path to output folder')
 parser.add_argument('-c', '--check', action='store_true', default=False,

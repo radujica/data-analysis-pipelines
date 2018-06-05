@@ -3,15 +3,19 @@ import argparse
 import pandas_weld as pdw
 
 parser = argparse.ArgumentParser(description='Weld Pipeline')
+parser.add_argument('-i', '--input', required=True, help='Path to folder containing input files')
+parser.add_argument('-o', '--output', help='Path to output folder')
+parser.add_argument('-c', '--check', action='store_true', default=False,
+                    help='If passed, create output to check correctness of the pipeline, so output is saved '
+                         'to csv files in --output folder. Otherwise, prints to stdout')
 parser.add_argument('-e', '--eager', default='nope')
-parser.add_argument('-p', '--path', default=None)
 args = parser.parse_args()
 
-PATH = args.path
-if PATH is None:
-    raise ValueError('expected directory path of files as arg')
-PATH1 = PATH + 'data1.nc'
-PATH2 = PATH + 'data2.nc'
+if args.check and args.output is None:
+    raise RuntimeError('--check requires an output folder path')
+
+PATH1 = args.input + 'data1.nc'
+PATH2 = args.input + 'data2.nc'
 
 if args.eager is 'nope':
     df1 = pdw.read_netcdf4(PATH1)
@@ -26,7 +30,11 @@ else:
 df = df1.merge(df2)
 
 # 2. quick preview on the data
-print(df.head(10))
+df_head = df.head(10)
+if args.check:
+    df_head.to_csv(args.output + 'head' + '.csv')
+else:
+    print(df_head)
 
 # 3. want a subset of the data, here only latitude >= 42.25 & <= 60.25 (~ mainland Europe)
 # not a filter because we want to showcase the selection of a subset of rows within the dataset;
@@ -53,7 +61,14 @@ def compute_abs_maxmin(series_max, series_min):
 df['abs_diff'] = compute_abs_maxmin(df['tx'], df['tn'])
 
 # 7. explore the data through aggregations
-print(df.agg(['min', 'max', 'mean', 'std']).evaluate())    # EVALUATE STEP
+df_agg = df.agg(['min', 'max', 'mean', 'std'])\
+    .evaluate()\
+    .reset_index()\
+    .rename(columns={'index': 'agg'})
+if args.check:
+    df_agg.to_csv(args.output + 'agg' + '.csv', index=False)  # EVALUATE STEP
+else:
+    print(df_agg)
 
 # TODO: this needs update from Weld
 # # 8. compute std per month
@@ -74,4 +89,7 @@ print(df.agg(['min', 'max', 'mean', 'std']).evaluate())    # EVALUATE STEP
 # df = df.drop('year_month', axis=1)
 
 # 9. EVALUATE
-print(df.evaluate())
+if args.check:
+    df.to_csv(args.output + 'result' + '.csv', index=False)  # EVALUATE STEP
+else:
+    print(df)
