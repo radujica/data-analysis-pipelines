@@ -33,7 +33,7 @@ class Index(LazyResult):
         super(Index, self).__init__(data, numpy_to_weld_type(dtype), 1)
 
         self.dtype = dtype
-        self.name = name
+        self.name = 'Index' if name is None else name
 
     @property
     def data(self):

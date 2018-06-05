@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 import numpy as np
 import os
 from grizzly.encoders import numpy_to_weld_type
@@ -91,7 +93,7 @@ class DataFrame(object):
         """
         evaluated_index = self.index.evaluate(verbose, decode, passes,
                                               num_threads, apply_experimental_transforms)
-        evaluated_data = {}
+        evaluated_data = OrderedDict()
         for k, v in self.data.items():
             evaluated_data[k] = evaluate_or_raw(v, verbose, decode, passes,
                                                 num_threads, apply_experimental_transforms)
@@ -651,7 +653,14 @@ class DataFrame(object):
                                 column_types)
 
     def reset_index(self):
-        new_columns = {}
+        """ Returns a new DataFrame with previous Index as columns
+
+        Returns
+        -------
+        DataFrame
+
+        """
+        new_columns = OrderedDict()
 
         # the index
         if isinstance(self.index, (Index, RangeIndex)):
@@ -669,7 +678,46 @@ class DataFrame(object):
         new_columns.update(self.data)
 
         # assumes at least 1 column
-        a_column = get_expression_or_raw(new_columns.values()[0])
+        a_column = get_expression_or_raw(new_columns.values()[-1])
         new_index = RangeIndex(0, LazyResult(weld_count(a_column), WeldLong(), 0).evaluate(), 1)
 
         return DataFrame(new_columns, new_index)
+
+    def to_csv(self, path_or_buf, sep=',', header=True, index=True):
+        """ Write DataFrame to file
+
+        Note: forces evaluation!
+
+        Parameters
+        ----------
+        path_or_buf : str
+            path to file to write to
+        sep : str, Optional
+            delimiter to use
+        header : bool, Optional
+            whether to first write the header with the keys
+        index : bool, Optional
+            whether to write the index
+
+        """
+        import csv
+
+        with open(path_or_buf, 'wb') as out_file:
+            writer = csv.writer(out_file, delimiter=sep)
+
+            if index:
+                df = self.reset_index()
+            else:
+                df = self
+
+            data = list(df.evaluate().data.itervalues())
+
+            if header:
+                writer.writerow(df.data.keys())
+
+            for i in range(len(data[-1])):
+                row = []
+                for j in range(len(data)):
+                    row.append(data[j][i])
+
+                writer.writerow(row)

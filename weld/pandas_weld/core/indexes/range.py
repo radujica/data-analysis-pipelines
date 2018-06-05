@@ -35,6 +35,10 @@ class RangeIndex(LazyResult):
     def data(self):
         return self.expr
 
+    @property
+    def name(self):
+        return 'RangeIndex'
+
     def __repr__(self):
         return "{}(start={}, stop={}, step={})".format(self.__class__.__name__,
                                                        self.start,

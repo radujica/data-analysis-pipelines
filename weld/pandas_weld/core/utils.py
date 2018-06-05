@@ -85,8 +85,14 @@ def get_weld_info(data, expression=False, weld_type=False, dtype=False):
 def evaluate_or_raw(data, verbose, decode, passes,
                     num_threads, apply_experimental_transforms):
     if isinstance(data, LazyResult):
-        return data.evaluate(verbose, decode, passes,
+        # e.g. for Series this will return a Series with raw data
+        data = data.evaluate(verbose, decode, passes,
                              num_threads, apply_experimental_transforms)
+        # so want the np.ndarray within
+        if isinstance(data, LazyResult):
+            data = data.expr
+
+        return data
     elif isinstance(data, np.ndarray):
         return data
     else:
