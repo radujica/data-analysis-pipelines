@@ -550,6 +550,10 @@ def weld_index_to_values(levels, labels):
     [1. 1. 2.5 3.]
 
     """
+    # TODO: fix this temporary hack
+    if isinstance(levels, np.ndarray) and levels.dtype == 'object':
+        levels = levels.astype(np.str)
+
     weld_obj = WeldObject(_encoder, _decoder)
 
     levels_var = weld_obj.update(levels)

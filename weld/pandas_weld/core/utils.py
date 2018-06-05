@@ -82,8 +82,8 @@ def get_weld_info(data, expression=False, weld_type=False, dtype=False):
     return tuple(result)
 
 
-def evaluate_or_raw(data, verbose, decode, passes,
-                    num_threads, apply_experimental_transforms):
+def evaluate_or_raw(data, verbose=False, decode=True, passes=None,
+                    num_threads=1, apply_experimental_transforms=False):
     if isinstance(data, LazyResult):
         # e.g. for Series this will return a Series with raw data
         data = data.evaluate(verbose, decode, passes,

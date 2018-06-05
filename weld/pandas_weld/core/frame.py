@@ -57,26 +57,22 @@ class DataFrame(object):
 
     # TODO: perhaps slice the arrays to avoid all the data being printed
     def __str__(self):
-        str_data = []
-        columns = []
+        str_data = OrderedDict()
 
         # NOTE: an evaluate step for MultiIndex to convert from labels & levels to actual values!
         if isinstance(self.index, MultiIndex):
-            for column in self.index.expand():
-                str_data.append(column)
-            for column_name in self.index.names:
-                columns.append(column_name)
+            expanded = self.index.expand()
+            names = self.index.names
+            for i in range(len(expanded)):
+                str_data[names[i]] = expanded[i]
         else:
             # there is no guarantee at this point that it has been evaluated
             # TODO: perhaps make more user friendly check to avoid tabulate throwing an exception if not evaluated
-            str_data.append(str(self.index))
-            columns.append(self.index.name)
-
+            str_data[self.index.name] = str(self.index)
         for column in self.data:
-            str_data.append(self[column])
-            columns.append(column)
+            str_data[column] = evaluate_or_raw(self.data[column])
 
-        return tabulate(str_data, headers=columns)
+        return tabulate(str_data, headers='keys')
 
     def evaluate(self, verbose=False, decode=True, passes=None, num_threads=1,
                  apply_experimental_transforms=False):
@@ -194,7 +190,7 @@ class DataFrame(object):
 
         Returns
         -------
-        str
+        DataFrame
             the output of evaluate on the sliced DataFrame
 
         """
@@ -671,7 +667,7 @@ class DataFrame(object):
                 new_columns[self.index.names[i]] = \
                     LazyResult(weld_index_to_values(get_expression_or_raw(self.index.levels[i]),
                                                     get_expression_or_raw(self.index.labels[i])),
-                               get_weld_type(self.index.labels[i]),
+                               get_weld_type(self.index.levels[i]),
                                1)
 
         # the data/columns
