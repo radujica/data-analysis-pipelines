@@ -1,10 +1,15 @@
 import com.google.common.base.Joiner;
 import com.google.common.primitives.Floats;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVPrinter;
 import ucar.nc2.Attribute;
 import ucar.nc2.NetcdfFile;
 import ucar.nc2.Variable;
 
+import java.io.BufferedWriter;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Map;
 
 // TODO: convert for loops to streams? no native support for floats though
@@ -70,25 +75,6 @@ public class Pipeline  {
         System.out.println("");
     }
 
-    private void head(DataFrame df, int numberRows) {
-        DataFrame head = df.subset(0, numberRows);
-
-        print(head);
-    }
-
-    private void printAggregations(DataFrame df) {
-        Joiner.MapJoiner valueJoiner = Joiner.on(", ").withKeyValueSeparator("=");
-
-        for (Map.Entry<String, Object> entry : df.values().entrySet()) {
-            df.put(entry.getKey(), valueJoiner.join((Map<String, Float>) entry.getValue()));
-        }
-
-        Joiner.MapJoiner mapJoiner = Joiner.on("\n").withKeyValueSeparator("=");
-
-        System.out.println(mapJoiner.join(df.values()));
-        System.out.println("");
-    }
-
     private Object computeAbsMaxmin(Object max, Object min) {
         float[] maxData = (float[]) max;
         float[] minData = (float[]) min;
@@ -114,16 +100,48 @@ public class Pipeline  {
         return yearMonth;
     }
 
-    public void start(String path) throws IOException {
-        DataFrame df1 = readData(path + "data1.nc");
-        DataFrame df2 = readData(path + "data2.nc");
+    private void toCsv(DataFrame df, String path) throws IOException {
+        BufferedWriter writer = Files.newBufferedWriter(Paths.get(path));
+        int numberOfColumns = df.keys().size();
+        String[] header = df.keys().toArray(new String[numberOfColumns]);
+        CSVPrinter csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT.withHeader(header));
+
+        for (int i = 0; i < df.getSize(); i++) {
+            Object[] rowData = new Object[numberOfColumns];
+            for (int j = 0; j < numberOfColumns; j++) {
+                Object columnData = df.get(header[j]);
+                if (columnData.getClass().equals(float[].class)) {
+                    float[] rawData = (float[]) columnData;
+                    rowData[j] = rawData[i];
+                } else if (columnData.getClass().equals(int[].class)) {
+                    int[] rawData = (int[]) columnData;
+                    rowData[j] = DataFrame.intTimeToString(rawData[i], Pipeline.CALENDAR, Pipeline.UNITS);
+                } else if (columnData.getClass().equals(String[].class)) {
+                    String[] rawData = (String[]) columnData;
+                    rowData[j] = rawData[i];
+                }
+            }
+            csvPrinter.printRecord(rowData);
+        }
+
+        csvPrinter.close(); // automatically flushes first
+    }
+
+    public void start(String input, String output) throws IOException {
+        DataFrame df1 = readData(input + "data1.nc");
+        DataFrame df2 = readData(input + "data2.nc");
 
         // PIPELINE
         // 1. join the 2 dataframes
         DataFrame df = df1.join(df2);
 
         // 2. quick preview on the data
-        head(df, 10);
+        DataFrame df_head = df.subset(0, 10);
+        if (output == null) {
+            print(df_head);
+        } else {
+            toCsv(df_head, output + "head.csv");
+        }
 
         // 3. subset the data
         df = df.subset(709920, 1482480);
@@ -139,7 +157,13 @@ public class Pipeline  {
         df.put("abs_diff", computeAbsMaxmin(df.get("tx"), df.get("tn")));
 
         // 7. explore the data through aggregations
-        printAggregations(df.aggregations());
+        DataFrame df_agg = df.aggregations();
+        if (output == null) {
+            print(df_agg);
+        } else {
+            toCsv(df_agg, output + "agg.csv");
+        }
+
 
         // 8. compute mean per month
         // UDF 2: compute custom year+month format
@@ -149,6 +173,10 @@ public class Pipeline  {
         df.pop("year_month");
 
         // careful with this! prints all
-        head(df, df.getSize());
+        if (output == null) {
+            print(df);
+        } else {
+            toCsv(df, output + "result.csv");
+        }
     }
 }

@@ -294,14 +294,17 @@ public class DataFrame {
     }
 
     DataFrame aggregations() {
-        DataFrame df = new DataFrame(this.size);
+        int numberAggregations = 4;
+        DataFrame df = new DataFrame(numberAggregations);
 
         // make sure the keys are copied to not remove from dataset
         Set<String> keys = new HashSet<>(this.keys());
         keys.removeAll(Arrays.asList("longitude", "latitude", "time"));
 
+        df.put("agg", new String[]{"min", "max", "mean", "std"});
+
         for (String columnName : keys) {
-            Map<String, Float> columnAggregations = new HashMap<>();
+            float[] aggregations = new float[numberAggregations];
 
             float[] data = (float[]) this.get(columnName);
 
@@ -317,8 +320,8 @@ public class DataFrame {
                 }
                 sum += number;
             }
-            columnAggregations.put("max", max);
-            columnAggregations.put("min", min);
+            aggregations[0] = min;
+            aggregations[1] = max;
 
             float mean = sum / ((float) data.length);
 
@@ -328,10 +331,10 @@ public class DataFrame {
             }
             float std = (float) Math.sqrt(numerator / ((float) (data.length - 1)));
 
-            columnAggregations.put("mean", mean);
-            columnAggregations.put("std", std);
+            aggregations[2] = mean;
+            aggregations[3] = std;
 
-            df.put(columnName, columnAggregations);
+            df.put(columnName, aggregations);
         }
 
         return df;
