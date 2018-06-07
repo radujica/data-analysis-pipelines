@@ -44,7 +44,8 @@ df = df[709920:1482480]  # TODO: update values for larger datasets
 
 # 4. drop rows with null values
 # could use ~np.isnan(column) (?)
-df = df[(df['tg'].notna()) & (df['pp'].notna()) & (df['rr'].notna())]
+# df = df[(df['tg'].notna()) & (df['pp'].notna()) & (df['rr'].notna())]
+df = df[(df['tg'] != -99.99) & (df['pp'] != -999.9) & (df['rr'] != -999.9)]
 
 # 5. drop pp_err and rr_err columns
 df = df.drop(columns=['pp_err', 'rr_err'])

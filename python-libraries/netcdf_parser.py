@@ -19,6 +19,8 @@ def to_dataframe(path):
     """
     ds = netCDF4.Dataset(path)
 
+    [ds.variables[k].set_auto_mask(False) for k in ds.variables]
+
     columns = [k for k in ds.variables if k not in ds.dimensions]
     ordered_dimensions = OrderedDict(map(lambda kv: (kv[0], kv[1].size), ds.dimensions.items()))
 
