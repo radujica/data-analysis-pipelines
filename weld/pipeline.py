@@ -64,7 +64,7 @@ df['abs_diff'] = compute_abs_maxmin(df['tx'], df['tn'])
 df_agg = df.agg(['min', 'max', 'mean', 'std'])\
     .evaluate()\
     .reset_index()\
-    .rename(columns={'index': 'agg'})
+    .rename(columns={'Index': 'agg'})
 if args.check:
     df_agg.to_csv(args.output + 'agg' + '.csv', index=False)  # EVALUATE STEP
 else:
