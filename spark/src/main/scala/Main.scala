@@ -1,8 +1,9 @@
 import java.io.IOException
 import java.util
 
+import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.functions.{abs, udf}
+import org.apache.spark.sql.functions.{abs, col, udf, when}
 import org.apache.spark.sql.types.{FloatType, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 import ucar.nc2.time.CalendarDate
@@ -88,18 +89,24 @@ object Main {
   def parseArgs(map : ArgsMap, list: List[String]) : ArgsMap = {
     list match {
       case Nil => map
-      case "--path" :: value :: tail =>
-        parseArgs(map ++ Map('path -> value), tail)
+      case "--input" :: value :: tail =>
+        parseArgs(map ++ Map('input -> value), tail)
       case "--partitions" :: value :: tail =>
         parseArgs(map ++ Map('partitions -> value.toInt), tail)
+      case "--output" :: value :: tail =>
+        parseArgs(map ++ Map('output -> value), tail)
+      case "--check" :: tail =>
+        parseArgs(map ++ Map('check -> true), tail)
         //stop parsing here and catch in main
       case string => throw new RuntimeException("invalid argument: " + string)
     }
   }
 
   def main(args: Array[String]): Unit = {
-    if (args.length != 4) {
-      throw new RuntimeException("Usage: --path <path> --partitions <number_partitions>")
+    val validNumberArgs: List[Int] = List(4, 7)
+    if (!validNumberArgs.contains(args.length)) {
+      throw new RuntimeException("Usage: --input <path> --partitions <number_partitions> or: " +
+        "--input <path> --partitions <number_partitions> --output <path> --check")
     }
     val options = parseArgs(Map(), args.toList)
 
@@ -108,9 +115,9 @@ object Main {
       .getOrCreate()
 
     val dimensions: List[String] = List("longitude", "latitude", "time")
-    val df1: DataFrame = readData(options('path) + "data1.nc", spark, dimensions,
+    val df1: DataFrame = readData(options('input) + "data1.nc", spark, dimensions,
                                   createIndex = true, options('partitions).asInstanceOf[Int])
-    val df2: DataFrame = readData(options('path) + "data2.nc", spark, dimensions,
+    val df2: DataFrame = readData(options('input) + "data2.nc", spark, dimensions,
                                   createIndex = false, options('partitions).asInstanceOf[Int])
 
     // PIPELINE
@@ -118,7 +125,16 @@ object Main {
     var df: DataFrame = df1.join(df2, dimensions, "inner").cache()
 
     // 2. quick preview on the data
-    println(df.show(10))
+    if (options.contains('check)) {
+      // this will not actually be the first 10 rows, so don't compare for correctness; to select the actual first 10
+      // would require more unnecessary work for spark
+      df.limit(10)
+        .write
+        .option("header", "true")
+        .csv(options('output) + "head")
+    } else {
+      println(df.show(10))
+    }
 
     // 3. subset the data
     // the only way to select by row number; more effectively would be to just filter by latitude as intended, though
@@ -135,15 +151,17 @@ object Main {
     df = df.withColumn("abs_diff", abs(df("tx") - df("tn"))).cache()
 
     // 7. explore the data through aggregations
-    println(df.drop("longitude", "latitude", "time").describe().show())
-    // describe also computes count but presumably the aggregations computation is optimized;
-    // doing the aggregations separately (as below) is more costly
-//    val aggregations = Seq("min", "max", "mean", "std")
-//    val columnsToAgg = df.drop("longitude", "latitude", "time").columns
-//    for (aggregation: String <- aggregations) {
-//      val aggr_map: Map[String, String] = columnsToAgg.map(column => column -> aggregation).toMap
-//      println(df.agg(aggr_map).show())
-//    }
+    val df_agg = df.drop("longitude", "latitude", "time")
+      .summary("min", "max", "mean", "stddev")
+    if (options.contains('check)) {
+      df_agg.withColumnRenamed("summary", "agg")
+        .withColumn("agg", when(col("agg") === "stddev", "std").otherwise(col("agg")))
+        .write
+        .option("header", "true")
+        .csv(options('output) + "agg")
+    } else {
+      println(df_agg.show())
+    }
 
     // 8. compute mean per month
     // UDF 2: compute custom year+month format
@@ -154,13 +172,39 @@ object Main {
     // group by
     val columnsToAgg: Array[String] = Array("tg", "tn", "tx", "pp", "rr")
     val groupOn: Seq[String] = Seq("longitude", "latitude", "year_month")
-    val grouped: DataFrame = df.groupBy(groupOn.head, groupOn.drop(1): _*).agg(columnsToAgg.map(column => column -> "mean").toMap)
+    val grouped: DataFrame = df.groupBy(groupOn.head, groupOn.drop(1): _*)
+      .agg(columnsToAgg.map(column => column -> "mean").toMap)
     // join
     df = df.join(grouped, groupOn)
     df = df.drop("year_month")
 
     // final evaluate
-    println(df.collect())
+    if (options.contains('check)) {
+      // want a single output file which means all data must fit in the memory of 1 machine;
+      // for this experiment, this is expected
+      df.coalesce(1)
+        .withColumnRenamed("avg(tg)", "tg_mean")
+        .withColumnRenamed("avg(tn)", "tn_mean")
+        .withColumnRenamed("avg(tx)", "tx_mean")
+        .withColumnRenamed("avg(rr)", "rr_mean")
+        .withColumnRenamed("avg(pp)", "pp_mean")
+        .write
+        .option("header", "true")
+        .csv(options('output) + "result")
+    } else {
+      println(df.collect())
+    }
+
+    // final rename of output csv's
+    if (options.contains('check)) {
+      val fs = FileSystem.get(spark.sparkContext.hadoopConfiguration)
+      val files: List[String] = List("head", "agg", "result")
+      for (f <- files) {
+        val file = fs.globStatus(new Path(options('output) + f + "/part*"))(0).getPath.getName
+        fs.rename(new Path(options('output) + f + "/" + file), new Path(options('output) + f + ".csv"))
+        fs.delete(new Path(options('output) + f), true)
+      }
+    }
 
     spark.stop()
   }
