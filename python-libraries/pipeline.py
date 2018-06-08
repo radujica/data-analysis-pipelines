@@ -6,6 +6,7 @@ from netcdf_parser import to_dataframe
 
 parser = argparse.ArgumentParser(description='Python-libraries Pipeline')
 parser.add_argument('-i', '--input', required=True, help='Path to folder containing input files')
+parser.add_argument('-s', '--slice', required=True, help='Start and stop of a subset of the data')
 parser.add_argument('-o', '--output', help='Path to output folder')
 parser.add_argument('-c', '--check', action='store_true', default=False,
                     help='If passed, create output to check correctness of the pipeline, so output is saved '
@@ -37,18 +38,18 @@ if args.check:
 else:
     print(df_head)
 
-# 3. want a subset of the data, here only latitude >= 42.25 & <= 60.25 (~ mainland Europe)
-# not a filter because we want to showcase the selection of a subset of rows within the dataset;
-# might as well be 123456:987654 but the values in that slice don't make much sense for this dataset
-df = df[709920:1482480]  # TODO: update values for larger datasets
+# 3. want a subset of the data, approx. 33%, here only latitude >= 42.375 & <= 60.125 (~ mainland Europe)
+# equivalent to df_r[(df_r['latitude'] >= 42.25) & (df_r['latitude'] <= 60.25)], where df_r = df.reset_index() and
+# latitude is the first dimension
+slice_ = [int(x) for x in args.slice.split(':')]
+df = df[slice_[0]:slice_[1]]
 
 # 4. drop rows with null values
-# could use ~np.isnan(column) (?)
 # df = df[(df['tg'].notna()) & (df['pp'].notna()) & (df['rr'].notna())]
 df = df[(df['tg'] != -99.99) & (df['pp'] != -999.9) & (df['rr'] != -999.9)]
 
 # 5. drop pp_err and rr_err columns
-df = df.drop(columns=['pp_err', 'rr_err'])
+df = df.drop(columns=['pp_stderr', 'rr_stderr'])
 
 
 # 6. UDF 1: compute absolute difference between max and min

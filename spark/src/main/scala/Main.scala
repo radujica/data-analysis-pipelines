@@ -34,8 +34,8 @@ object Main {
     data
   }
 
-  def cartesian[X, Y, Z](a: Array[X], b: Array[Y], c: Array[Z]): Array[(X, Y, Z)] = {
-    for { x <- a; y <- b; z <- c } yield (x, y, z)
+  def cartesian[X, Y, Z](a: Array[X], b: Array[Y], c: Array[Z]): Array[ListBuffer[_]] = {
+    for { x <- a; y <- b; z <- c } yield ListBuffer(x, y, z)
   }
 
   // actually expects 3 dimensions; TODO: generalize
@@ -50,22 +50,22 @@ object Main {
     val lon: Array[Float] = readVariable(dimVars(dims(0)))
     val lat: Array[Float] = readVariable(dimVars(dims(1)))
     val tim: Array[Float] = readVariable(dimVars(dims(2)))
-    val dimsCartesian: Array[(Float, Float, Float)] = cartesian(lon, lat, tim)
+    val dimsCartesian: Array[ListBuffer[_]] = cartesian(lon, lat, tim)
 
     // create the rdd with the dimensions (by transposing the cartesian product)
-    var tempRDD: RDD[ListBuffer[_]] = ss.sparkContext.parallelize(dimsCartesian.map(t => ListBuffer(t._1, t._2, t._3)), numPartitions)
+    var tempRDD: RDD[ListBuffer[_]] = ss.sparkContext.parallelize(dimsCartesian, numPartitions)
     // gather the names of the columns (in order)
     val names: ListBuffer[String] = ListBuffer(dims: _*)
 
     // read the columns and zip with the rdd
     for (col <- colVars) {
-      tempRDD = tempRDD.zip(ss.sparkContext.parallelize(readVariable(col._2), numPartitions)).map(t => t._1 ++ Seq(t._2))
+      tempRDD = tempRDD.zip(ss.sparkContext.parallelize(readVariable(col._2), numPartitions)).map(t => t._1 :+ t._2)
       names.add(col._1)
     }
 
     // add the index column
     if (createIndex) {
-      tempRDD = tempRDD.zipWithIndex().map(t => t._1 ++ Seq(t._2.asInstanceOf[Float]))
+      tempRDD = tempRDD.zipWithIndex().map(t => t._1 :+ t._2.asInstanceOf[Float])
       names.add("index")
     }
 
@@ -93,6 +93,8 @@ object Main {
         parseArgs(map ++ Map('input -> value), tail)
       case "--partitions" :: value :: tail =>
         parseArgs(map ++ Map('partitions -> value.toInt), tail)
+      case "--slice" :: value :: tail =>
+        parseArgs(map ++ Map('slice -> value), tail)
       case "--output" :: value :: tail =>
         parseArgs(map ++ Map('output -> value), tail)
       case "--check" :: tail =>
@@ -103,10 +105,10 @@ object Main {
   }
 
   def main(args: Array[String]): Unit = {
-    val validNumberArgs: List[Int] = List(4, 7)
+    val validNumberArgs: List[Int] = List(6, 9)
     if (!validNumberArgs.contains(args.length)) {
-      throw new RuntimeException("Usage: --input <path> --partitions <number_partitions> or: " +
-        "--input <path> --partitions <number_partitions> --output <path> --check")
+      throw new RuntimeException("Usage: --input <path> --partitions <number_partitions> --slice <a:b> or: " +
+        "--input <path> --partitions <number_partitions> --slice <a:b> --output <path> --check")
     }
     val options = parseArgs(Map(), args.toList)
 
@@ -139,13 +141,14 @@ object Main {
     // 3. subset the data
     // the only way to select by row number; more effectively would be to just filter by latitude as intended, though
     // this deviates even further from the other pipeline implementations
-    df = df.filter(df("index") >= 709920.0f && df("index") < 1482480.0f)
+    val slice: Array[String] = options('slice).asInstanceOf[String].split(":")
+    df = df.filter(df("index") >= slice(0).toFloat && df("index") < slice(1).toFloat)
 
     // 4. drop rows with null values
     df = df.filter(df("tg") =!= -99.99f && df("pp") =!= -999.9f && df("rr") =!= -999.9f)
 
     // 5. drop columns
-    df = df.drop("pp_err", "rr_err", "index")
+    df = df.drop("pp_stderr", "rr_stderr", "index")
 
     // 6. UDF 1: compute absolute difference between max and min
     df = df.withColumn("abs_diff", abs(df("tx") - df("tn"))).cache()

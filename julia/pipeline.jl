@@ -14,6 +14,10 @@ function parse_command_line()
             help = "Path to folder containing input files"
             arg_type = String
             required = true
+        "--slice", "-s"
+            help = "Start and stop of a subset of the data"
+            arg_type = String
+            required = true
         "--output", "-o"
             help = "Path to output folder"
             arg_type = String
@@ -47,13 +51,14 @@ function main()
     end
 
     # 3. subset the data
-    df = df[709921:1482480, :]
+    slice = split(parsed_args["slice"], ":")
+    df = df[parse(Int64, slice[1]):parse(Int64, slice[2]), :]
 
     # 4. drop rows with null values
     df = df[(df[:tg] .!= -99.99f0) .& (df[:pp] .!= -999.9f0) .& (df[:rr] .!= -999.9f0), :]
 
     # 5. drop columns
-    delete!(df, [:pp_err, :rr_err])
+    delete!(df, [:pp_stderr, :rr_stderr])
 
     # 6. UDF 1: compute absolute difference between max and min
     function compute_abs_maxmin(column_max, column_min)

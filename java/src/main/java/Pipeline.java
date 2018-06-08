@@ -127,7 +127,7 @@ public class Pipeline  {
         csvPrinter.close(); // automatically flushes first
     }
 
-    public void start(String input, String output) throws IOException {
+    public void start(String input, String slice, String output) throws IOException {
         DataFrame df1 = readData(input + "data1.nc");
         DataFrame df2 = readData(input + "data2.nc");
 
@@ -144,14 +144,15 @@ public class Pipeline  {
         }
 
         // 3. subset the data
-        df = df.subset(709920, 1482480);
+        String[] slice_ = slice.split(":");
+        df = df.subset(Integer.parseInt(slice_[0]), Integer.parseInt(slice_[1]));
 
         // 4. drop rows with null values
         df = df.filter();
 
         // 5. drop columns
-        df.pop("pp_err");
-        df.pop("rr_err");
+        df.pop("pp_stderr");
+        df.pop("rr_stderr");
 
         // 6. UDF 1: compute absolute difference between max and min
         df.put("abs_diff", computeAbsMaxmin(df.get("tx"), df.get("tn")));

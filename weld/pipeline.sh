@@ -1,7 +1,8 @@
 #!/bin/bash
 
 path=${HOME2}
-input=${path}"/datasets/ECAD/original/small_sample/"
-output=${path}"/datasets/ECAD/original/small_sample/output/weld/"
-pipenv run python pipeline.py --input ${input}
-# pipenv run python pipeline.py --input ${input} --output ${output} --check
+input=${path}"/datasets/ECAD/data_1/"
+output=${path}"/results/pipelines/data_1/output/weld/"
+slice="12021312:24749760"
+# pipenv run python pipeline.py --input ${input} --slice ${slice}
+pipenv run python pipeline.py --input ${input} --slice ${slice} --output ${output} --check

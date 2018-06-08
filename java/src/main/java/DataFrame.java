@@ -214,8 +214,8 @@ public class DataFrame {
 
         DataFrame df = new DataFrame(newSize);
 
-        String[] df1Cols = {"tg", "tg_err", "pp", "pp_err", "rr", "rr_err"};
-        String[] df2Cols = {"tn", "tn_err", "tx", "tx_err"};
+        String[] df1Cols = {"tg", "tg_stderr", "pp", "pp_stderr", "rr", "rr_stderr"};
+        String[] df2Cols = {"tn", "tn_stderr", "tx", "tx_stderr"};
 
         for (String columnName : joinOn) {
             df.put(columnName, this.filterColumn(columnName, df1NewIndex, newSize));
