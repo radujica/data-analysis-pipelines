@@ -1,8 +1,8 @@
 #!/bin/bash
 
 path=${HOME2}
-input=${path}"/datasets/ECAD/data_1/"
-output=${path}"/results/pipelines/data_1/output/julia/"
-slice="12021312:24749760"
+input=${path}"/datasets/ECAD/data_0/"
+output=${path}"/results/pipelines/data_0/output/julia/"
+slice="4718274:9007614"
 # julia pipeline.jl --input ${input} --slice ${slice}
 julia pipeline.jl --input ${input} --slice ${slice} --output ${output} --check

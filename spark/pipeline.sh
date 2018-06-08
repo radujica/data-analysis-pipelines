@@ -4,9 +4,9 @@
 sbt assembly
 
 path=${HOME2}
-input=${path}"/datasets/ECAD/data_1/"
-output=${path}"/results/pipelines/data_1/output/spark/"
-slice="12021312:24749760"
+input=${path}"/datasets/ECAD/data_0/"
+output=${path}"/results/pipelines/data_0/output/spark/"
+slice="4718274:9007614"
 # requires spark-submit in PATH, ofc
 # TODO: spark goes wrong somewhere, takes waaay too lon; perhaps memory is the problem though data_1 is only 700MB
 # --executor-memory 2g --executor-cores 1 seem unnecessary since executors live in the same JVM process as the driver
