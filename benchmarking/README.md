@@ -14,6 +14,8 @@
     ./prepare_data.sh
     # run all benchmarks; check out --help on how to run only a selection of them
     pipenv run python run.py
+    # check all outputs; check out --help on how to check only a selection of them
+    pipenv run python check.py
 
 ## Folder structure
     # this git repo
