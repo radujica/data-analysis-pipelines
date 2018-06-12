@@ -24,7 +24,6 @@ function parse_command_line()
         "--check", "-c"
             help = "If passed, create output to check correctness of the pipeline, so output is saved '
                          'to csv files in --output folder. Otherwise, prints to stdout"
-            default = false
             action = :store_true
     end
 

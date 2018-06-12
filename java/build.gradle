@@ -8,6 +8,7 @@ dependencies {
     implementation 'com.google.guava:guava:23.0'
     implementation 'commons-cli:commons-cli:1.4'
     implementation 'org.apache.commons:commons-csv:1.5'
+    implementation 'org.slf4j:slf4j-nop:1.7.25'     // this is just to remove the pesky warning
     testImplementation 'junit:junit:4.12'
 }
 
