@@ -45,12 +45,10 @@ else:
 for input_, slice_ in inputs.items():
     for pipeline in pipelines:
         # delete previous data (spark for example complains if file exists)
-        os.system('rm -rf ' + HOME2 + '/results/pipelines/' + input_ + '/output/' + pipeline)
         os.system('rm -rf ' + HOME2 + '/results/pipelines/' + input_ + '/profile/' + pipeline)
         os.system('rm -rf ' + HOME2 + '/results/pipelines/' + input_ + '/time/' + pipeline)
 
         # make required directories
-        os.system('mkdir -p ' + HOME2 + '/results/pipelines/' + input_ + '/output/' + pipeline)
         os.system('mkdir -p ' + HOME2 + '/results/pipelines/' + input_ + '/profile/' + pipeline)
         os.system('mkdir -p ' + HOME2 + '/results/pipelines/' + input_ + '/time/' + pipeline)
 
@@ -88,6 +86,9 @@ for input_, slice_ in inputs.items():
         # generate output for correctness check
         if args.check:
             output_path = HOME2 + '/results/pipelines/' + input_ + '/output/' + pipeline + '/'
+            # delete previous data and make sure directory exists
+            os.system('rm -rf ' + output_path)
+            os.system('mkdir -p ' + output_path)
 
             print('Computing output of pipeline={} on input={}'.format(pipeline, input_))
             check_process = subprocess.Popen(pipeline_command + [output_path],
