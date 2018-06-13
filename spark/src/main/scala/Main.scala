@@ -117,6 +117,8 @@ object Main {
       .getOrCreate()
 
     val dimensions: List[String] = List("longitude", "latitude", "time")
+    // no need for using the same partitioner since there is a single join; using repartition will just force the
+    // same shuffling to happen
     val df1: DataFrame = readData(options('input) + "data1.nc", spark, dimensions,
                                   createIndex = true, options('partitions).asInstanceOf[Int])
     val df2: DataFrame = readData(options('input) + "data2.nc", spark, dimensions,
@@ -129,7 +131,7 @@ object Main {
     // 2. quick preview on the data
     if (options.contains('check)) {
       // this will not actually be the first 10 rows, so don't compare for correctness; to select the actual first 10
-      // would require more unnecessary work for spark
+      // would require more unnecessary work for spark (bringing all data to driver)
       df.limit(10)
         .write
         .option("header", "true")
@@ -191,6 +193,7 @@ object Main {
         .withColumnRenamed("avg(tx)", "tx_mean")
         .withColumnRenamed("avg(rr)", "rr_mean")
         .withColumnRenamed("avg(pp)", "pp_mean")
+        .orderBy("longitude", "latitude", "time")
         .write
         .option("header", "true")
         .csv(options('output) + "result")
