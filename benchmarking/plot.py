@@ -14,7 +14,7 @@ all_inputs = ['data_0', 'data_1', 'data_3', 'data_6', 'data_12', 'data_25', 'dat
 parser = argparse.ArgumentParser(description='Plot results')
 parser.add_argument('--input',
                     help='Which input to use. If more than 1, separate with comma, e.g. --input data_1,data_25')
-parser.add_argument('--plot', help='Choose a specific plot out of: time_bars')
+parser.add_argument('--plot', help='Choose a specific plot out of: time_bars, profile_scatter')
 parser.add_argument('--save',
                     dest='save',
                     action='store_true',
@@ -22,7 +22,7 @@ parser.add_argument('--save',
 args = parser.parse_args()
 
 
-def read_input_df(input_, pipeline):
+def read_time_input_df(input_, pipeline):
     input_path = HOME2 + '/results/pipelines/' + input_ + '/time/' + pipeline + '/time.csv'
     df = pd.read_csv(input_path)
     # keep track of which pipeline the data refers to
@@ -31,8 +31,8 @@ def read_input_df(input_, pipeline):
     return df
 
 
-def plot_time_bars(input_):
-    dfs = [read_input_df(input_, pipeline) for pipeline in all_pipelines]
+def plot_time_bars_single(input_):
+    dfs = [read_time_input_df(input_, pipeline) for pipeline in all_pipelines]
 
     # combine into 1 df
     df = dfs[0]
@@ -42,7 +42,7 @@ def plot_time_bars(input_):
     # fix index
     df = df.reset_index().drop(columns='index')
 
-    plt.figure(1)
+    plt.figure()
     plt.subplots_adjust(hspace=0.4)
 
     plt.subplot(211)
@@ -66,11 +66,52 @@ def plot_time_bars(input_):
         plt.show()
 
 
+def plot_time_bars(inputs):
+    for input_ in inputs:
+        # make sure directory exists
+        os.system('mkdir -p ' + OUTPUT_FOLDER + '/' + input_)
+
+        plot_time_bars_single(input_)
+
+
+def read_collectl_input_df(input_, pipeline):
+    input_path = HOME2 + '/results/pipelines/' + input_ + '/profile/' + pipeline + '/profile.csv'
+    df = pd.read_csv(input_path, skiprows=range(0, 14))
+    # keep track of which pipeline the data refers to
+    df['pipeline'] = pipeline
+
+    return df
+
+
+def plot_profile_scatter_single(input_):
+    dfs = {pipeline: read_collectl_input_df(input_, pipeline) for pipeline in all_pipelines}
+
+    plt.figure()
+    [plt.plot(df.index.values, df['[MEM]Used'], label=name) for name, df in dfs.items()]
+    plt.ylabel('Memory (B)')
+    plt.xlabel('Time (s)')
+    plt.title('Memory usage over input={}'.format(input_))
+    plt.legend()
+
+    if args.save:
+        plt.savefig(OUTPUT_FOLDER + '/' + input_ + 'profile_scatter.png')
+    else:
+        plt.show()
+
+
+def plot_profile_scatter(inputs):
+    for input_ in inputs:
+        # make sure directory exists
+        os.system('mkdir -p ' + OUTPUT_FOLDER + '/' + input_)
+
+        plot_profile_scatter_single(input_)
+
+
 # all available plots
-all_plots = {'time_bars': plot_time_bars}
+all_plots = {'time_bars': plot_time_bars, 'profile_scatter': plot_profile_scatter}
 
 if args.plot is not None:
-    plots = {k: all_plots[k] for k in args.input.split(',')}
+    plots = {k: all_plots[k] for k in args.plot.split(',')}
 else:
     plots = all_plots
 
@@ -81,8 +122,4 @@ else:
 
 # call the functions to plot the required plots
 for plot_func in plots.values():
-    for input_ in inputs:
-        # make sure directory exists
-        os.system('mkdir -p ' + OUTPUT_FOLDER + '/' + input_)
-
-        plot_func(input_)
+    plot_func(inputs)
