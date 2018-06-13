@@ -7,7 +7,7 @@ cd ${BASH_SOURCE%/*}
 # TODO: we probably want to restrict to 1 core ~ local for fair comparison
 
 cores=4
-partitions=$(( ${cores} * 3 ))
+partitions=$(( ${cores} * 10 ))
 memory="12g"
 
 # run default pipeline if no args passed

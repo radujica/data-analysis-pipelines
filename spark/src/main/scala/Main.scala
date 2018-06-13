@@ -117,12 +117,11 @@ object Main {
       .getOrCreate()
 
     val dimensions: List[String] = List("longitude", "latitude", "time")
-    // no need for using the same partitioner since there is a single join; using repartition will just force the
-    // same shuffling to happen
-    val df1: DataFrame = readData(options('input) + "data1.nc", spark, dimensions,
-                                  createIndex = true, options('partitions).asInstanceOf[Int])
-    val df2: DataFrame = readData(options('input) + "data2.nc", spark, dimensions,
-                                  createIndex = false, options('partitions).asInstanceOf[Int])
+    val numberPartitions = options('partitions).asInstanceOf[Int]
+    val df1: DataFrame = readData(options('input) + "data1.nc", spark, dimensions, createIndex = true, numberPartitions)
+      .repartition(numberPartitions, col("longitude"), col("latitude"), col("time"))
+    val df2: DataFrame = readData(options('input) + "data2.nc", spark, dimensions, createIndex = false, numberPartitions)
+      .repartition(numberPartitions, col("longitude"), col("latitude"), col("time"))
 
     // PIPELINE
     // 1. join the 2 dataframes
@@ -133,6 +132,7 @@ object Main {
       // this will not actually be the first 10 rows, so don't compare for correctness; to select the actual first 10
       // would require more unnecessary work for spark (bringing all data to driver)
       df.limit(10)
+        .coalesce(1)
         .write
         .option("header", "true")
         .csv(options('output) + "head")
@@ -159,7 +159,8 @@ object Main {
     val df_agg = df.drop("longitude", "latitude", "time")
       .summary("min", "max", "mean", "stddev")
     if (options.contains('check)) {
-      df_agg.withColumnRenamed("summary", "agg")
+      df_agg.coalesce(1)
+        .withColumnRenamed("summary", "agg")
         .withColumn("agg", when(col("agg") === "stddev", "std").otherwise(col("agg")))
         .write
         .option("header", "true")
