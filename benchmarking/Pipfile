@@ -11,6 +11,7 @@ xarray = "*"
 numpy = "*"
 pandas = "*"
 "netcdf4" = "*"
+matplotlib = "*"
 
 
 [dev-packages]

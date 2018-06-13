@@ -12,10 +12,12 @@
 # Run
     # prepare the data subsets
     ./prepare_data.sh
-    # run all benchmarks; check out --help on how to run only a selection of them
+    # run all benchmarks; check out --help
     pipenv run python run.py
-    # check all outputs; check out --help on how to check only a selection of them
+    # check all outputs; check out --help
     pipenv run python check.py
+    # generate plots; check out --help
+    pipenv run python plot.py
 
 ## Folder structure
     # this git repo
@@ -28,5 +30,7 @@
     /results/pipelines/data_*/profile/<pipeline*>/
     # time command's outputs as csv
     /results/pipelines/data_*/time/<pipeline*>/
+    # graphs output
+    /results/graphs/data_*/
     # weld comparison folder with profile/ and time/
     /results/weld/
