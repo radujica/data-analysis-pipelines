@@ -51,7 +51,7 @@ function main()
 
     # 3. subset the data
     slice = split(parsed_args["slice"], ":")
-    df = df[parse(Int64, slice[1]):parse(Int64, slice[2]), :]
+    df = df[parse(Int64, slice[1]) + 1:parse(Int64, slice[2]), :]
 
     # 4. drop rows with null values
     df = df[(df[:tg] .!= -99.99f0) .& (df[:pp] .!= -999.9f0) .& (df[:rr] .!= -999.9f0), :]
