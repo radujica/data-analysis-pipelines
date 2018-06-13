@@ -83,6 +83,12 @@ for input_, slice_ in inputs.items():
         print('Done')
         collectl_process.terminate()
 
+        # extract and rename the collectl output to csv
+        extract_command = ['gunzip', collectl_path + '*.gz']
+        os.system(' '.join(extract_command))
+        rename_command = ['mv', collectl_path + '*.tab', collectl_path + '.csv']
+        os.system(' '.join(rename_command))
+
         # generate output for correctness check
         if args.check:
             output_path = HOME2 + '/results/pipelines/' + input_ + '/output/' + pipeline + '/'
