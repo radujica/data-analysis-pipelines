@@ -5,7 +5,9 @@ import os
 
 "Script to run any/all benchmarks. This script only generates data"
 
-HOME2 = '/export/scratch1/radujica'
+HOME2 = os.environ.get('HOME2')
+if HOME2 is None:
+    raise RuntimeError('Cannot find HOME2 environment variable')
 
 all_pipelines = ['python-libraries', 'weld', 'julia', 'java', 'spark']
 # to obtain 'west' Europe, given longitude is the first dimension:
@@ -39,8 +41,8 @@ else:
     inputs = all_inputs
 
 # make sure buildable stuff is built
-# os.system('cd ' + HOME2 + '/data-analysis-pipelines/java' + ' && ' + './gradlew clean jar')
-# os.system('cd ' + HOME2 + '/data-analysis-pipelines/spark' + ' && ' + 'sbt assembly')
+os.system('cd ' + HOME2 + '/data-analysis-pipelines/java' + ' && ' + './gradlew clean jar')
+os.system('cd ' + HOME2 + '/data-analysis-pipelines/spark' + ' && ' + 'sbt assembly')
 
 for input_, slice_ in inputs.items():
     for pipeline in pipelines:
@@ -53,7 +55,7 @@ for input_, slice_ in inputs.items():
         os.system('mkdir -p ' + HOME2 + '/results/pipelines/' + input_ + '/time/' + pipeline)
 
         # clear caches; this should work on the cluster
-        # os.system('echo 3 | sudo /usr/bin/tee | /proc/sys/vm/drop_caches')
+        os.system('sync; echo 3 | sudo /usr/bin/tee /proc/sys/vm/drop_caches')
 
         # setup the time command
         time_path = HOME2 + '/results/pipelines/' + input_ + '/time/' + pipeline + '/time.csv'
@@ -61,8 +63,7 @@ for input_, slice_ in inputs.items():
 
         # setup the command to run a pipeline
         input_path = HOME2 + '/datasets/ECAD/' + input_ + '/'
-        # TODO replace with HOME2
-        pipeline_path = '/ufs/radujica/Workspace' + '/data-analysis-pipelines/' + pipeline + '/pipeline.sh'
+        pipeline_path = HOME2 + '/data-analysis-pipelines/' + pipeline + '/pipeline.sh'
         pipeline_command = ['sh', pipeline_path, input_path, '{}:{}'.format(slice_[0], slice_[1])]
 
         # add csv header to output file
