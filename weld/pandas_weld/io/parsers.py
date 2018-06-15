@@ -42,7 +42,7 @@ def read_netcdf4_eager(path):
 
     indexes = [convert_datetime(ds.variables[k]) if hasattr(ds.variables[k], 'calendar')
                else ds.variables[k][:] for k in ordered_dimensions]
-    index = MultiIndex.from_product(indexes, names=ordered_dimensions)
+    index = MultiIndex.from_product(indexes, names=ordered_dimensions.keys())
 
     return DataFrame(OrderedDict(zip(columns, data)), index)
 
