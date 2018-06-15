@@ -1,4 +1,7 @@
+from __future__ import print_function
+
 import argparse
+import sys
 
 import pandas_weld as pdw
 
@@ -9,7 +12,7 @@ parser.add_argument('-o', '--output', help='Path to output folder')
 parser.add_argument('-c', '--check', action='store_true', default=False,
                     help='If passed, create output to check correctness of the pipeline, so output is saved '
                          'to csv files in --output folder. Otherwise, prints to stdout')
-parser.add_argument('-e', '--eager', default='nope')
+parser.add_argument('-e', '--eager', action='store_true')
 args = parser.parse_args()
 
 if args.check and args.output is None:
@@ -18,12 +21,12 @@ if args.check and args.output is None:
 PATH1 = args.input + 'data1.nc'
 PATH2 = args.input + 'data2.nc'
 
-if args.eager is 'nope':
-    df1 = pdw.read_netcdf4(PATH1)
-    df2 = pdw.read_netcdf4(PATH2)
-else:
+if args.eager:
     df1 = pdw.read_netcdf4_eager(PATH1)
     df2 = pdw.read_netcdf4_eager(PATH2)
+else:
+    df1 = pdw.read_netcdf4(PATH1)
+    df2 = pdw.read_netcdf4(PATH2)
 
 
 # PIPELINE
@@ -35,7 +38,7 @@ df_head = df.head(10)
 if args.check:
     df_head.to_csv(args.output + 'head' + '.csv')
 else:
-    print(df_head)
+    print(df_head, file=sys.stderr)
 
 # 3. want a subset of the data
 slice_ = [int(x) for x in args.slice.split(':')]
@@ -68,7 +71,7 @@ df_agg = df.agg(['min', 'max', 'mean', 'std'])\
 if args.check:
     df_agg.to_csv(args.output + 'agg' + '.csv', index=False)  # EVALUATE STEP
 else:
-    print(df_agg)
+    print(df_agg.evaluate(), file=sys.stderr)
 
 # TODO: this needs update from Weld
 # # 8. compute std per month
@@ -92,4 +95,4 @@ else:
 if args.check:
     df.to_csv(args.output + 'result' + '.csv', index=False)  # EVALUATE STEP
 else:
-    print(df)
+    print(df.evaluate(), file=sys.stderr)

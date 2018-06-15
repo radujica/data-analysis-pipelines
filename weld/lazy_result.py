@@ -282,7 +282,7 @@ class LazyResult(LazyOpResult):
 
         return weld_obj
 
-    def evaluate(self, verbose=False, decode=True, passes=None, num_threads=1,
+    def evaluate(self, verbose=True, decode=True, passes=None, num_threads=1,
                  apply_experimental_transforms=False):
         if isinstance(self.expr, WeldObject):
             # replace context values for every lazy recorded file input

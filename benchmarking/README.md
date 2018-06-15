@@ -32,5 +32,5 @@
     /results/pipelines/data_*/time/<pipeline*>/
     # graphs output
     /results/graphs/data_*/
-    # weld comparison folder with profile/ and time/
-    /results/weld/
+    # weld comparison output folder
+    /results/weld/data_*/
