@@ -64,11 +64,11 @@ class DataFrame(object):
             expanded = self.index.expand()
             names = self.index.names
             for i in range(len(expanded)):
-                str_data[names[i]] = expanded[i]
+                str_data[names[i]] = expanded[i].evaluate()
         else:
             # there is no guarantee at this point that it has been evaluated
             # TODO: perhaps make more user friendly check to avoid tabulate throwing an exception if not evaluated
-            str_data[self.index.name] = str(self.index)
+            str_data[self.index.name] = self.index.data
         for column in self.data:
             str_data[column] = evaluate_or_raw(self.data[column])
 
@@ -194,8 +194,6 @@ class DataFrame(object):
             the output of evaluate on the sliced DataFrame
 
         """
-        slice_ = replace_slice_defaults(slice(n))
-
         new_data = {}
         for column_name in self:
             # making series because Series has the proper method to slice something; re-use the code above
@@ -206,6 +204,7 @@ class DataFrame(object):
                                            series.index,
                                            series.name)
 
+        slice_ = replace_slice_defaults(slice(n))
         new_index = self.index[slice_]
 
         return DataFrame(new_data, new_index).evaluate(verbose, decode, passes,

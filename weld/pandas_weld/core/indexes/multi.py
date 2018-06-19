@@ -149,11 +149,10 @@ class MultiIndex(object):
         else:
             raise TypeError('expected slice or LazyResult of bool in MultiIndex.__getitem__')
 
-    # NOTE: this is an EAGER operation, evaluating the actual values of the index
     # TODO: cache the expanded format to avoid re-computation when needed (?)
     def expand(self):
-        return [self._index_to_values(self.levels[i], self.labels[i]).evaluate()
-                for i in xrange(len(self.levels))]
+        # convert from levels/labels format to actual values
+        return [self._index_to_values(self.levels[i], self.labels[i]) for i in xrange(len(self.levels))]
 
     @staticmethod
     def _index_to_values(levels, labels):
