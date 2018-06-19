@@ -1,12 +1,11 @@
 from collections import OrderedDict
 
-import netCDF4
 import numpy as np
-import pandas as pd
 from grizzly.encoders import numpy_to_weld_type
 
 import csv_weld
 import netCDF4_weld
+import netCDF4_weld_eager
 from lazy_result import LazyResult
 from pandas_weld import MultiIndex, DataFrame, Index
 from pandas_weld.weld import weld_range
@@ -25,26 +24,42 @@ def read_netcdf4_eager(path):
     DataFrame
 
     """
-    ds = netCDF4.Dataset(path)
+    # This is how it should look like
+    # ds = netCDF4.Dataset(path)
+    #
+    # [ds.variables[k].set_auto_mask(False) for k in ds.variables]
+    #
+    # columns = [k for k in ds.variables if k not in ds.dimensions]
+    # ordered_dimensions = OrderedDict(map(lambda kv: (kv[0], kv[1].size), OrderedDict(ds.dimensions.items()).items()))
+    #
+    # data = [ds.variables[k][:].reshape(-1) for k in columns]
+    #
+    # def convert_datetime(variable):
+    #     return np.array([str(pd.Timestamp(d).date()) for d in netCDF4.num2date(variable[:],
+    #                                                                            variable.units,
+    #                                                                            calendar=variable.calendar)],
+    #                     dtype=np.str)
+    #
+    # indexes = [convert_datetime(ds.variables[k]) if hasattr(ds.variables[k], 'calendar')
+    #            else ds.variables[k][:] for k in ordered_dimensions]
+    # index = MultiIndex.from_product(indexes, names=list(ordered_dimensions.keys()))
+    #
+    # return DataFrame(dict(zip(columns, data)), index)
 
-    [ds.variables[k].set_auto_mask(False) for k in ds.variables]
+    ds = netCDF4_weld_eager.Dataset(path)
 
     columns = [k for k in ds.variables if k not in ds.dimensions]
-    ordered_dimensions = OrderedDict(map(lambda kv: (kv[0], kv[1].size), ds.dimensions.items()))
+    dimensions = OrderedDict(map(lambda kv: (kv[0], kv[1]),
+                                 OrderedDict(ds.dimensions.items()).items()))
 
-    data = [ds.variables[k][:].reshape(-1) for k in columns]
+    # columns data, either LazyResult or raw
+    data = [ds.variables[k] for k in columns]
+    # the dimensions
+    indexes = [ds.variables[k] for k in dimensions]
 
-    def convert_datetime(variable):
-        return np.array([str(pd.Timestamp(d).date()) for d in netCDF4.num2date(variable[:],
-                                                                               variable.units,
-                                                                               calendar=variable.calendar)],
-                        dtype=np.str)
+    index = MultiIndex.from_product(indexes, list(dimensions.keys()))
 
-    indexes = [convert_datetime(ds.variables[k]) if hasattr(ds.variables[k], 'calendar')
-               else ds.variables[k][:] for k in ordered_dimensions]
-    index = MultiIndex.from_product(indexes, names=ordered_dimensions.keys())
-
-    return DataFrame(OrderedDict(zip(columns, data)), index)
+    return DataFrame(dict(zip(columns, data)), index)
 
 
 def read_netcdf4(path):

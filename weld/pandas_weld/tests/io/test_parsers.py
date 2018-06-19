@@ -40,6 +40,16 @@ class ParserTests(unittest.TestCase):
     def test_read_csv(self):
         pass
 
+    def test_netcdf4_lazy_eager(self):
+        result_lazy = pdw.read_netcdf4(ParserTests.PATH_EXT)
+        result_eager = pdw.read_netcdf4_eager(ParserTests.PATH_EXT)
+
+        self.assertListEqual(result_lazy.data.keys(), result_eager.data.keys())
+        np.testing.assert_array_equal(result_lazy.data['tg'].evaluate(), result_eager.data['tg'].evaluate())
+        np.testing.assert_array_equal(result_lazy.data['tg_ext'].evaluate(), result_eager.data['tg_ext'].evaluate())
+
+        test_equal_multiindex(result_lazy.index, result_eager.index)
+
 
 def main():
     unittest.main()
