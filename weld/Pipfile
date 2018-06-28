@@ -1,24 +1,17 @@
 [[source]]
-
 url = "https://pypi.python.org/simple"
 verify_ssl = true
 name = "pypi"
 
-
 [packages]
-
 numpy = "*"
 pandas = "*"
 "netcdf4" = "*"
-"9aa4f98" = {path = "/ufs/radujica/Workspace/weld/python/pyweld", editable = true}
-"7409f53" = {path = "/ufs/radujica/Workspace/weld/python/grizzly", editable = true}
 tabulate = "*"
-
+"d3dc1d4" = {path = "/export/scratch1/home/radujica/weld/python/pyweld", editable = true}
+"cb631b1" = {path = "/export/scratch1/home/radujica/weld/python/grizzly", editable = true}
 
 [dev-packages]
 
-
-
 [requires]
-
 python_version = "2.7"
