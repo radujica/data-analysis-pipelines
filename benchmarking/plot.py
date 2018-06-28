@@ -4,7 +4,10 @@ import matplotlib.pyplot as plt
 import os
 import pandas as pd
 
-HOME2 = '/export/scratch1/radujica'
+HOME2 = os.environ.get('HOME2')
+if HOME2 is None:
+    raise RuntimeError('Cannot find HOME2 environment variable')
+
 OUTPUT_FOLDER = HOME2 + '/results/graphs'
 
 all_pipelines = ['python-libraries', 'weld', 'julia', 'java', 'spark']
