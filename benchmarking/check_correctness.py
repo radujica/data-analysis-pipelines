@@ -36,5 +36,5 @@ def compare_df(df_truth, other_df):
 
 for file in args.files[1:]:
     other_df = pd.read_csv(file)
-    other_df.name = file.split('/')[-2]
+    other_df.name = '/'.join(file.split('/')[-2:])
     compare_df(df_truth, other_df)

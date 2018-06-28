@@ -5,6 +5,8 @@ import os
 
 "Script to run any/all benchmarks. This script only generates data"
 
+# nohup pipenv run python run.py &
+
 HOME2 = os.environ.get('HOME2')
 if HOME2 is None:
     raise RuntimeError('Cannot find HOME2 environment variable')
@@ -55,11 +57,11 @@ for input_, slice_ in inputs.items():
         os.system('mkdir -p ' + HOME2 + '/results/pipelines/' + input_ + '/time/' + pipeline)
 
         # clear caches; this should work on the cluster
-        os.system('sync; echo 3 | sudo /usr/bin/tee /proc/sys/vm/drop_caches')
+        os.system('sync; echo 3 | sudo /usr/bin/tee /proc/sys/vm/drop_caches > /dev/null 2>&1')
 
         # setup the time command
         time_path = HOME2 + '/results/pipelines/' + input_ + '/time/' + pipeline + '/time.csv'
-        time_command = ['/usr/bin/time', '-a', '-o', time_path, '-f', '%e,%U,%S,%P,%K,%M,%F,%W,%I,%O']
+        time_command = ['/usr/bin/time', '-a', '-o', time_path, '-f', '%e,%U,%S,%P,%K,%M,%F,%R,%W,%w,%I,%O']
 
         # setup the command to run a pipeline
         input_path = HOME2 + '/datasets/ECAD/' + input_ + '/'
@@ -67,7 +69,8 @@ for input_, slice_ in inputs.items():
         pipeline_command = ['sh', pipeline_path, input_path, '{}:{}'.format(slice_[0], slice_[1])]
 
         # add csv header to output file
-        time_header = '"real,user,sys,cpu,mem_avg_tot(K),mem_max(K),page_faults,swaps,input,output\n"'
+        time_header = '"real,user,sys,cpu,mem_avg_tot(K),mem_max(K),' \
+                      'major_page_faults,minor_page_faults,swaps,voluntary_context_switch,input,output\n"'
         os.system('printf ' + time_header + ' > ' + time_path)
 
         # start pipeline

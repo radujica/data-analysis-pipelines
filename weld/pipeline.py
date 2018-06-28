@@ -1,4 +1,5 @@
 from __future__ import print_function
+from datetime import datetime
 
 import argparse
 import sys
@@ -9,6 +10,7 @@ parser = argparse.ArgumentParser(description='Weld Pipeline')
 parser.add_argument('-i', '--input', required=True, help='Path to folder containing input files')
 parser.add_argument('-s', '--slice', required=True, help='Start and stop of a subset of the data')
 parser.add_argument('-o', '--output', help='Path to output folder')
+# TODO: remove; redundant; implied by --output
 parser.add_argument('-c', '--check', action='store_true', default=False,
                     help='If passed, create output to check correctness of the pipeline, so output is saved '
                          'to csv files in --output folder. Otherwise, prints to stdout')
@@ -29,9 +31,18 @@ else:
     df2 = pdw.read_netcdf4(PATH2)
 
 
+def print_event(name):
+    print('#{}-{}'.format(str(datetime.now()), name))
+
+
+print_event('data_read')
+
+
 # PIPELINE
 # 1. join the 2 dataframes
 df = df1.merge(df2)
+
+print_event('data_merged')
 
 # 2. quick preview on the data
 df_head = df.head(10)
@@ -39,6 +50,8 @@ if args.check:
     df_head.to_csv(args.output + 'head' + '.csv')
 else:
     print(df_head, file=sys.stderr)
+
+print_event('done_head')
 
 # 3. want a subset of the data
 slice_ = [int(x) for x in args.slice.split(':')]
@@ -65,13 +78,15 @@ df['abs_diff'] = compute_abs_maxmin(df['tx'], df['tn'])
 
 # 7. explore the data through aggregations
 df_agg = df.agg(['min', 'max', 'mean', 'std'])\
-    .evaluate()\
     .reset_index()\
-    .rename(columns={'Index': 'agg'})
+    .rename(columns={'Index': 'agg'})\
+    .evaluate()
 if args.check:
-    df_agg.to_csv(args.output + 'agg' + '.csv', index=False)  # EVALUATE STEP
+    df_agg.to_csv(args.output + 'agg' + '.csv', index=False)
 else:
-    print(df_agg.evaluate(), file=sys.stderr)
+    print(df_agg, file=sys.stderr)
+
+print_event('done_agg')
 
 # TODO: this needs update from Weld
 # # 8. compute std per month
@@ -93,6 +108,8 @@ else:
 
 # 9. EVALUATE
 if args.check:
-    df.to_csv(args.output + 'result' + '.csv', index=False)  # EVALUATE STEP
+    df.evaluate().to_csv(args.output + 'result' + '.csv', index=False)
 else:
     print(df.evaluate(), file=sys.stderr)
+
+print_event('done_evaluate')
