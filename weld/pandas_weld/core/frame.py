@@ -90,7 +90,7 @@ class DataFrame(object):
         evaluated_index = self.index.evaluate(verbose, decode, passes,
                                               num_threads, apply_experimental_transforms)
         evaluated_data = OrderedDict()
-        for k, v in self.data.items():
+        for k, v in self.data.iteritems():
             evaluated_data[k] = evaluate_or_raw(v, verbose, decode, passes,
                                                 num_threads, apply_experimental_transforms)
 

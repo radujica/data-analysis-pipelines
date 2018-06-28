@@ -286,7 +286,7 @@ class LazyResult(LazyOpResult):
                  apply_experimental_transforms=False):
         if isinstance(self.expr, WeldObject):
             # replace context values for every lazy recorded file input
-            for key, value in self.expr.context.items():
+            for key, value in self.expr.context.iteritems():
                 value = str(value)
                 if value in LazyResult.data_mapping:
                     self.expr.context[key] = LazyResult.retrieve_data(value)
@@ -337,7 +337,7 @@ class LazyResult(LazyOpResult):
         # if WeldObject, could either be 1) from lazy data or 2) raw with some lazy operation;
         # for 1), update_args is enough, however for 2) need to TODO
         elif isinstance(self.expr, WeldObject):
-            # # TODO: this is a step towards it but doesn't work by itself
+            # # TODO: this is a step towards it but doesn't work by itself; probably going over the dependencies is req.
             # for k, v in self.expr.context.items():
             #     if isinstance(v, np.ndarray):
             #         self.expr.context[k] = v[slice_]
@@ -374,7 +374,7 @@ class LazyResult(LazyOpResult):
             copy = self._copy()
 
             # loop through context to identify placeholders AND replace with the take_n values
-            for key, value in copy.expr.context.items():
+            for key, value in copy.expr.context.iteritems():
                 # intermediate results return the n needed, however other raw data has not been sliced yet
                 # which leads to different array lengths in the context; therefore, make sure they're the same length
                 if isinstance(value, np.ndarray):
