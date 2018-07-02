@@ -74,7 +74,7 @@ class DataFrame(object):
 
         return tabulate(str_data, headers='keys')
 
-    def evaluate(self, verbose=False, decode=True, passes=None, num_threads=1,
+    def evaluate(self, verbose=True, decode=True, passes=None, num_threads=1,
                  apply_experimental_transforms=False):
         """ Evaluates by creating a str representation of the DataFrame
 
@@ -552,6 +552,7 @@ class DataFrame(object):
             bool_indexes = self._merge_multi(self.index, right.index)
         else:
             bool_indexes = self._merge_single(self.index, right.index)
+
         # can filter any of the two dataframes for the new index
         new_index = self.index[bool_indexes[0]]
 

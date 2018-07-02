@@ -85,7 +85,7 @@ class MultiIndex(object):
         else:
             return data
 
-    def evaluate(self, verbose=False, decode=True, passes=None, num_threads=1,
+    def evaluate(self, verbose=True, decode=True, passes=None, num_threads=1,
                  apply_experimental_transforms=False):
         """ Evaluates by creating a str representation of the MultiIndex
 
