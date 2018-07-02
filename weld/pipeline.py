@@ -4,6 +4,9 @@ from datetime import datetime
 import argparse
 import sys
 
+import os
+from weld.weldobject import WeldObject
+
 import pandas_weld as pdw
 
 parser = argparse.ArgumentParser(description='Weld Pipeline')
@@ -88,23 +91,27 @@ else:
 
 print_event('done_agg')
 
-# TODO: this needs update from Weld
-# # 8. compute std per month
-# # need index as columns
-# df = df.reset_index()
-# # UDF 2: compute custom year+month format
-# df['year_month'] = df['time'].map(lambda x: x.year * 100 + x.month)
-# # group by month and rename columns appropriately
-# df_grouped = df[['latitude', 'longitude', 'year_month', 'tg', 'tn', 'tx', 'pp', 'rr']] \
-#     .groupby(['latitude', 'longitude', 'year_month']) \
-#     .mean() \
-#     .rename(columns={'tg': 'tg_mean', 'tn': 'tn_mean', 'tx': 'tx_mean', 'pp': 'pp_mean', 'rr': 'rr_mean'}) \
-#     .reset_index()
-# # merge the results; TODO: this will probably be another EVALUATE STEP to avoid the merge
-# df = df.merge(df_grouped, on=['latitude', 'longitude', 'year_month'], how='inner')
-# # clean up
-# del df_grouped
-# df = df.drop('year_month', axis=1)
+# 8. compute mean per month
+# need index as columns
+df = df.reset_index()
+
+
+# UDF 2: compute custom year+month format, now through C UDF
+def compute_year_month(time):
+    WeldObject.load_binary(os.getcwd() + '/udf_yearmonth.so')
+    weld_template = "cudf[udf_yearmonth, vec[vec[i8]]](%(self)s)"
+
+    return time.map(weld_template, {})
+
+
+df['year_month'] = compute_year_month(df['time'])
+# group by month and rename columns appropriately
+df_grouped = df[['latitude', 'longitude', 'year_month', 'tg', 'tn', 'tx', 'pp', 'rr']] \
+    .groupby(['latitude', 'longitude', 'year_month']) \
+    .mean() \
+    .rename(columns={'tg': 'tg_mean', 'tn': 'tn_mean', 'tx': 'tx_mean', 'pp': 'pp_mean', 'rr': 'rr_mean'}) \
+    .reset_index()\
+    .evaluate()
 
 # 9. EVALUATE
 if args.check:
