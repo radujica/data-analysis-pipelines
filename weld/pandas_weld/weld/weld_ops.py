@@ -823,7 +823,7 @@ def weld_groupby_aggregate(grouped_df, by_types, columns_types, operation):
         corresponding to by
     columns_types : list of WeldType
         corresponding to columns
-    operation : {'+', '*', 'min', 'max', 'mean', 'std'}
+    operation : {'+', '*', 'min', 'max'}
         what operation to apply to grouped rows
 
     Returns
@@ -878,6 +878,78 @@ def weld_groupby_aggregate(grouped_df, by_types, columns_types, operation):
 
     weld_obj.weld_code = weld_template % {'grouped_df': grouped_df_var,
                                           'operation': operation,
+                                          'mergers': mergers,
+                                          'merger_ops': merger_ops,
+                                          'merger_res': merger_res,
+                                          'by_types': by_types,
+                                          'columns_types': columns_typess}
+
+    return weld_obj
+
+
+def weld_groupby_mean(grouped_df, by_types, columns_types):
+    """ Groups by the columns in by
+
+    Parameters
+    ----------
+    grouped_df : WeldObject
+        DataFrame which has been grouped through weld_groupby
+    by_types : list of WeldType
+        corresponding to by
+    columns_types : list of WeldType
+        corresponding to columns
+
+    Returns
+    -------
+    WeldObject
+        representation of the computation
+
+    """
+    weld_obj = WeldObject(_encoder, _decoder)
+
+    grouped_df_var = weld_obj.update(grouped_df)
+
+    assert grouped_df_var is None
+
+    grouped_df_var = grouped_df.obj_id
+    weld_obj.dependencies[grouped_df_var] = grouped_df
+
+    weld_template = """
+    tovec(
+        result(
+            for(
+                %(grouped_df)s,
+                dictmerger[%(by_types)s, %(columns_types)s, +],
+                |b, i, e|
+                    let group_res = for(e.$1,
+                        %(mergers)s,
+                        |c, j, f|
+                            %(merger_ops)s
+                    );
+                    
+                    merge(b, {e.$0, %(merger_res)s})
+            )
+        )
+    )"""
+
+    """ should be this but unsupported by Weld
+    let merged = 
+                        result(
+                            for(e.$1,
+                                merger[%(columns_types)s, %(operation)s],
+                                |c, j, f|
+                                    merge(c, f)
+                            )
+                    );
+    """
+
+    by_types = '{%s}' % ', '.join([str(k) for k in by_types])
+    columns_typess = '{%s}' % ', '.join(['f64' for k in columns_types])
+    mergers = '{%s}' % ', '.join(['merger[%s, +]' % str(k) for k in columns_types])
+    merger_ops = '{%s}' % ', '.join(['merge(c.$%s, f.$%s)' % (str(k), str(k)) for k in range(len(columns_types))])
+    merger_res = '{%s}' % ', '.join(['f64(result(group_res.$%s)) / f64(len(e.$1))' % str(k) for k in range(len(columns_types))])
+
+    weld_obj.weld_code = weld_template % {'grouped_df': grouped_df_var,
                                           'mergers': mergers,
                                           'merger_ops': merger_ops,
                                           'merger_res': merger_res,

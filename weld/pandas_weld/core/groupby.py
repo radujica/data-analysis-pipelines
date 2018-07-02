@@ -1,9 +1,10 @@
 from collections import OrderedDict
 
+import numpy as np
 from grizzly.encoders import numpy_to_weld_type
 
 from pandas_weld import DataFrame, Index, Series, MultiIndex
-from pandas_weld.weld import weld_groupby_aggregate, weld_get_column, LazyResult
+from pandas_weld.weld import weld_groupby_aggregate, weld_get_column, LazyResult, weld_groupby_mean
 
 
 # TODO: grouping on all columns should result in empty df
@@ -71,4 +72,24 @@ class DataFrameGroupBy(object):
         return self._aggregate('max')
 
     def mean(self):
-        raise NotImplementedError
+        aggregated_data = weld_groupby_mean(self.expr,
+                                            [str(numpy_to_weld_type(k)) for k in self.by_types],
+                                            [str(numpy_to_weld_type(k)) for k in self.columns_types])
+
+        if len(self.by) == 1:
+            new_index = Index(weld_get_column(aggregated_data, 0, True),
+                              self.by_types[0],
+                              self.by[0])
+        else:
+            arrays = [LazyResult(weld_get_column(aggregated_data, index, True), numpy_to_weld_type(self.by_types[index]), 1) for index in xrange(len(self.by))]
+            new_index = MultiIndex.from_arrays(arrays, self.by)
+
+        new_data = OrderedDict()
+        for i in xrange(len(self.columns)):
+            column_name = self.columns[i]
+            new_data[column_name] = Series(weld_get_column(aggregated_data, i, False),
+                                           np.dtype(np.float64),
+                                           new_index,
+                                           column_name)
+
+        return DataFrame(new_data, new_index)
