@@ -65,8 +65,8 @@ class MultiIndexTests(unittest.TestCase):
 
         result = pdw.MultiIndex.from_arrays(arrays, names)
 
-        expected_result = pdw.MultiIndex([np.array([2, 1]),
-                                          np.array([4, 3])],
+        expected_result = pdw.MultiIndex([np.array([1, 2]),
+                                          np.array([3, 4])],
                                          [np.array([0, 0, 1, 1]),
                                           np.array([0, 1, 0, 1])],
                                          ['a', 'b'])

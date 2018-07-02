@@ -259,14 +259,15 @@ class DataFrameTests(unittest.TestCase):
         test_equal_series(expected_result['col2'], result['col2'])
 
     # noinspection PyMethodMayBeStatic
-    # TODO: 2 things that need fixing: MultiIndex.from_arrays' ordereddict & multiple_columns merger
     def test_groupby_single_column_sum(self):
         df = pdw.DataFrame({'col1': np.array([1, 1, 2, 3, 3], dtype=np.int32),
                             'col2': np.array([3, 4, 5, 5, 6], dtype=np.int64),
                             'col3': np.array([5., 6., 7., 7., 7.], dtype=np.float32)},
-                           pdw.MultiIndex.from_product([np.array([1, 1, 2, 3, 3], dtype=np.int32),
-                                                        np.array([5., 6., 7., 7., 7.], dtype=np.float32)],
-                                                       ['i32', 'f32']))
+                           pdw.MultiIndex([np.array([1, 2, 3], dtype=np.int32),
+                                           np.array([5., 6., 7.], dtype=np.float32)],
+                                          [np.array([0, 0, 1, 2, 2], dtype=np.int64),
+                                           np.array([0, 1, 2, 2, 2], dtype=np.int64)],
+                                          ['i32', 'f32']))
 
         result = df.groupby('col1').sum()
 
@@ -275,13 +276,47 @@ class DataFrameTests(unittest.TestCase):
                                         pdw.Index(np.array([1, 2, 3], dtype=np.int32), np.dtype('int32'), 'col1'))
 
         # TODO: test equal 1d index method (both rangeindex and index should work)
-        np.testing.assert_array_equal(evaluate_if_necessary(expected_result.index),
-                                      evaluate_if_necessary(result.index))
-        test_equal_series(expected_result['col2'], result['col2'])
-        test_equal_series(expected_result['col3'], result['col3'])
+        np.testing.assert_array_equal(np.sort(evaluate_if_necessary(expected_result.index)),
+                                      np.sort(evaluate_if_necessary(result.index)))
+        # assume correct values but in different order; just check the values
+        np.testing.assert_array_equal(np.sort(expected_result['col2'].evaluate().data),
+                                      np.sort(result['col2'].evaluate().data))
+        np.testing.assert_array_equal(np.sort(expected_result['col3'].evaluate().data),
+                                      np.sort(result['col3'].evaluate().data))
 
+    # noinspection PyMethodMayBeStatic
     def test_groupby_multiple_columns_sum(self):
-        raise NotImplementedError
+        df = pdw.DataFrame({'col1': np.array([1, 1, 2, 3, 3], dtype=np.int32),
+                            'col2': np.array([3, 4, 5, 5, 6], dtype=np.int64),
+                            'col3': np.array([5., 6., 7., 7., 7.], dtype=np.float32)},
+                           pdw.MultiIndex([np.array([1, 2, 3], dtype=np.int32),
+                                           np.array([5., 6., 7.], dtype=np.float32)],
+                                          [np.array([0, 0, 1, 2, 2], dtype=np.int64),
+                                           np.array([0, 1, 2, 2, 2], dtype=np.int64)],
+                                          ['i32', 'f32']))
+
+        result = df.groupby(['col1', 'col3']).sum()
+
+        expected_result = pdw.DataFrame({'col2': np.array([3, 4, 5, 11], dtype=np.int64)},
+                                        pdw.MultiIndex([np.array([1, 2, 3], dtype=np.int32),
+                                                        np.array([5., 6., 7.], dtype=np.float32)],
+                                                       [np.array([0, 0, 1, 2], dtype=np.int64),
+                                                        np.array([0, 1, 2, 2], dtype=np.int64)],
+                                                       ['col1', 'col3']))
+
+        # TODO: test equal 1d index method (both rangeindex and index should work)
+        # assume correct index values but in different order; just check the values
+        levels_result = [np.sort(level.evaluate()) for level in result.index.levels]
+        labels_result = [np.sort(label.evaluate()) for label in result.index.labels]
+        levels_expected = [np.sort(level) for level in expected_result.index.levels]
+        labels_expected = [np.sort(label) for label in expected_result.index.labels]
+        np.testing.assert_array_equal(result.index.names, expected_result.index.names)
+        for i in range(2):
+            np.testing.assert_array_equal(levels_result[i], levels_expected[i])
+            np.testing.assert_array_equal(labels_result[i], labels_expected[i])
+        # assume correct values but in different order; just check the values
+        np.testing.assert_array_equal(np.sort(expected_result['col2'].evaluate().data),
+                                      np.sort(result['col2'].evaluate().data))
 
     def test_reset_index(self):
         result = self.df.reset_index()

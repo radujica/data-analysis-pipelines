@@ -3,7 +3,7 @@ from collections import OrderedDict
 from grizzly.encoders import numpy_to_weld_type
 
 from pandas_weld import DataFrame, Index, Series, MultiIndex
-from pandas_weld.weld import weld_groupby_aggregate, weld_get_column
+from pandas_weld.weld import weld_groupby_aggregate, weld_get_column, LazyResult
 
 
 # TODO: grouping on all columns should result in empty df
@@ -45,7 +45,7 @@ class DataFrameGroupBy(object):
                               self.by_types[0],
                               self.by[0])
         else:
-            arrays = [weld_get_column(aggregated_data, index, True) for index in xrange(len(self.by))]
+            arrays = [LazyResult(weld_get_column(aggregated_data, index, True), numpy_to_weld_type(self.by_types[index]), 1) for index in xrange(len(self.by))]
             new_index = MultiIndex.from_arrays(arrays, self.by)
 
         new_data = OrderedDict()

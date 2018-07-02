@@ -592,7 +592,6 @@ class DataFrame(object):
         return DataFrame(new_data, new_index)
 
     # noinspection SpellCheckingInspection
-    # TODO: extremely limited by weld: can only group on 1 column and have only 1 other column
     def groupby(self, by):
         """ Group by one or more columns
 

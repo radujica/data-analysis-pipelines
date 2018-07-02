@@ -55,15 +55,16 @@ class MultiIndex(object):
 
         return cls(levels, labels, names)
 
-    # TODO: currently bugged as sortedness is lost in weld_unique
-    # TODO: when ^ == fixed, cache the input arrays in _expanded
+    # TODO: currently bugged as order is lost in weld_unique
     @classmethod
     def from_arrays(cls, arrays, names):
         weld_types = [get_weld_type(k) for k in arrays]
         arrays = [get_expression_or_raw(k) for k in arrays]
         levels = [LazyResult(weld_unique(arrays[k], weld_types[k]), weld_types[k], 1) for k in xrange(len(arrays))]
+        levels_types = [level.weld_type for level in levels]
+        labels = [npw.array_to_labels(arrays[k], levels[k], levels_types[k]) for k in xrange(len(arrays))]
 
-        return cls.from_product(levels, names)
+        return cls(levels, labels, names)
 
     def __repr__(self):
         return "{}(names={})".format(self.__class__.__name__,

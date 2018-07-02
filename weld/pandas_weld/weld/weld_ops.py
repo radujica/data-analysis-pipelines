@@ -778,7 +778,7 @@ def weld_groupby(by, by_types, columns, columns_types):
     weld_template = """
     let columns = result(
             for(
-                zip(%(columns)s),
+                %(columns)s,
                 appender,
                 |b, i, e|
                     merge(b, e)
@@ -790,19 +790,23 @@ def weld_groupby(by, by_types, columns, columns_types):
                 zip(%(by)s, columns),
                 groupmerger[%(by_types)s, %(columns_types)s],
                 |b, i, e|
-                    merge(b, {e.$0, e.$1})
+                    merge(b, {%(to_merge_keys)s, %(to_merge_values)s})
             )
         )
     )"""
 
-    by = 'zip(%s)' % ', '.join(by_list_var) if len(by_list_var) > 1 else '%s' % by_list_var[0]
+    by = ', '.join(by_list_var) if len(by_list_var) > 1 else '%s' % by_list_var[0]
     columns = 'zip(%s)' % ', '.join(columns_list_var) if len(columns_list_var) > 1 else '%s' % columns_list_var[0]
-    by_types = '{%s}' % ', '.join([str(k) for k in by_types]) if len(by_types) > 1 else '%s' % by_types[0]
-    columns_types = '{%s}' % ', '.join([str(k) for k in columns_types]) if len(columns_types) > 1 else '%s' % columns_types[0]
+    to_merge_keys = '{%s}' % ', '.join(['e.$%s' % str(k) for k in range(len(by_types))]) # if len(by_types) > 1 else '{e.$0}'
+    to_merge_values = '{%s}' % ', '.join(['e.$%s.$%s' % (str(len(by_types)), str(k)) for k in range(len(columns_types))]) if len(columns_types) > 1 else '{e.$%s}' % str(len(by_types))
+    by_types = '{%s}' % ', '.join([str(k) for k in by_types]) # if len(by_types) > 1 else '%s' % by_types[0]
+    columns_types = '{%s}' % ', '.join([str(k) for k in columns_types]) if len(columns_types) > 1 else '{%s}' % columns_types[0]
 
     weld_obj.weld_code = weld_template % {'by': by,
                                           'columns': columns,
                                           'by_types': by_types,
+                                          'to_merge_keys': to_merge_keys,
+                                          'to_merge_values': to_merge_values,
                                           'columns_types': columns_types}
 
     return weld_obj
@@ -844,7 +848,19 @@ def weld_groupby_aggregate(grouped_df, by_types, columns_types, operation):
                 %(grouped_df)s,
                 dictmerger[%(by_types)s, %(columns_types)s, +],
                 |b, i, e|
-                    let merged = 
+                    let group_res = for(e.$1,
+                        %(mergers)s,
+                        |c, j, f|
+                            %(merger_ops)s
+                    );
+                    
+                    merge(b, {e.$0, %(merger_res)s})
+            )
+        )
+    )"""
+
+    """ should be this but unsupported by Weld
+    let merged = 
                         result(
                             for(e.$1,
                                 merger[%(columns_types)s, %(operation)s],
@@ -852,19 +868,21 @@ def weld_groupby_aggregate(grouped_df, by_types, columns_types, operation):
                                     merge(c, f)
                             )
                     );
-                    
-                    merge(b, {e.$0, merged})
-            )
-        )
-    )"""
+    """
 
-    by_types = '{%s}' % ', '.join([str(k) for k in by_types]) if len(by_types) > 1 else '%s' % by_types[0]
-    columns_types = '{%s}' % ', '.join([str(k) for k in columns_types]) if len(columns_types) > 1 else '%s' % columns_types[0]
+    by_types = '{%s}' % ', '.join([str(k) for k in by_types])
+    columns_typess = '{%s}' % ', '.join([str(k) for k in columns_types])
+    mergers = '{%s}' % ', '.join(['merger[%s, %s]' % (str(k), operation) for k in columns_types])
+    merger_ops = '{%s}' % ', '.join(['merge(c.$%s, f.$%s)' % (str(k), str(k)) for k in range(len(columns_types))])
+    merger_res = '{%s}' % ', '.join(['result(group_res.$%s)' % str(k) for k in range(len(columns_types))])
 
     weld_obj.weld_code = weld_template % {'grouped_df': grouped_df_var,
                                           'operation': operation,
+                                          'mergers': mergers,
+                                          'merger_ops': merger_ops,
+                                          'merger_res': merger_res,
                                           'by_types': by_types,
-                                          'columns_types': columns_types}
+                                          'columns_types': columns_typess}
 
     return weld_obj
 
@@ -904,7 +922,7 @@ def weld_get_column(grouped_df, index, is_index=False):
     )"""
 
     weld_obj.weld_code = weld_template % {'grouped_df': grouped_df_var,
-                                          'index': '%s' % index if is_index else '1.$%s' % index}
+                                          'index': '0.$%s' % index if is_index else '1.$%s' % index}
 
     return weld_obj
 
@@ -934,23 +952,27 @@ def weld_unique(array, type):
         weld_obj.dependencies[array_var] = array
 
     weld_template = """
-    map(
-        tovec(
-            result(
-                for(
-                    map(
-                        %(array)s,
-                        |e| 
-                            {e, 0}
-                    ),
-                    dictmerger[%(type)s, i32, +],
-                    |b, i, e| 
-                        merge(b,e)
+    sort(
+        map(
+            tovec(
+                result(
+                    for(
+                        map(
+                            %(array)s,
+                            |e| 
+                                {e, 0}
+                        ),
+                        dictmerger[%(type)s, i32, +],
+                        |b, i, e| 
+                            merge(b, e)
+                    )
                 )
-            )
+            ),
+            |e| 
+                e.$0
         ),
-        |e| 
-            e.$0
+        |x: %(type)s| 
+            x
     )"""
 
     weld_obj.weld_code = weld_template % {'array': array_var,
@@ -1002,3 +1024,8 @@ def weld_udf(weld_template, mapping):
     weld_obj.weld_code = weld_template % mapping
 
     return weld_obj
+
+
+# TODO: be able to sort a dataframe since the groupby output is expected to be sorted
+def weld_sort():
+    pass

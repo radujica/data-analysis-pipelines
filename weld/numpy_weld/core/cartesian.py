@@ -52,6 +52,7 @@ def _duplicate_elements_indices(array, n, weld_type, cartesian=False):
     return weld_obj
 
 
+# TODO: duplicate elements don't work!
 def duplicate_elements_indices(array, n, cartesian=False):
     """ Expands array by multiplying each element n times
 
@@ -137,6 +138,7 @@ def _duplicate_array_indices(array, n, weld_type, cartesian=False):
     return weld_obj
 
 
+# TODO: duplicate elements don't work!
 def duplicate_array_indices(array, n, cartesian=False):
     """ Duplicate array n times
 
@@ -222,6 +224,7 @@ def _cartesian_product_indices(arrays):
     return weld_obj
 
 
+# TODO: duplicate elements don't work!
 def cartesian_product_indices(arrays, cache=True):
     """ Performs cartesian product between all arrays
 
@@ -288,3 +291,78 @@ def cartesian_product_indices(arrays, cache=True):
                                                      'i': str(i)}
 
     return [LazyResult(obj, WeldLong(), 1) for obj in weld_objects]
+
+
+def _array_to_labels(array, levels, levels_type):
+    weld_obj = WeldObject(_encoder, _decoder)
+
+    array_var = weld_obj.update(array)
+    if isinstance(array, WeldObject):
+        array_var = array.obj_id
+        weld_obj.dependencies[array_var] = array
+
+    levels_var = weld_obj.update(levels)
+    if isinstance(levels, WeldObject):
+        levels_var = levels.obj_id
+        weld_obj.dependencies[levels_var] = levels
+
+    weld_template = """
+    let indices = result(
+        for(%(levels)s,
+            appender[i64],
+            |b, i, e|
+                merge(b, i)
+        )
+    );
+    let indices_dict = result(
+        for(zip(%(levels)s, indices),
+            dictmerger[%(type)s, i64, +],
+            |b, i, e|
+                merge(b, {e.$0, e.$1})        
+        )
+    );
+    result(   
+        for(
+            %(array)s,
+            appender[i64],
+            |b, i, e|
+                merge(b, lookup(indices_dict, e))
+        )
+    )"""
+
+    weld_obj.weld_code = weld_template % {'array': array_var,
+                                          'levels': levels_var,
+                                          'type': levels_type}
+
+    return weld_obj
+
+
+# TODO: does NOT work with duplicates!
+# TODO: this doesn't really belong here
+def array_to_labels(array, levels, levels_type):
+    """ Extracts the indices of the values in the array
+
+    Parameters
+    ----------
+    array : np.ndarray or LazyResult
+        the source data
+    levels : np.ndarray or LazyResult
+        the unique items from the array, currently sorted by default (see TODOs)
+    levels_type : WeldType
+        of the levels
+
+    Returns
+    -------
+    LazyResult
+        the labels for MultiIndex
+
+    """
+    if isinstance(array, LazyResult):
+        array = array.expr
+
+    if isinstance(levels, LazyResult):
+        levels = levels.expr
+
+    return LazyResult(_array_to_labels(array, levels, levels_type),
+                      WeldLong(),
+                      1)
