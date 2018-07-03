@@ -17,15 +17,13 @@ public class RunPipeline {
                 "Start and stop of a subset of the data");
         sliceOption.setRequired(true);
         options.addOption(sliceOption);
-        options.addOption(new Option("o",
+        Option outputOption = new Option("o",
                 "output",
                 true,
-                "Path to output folder"));
-        options.addOption(new Option("c",
-                "check",
-                false,
-                "If passed, create output to check correctness of the pipeline, so output is saved '\n" +
-                "                         'to csv files in --output folder. Otherwise, prints to stdout"));
+                "Path to output folder");
+        outputOption.setRequired(true);
+        options.addOption(outputOption);
+
 
         CommandLineParser parser = new DefaultParser();
         HelpFormatter formatter = new HelpFormatter();
@@ -35,14 +33,7 @@ public class RunPipeline {
             cmd = parser.parse(options, args);
             String input = cmd.getOptionValue("input");
             String slice = cmd.getOptionValue("slice");
-            String output = null;
-            if (cmd.hasOption("check")) {
-                if (!cmd.hasOption("output")) {
-                    throw new RuntimeException("if checking, require --output arg");
-                }
-
-                output = cmd.getOptionValue("output");
-            }
+            String output = cmd.getOptionValue("output");
 
             new Pipeline().start(input, slice, output);
         } catch (IOException e) {

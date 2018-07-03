@@ -1,8 +1,7 @@
 from __future__ import print_function
-from datetime import datetime
 
 import argparse
-import sys
+from datetime import datetime
 
 import os
 from weld.weldobject import WeldObject
@@ -12,16 +11,9 @@ import pandas_weld as pdw
 parser = argparse.ArgumentParser(description='Weld Pipeline')
 parser.add_argument('-i', '--input', required=True, help='Path to folder containing input files')
 parser.add_argument('-s', '--slice', required=True, help='Start and stop of a subset of the data')
-parser.add_argument('-o', '--output', help='Path to output folder')
-# TODO: remove; redundant; implied by --output
-parser.add_argument('-c', '--check', action='store_true', default=False,
-                    help='If passed, create output to check correctness of the pipeline, so output is saved '
-                         'to csv files in --output folder. Otherwise, prints to stdout')
+parser.add_argument('-o', '--output', required=True, help='Path to output folder')
 parser.add_argument('-e', '--eager', action='store_true')
 args = parser.parse_args()
-
-if args.check and args.output is None:
-    raise RuntimeError('--check requires an output folder path')
 
 PATH1 = args.input + 'data1.nc'
 PATH2 = args.input + 'data2.nc'
@@ -35,26 +27,23 @@ else:
 
 
 def print_event(name):
-    print('#{}-{}'.format(str(datetime.now()), name))
+    print('#{}-{}'.format(datetime.now().strftime('%H:%M:%S'), name))
 
 
-print_event('data_read')
+print_event('done_read')
 
 
 # PIPELINE
 # 1. join the 2 dataframes
 df = df1.merge(df2)
 
-print_event('data_merged')
-
 # 2. quick preview on the data
 df_head = df.head(10)
-if args.check:
-    df_head.to_csv(args.output + 'head' + '.csv')
-else:
-    print(df_head, file=sys.stderr)
 
 print_event('done_head')
+
+df_head.to_csv(args.output + 'head' + '.csv')
+
 
 # 3. want a subset of the data
 slice_ = [int(x) for x in args.slice.split(':')]
@@ -84,12 +73,11 @@ df_agg = df.agg(['min', 'max', 'mean', 'std'])\
     .reset_index()\
     .rename(columns={'Index': 'agg'})\
     .evaluate()
-if args.check:
-    df_agg.to_csv(args.output + 'agg' + '.csv', index=False)
-else:
-    print(df_agg, file=sys.stderr)
 
 print_event('done_agg')
+
+df_agg.to_csv(args.output + 'agg' + '.csv', index=False)
+
 
 # 8. compute mean per month
 # need index as columns
@@ -110,13 +98,11 @@ df_grouped = df[['latitude', 'longitude', 'year_month', 'tg', 'tn', 'tx', 'pp', 
     .groupby(['latitude', 'longitude', 'year_month']) \
     .mean() \
     .rename(columns={'tg': 'tg_mean', 'tn': 'tn_mean', 'tx': 'tx_mean', 'pp': 'pp_mean', 'rr': 'rr_mean'}) \
+    .drop('year_month')\
     .reset_index()\
+    .sum()\
     .evaluate()
 
-# 9. EVALUATE
-if args.check:
-    df.evaluate().to_csv(args.output + 'result' + '.csv', index=False)
-else:
-    print(df.evaluate(), file=sys.stderr)
+print_event('done_groupby')
 
-print_event('done_evaluate')
+df_grouped.to_csv(args.output + 'grouped' + '.csv', index=False)

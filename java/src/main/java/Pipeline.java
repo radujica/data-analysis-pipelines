@@ -10,6 +10,8 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Map;
 
 // TODO: convert for loops to streams? no native support for floats though
@@ -17,6 +19,8 @@ import java.util.Map;
 public class Pipeline  {
     private static final String CALENDAR = "proleptic_gregorian";
     private static final String UNITS = "days since 1950-01-01";
+    private static final Calendar cal = Calendar.getInstance();
+    private static final SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
 
     private Object readVariable(Variable variable) throws IOException {
         Class<?> dataType = variable.getDataType().getPrimitiveClassType();
@@ -119,6 +123,9 @@ public class Pipeline  {
                 } else if (columnData.getClass().equals(String[].class)) {
                     String[] rawData = (String[]) columnData;
                     rowData[j] = rawData[i];
+                } else if (columnData.getClass().equals(double[].class)) {
+                    double[] rawData = (double[]) columnData;
+                    rowData[j] = rawData[i];
                 }
             }
             csvPrinter.printRecord(rowData);
@@ -127,9 +134,15 @@ public class Pipeline  {
         csvPrinter.close(); // automatically flushes first
     }
 
+    private void printEvent(String name) {
+        System.out.printf("#%s-%s", sdf.format(cal.getTime()), name);
+    }
+
     public void start(String input, String slice, String output) throws IOException {
         DataFrame df1 = readData(input + "data1.nc");
         DataFrame df2 = readData(input + "data2.nc");
+
+        printEvent("done_read");
 
         // PIPELINE
         // 1. join the 2 dataframes
@@ -137,11 +150,10 @@ public class Pipeline  {
 
         // 2. quick preview on the data
         DataFrame df_head = df.subset(0, 10);
-        if (output == null) {
-            print(df_head);
-        } else {
-            toCsv(df_head, output + "head.csv");
-        }
+
+        printEvent("done_head");
+
+        toCsv(df_head, output + "head.csv");
 
         // 3. subset the data
         String[] slice_ = slice.split(":");
@@ -159,11 +171,10 @@ public class Pipeline  {
 
         // 7. explore the data through aggregations
         DataFrame df_agg = df.aggregations();
-        if (output == null) {
-            print(df_agg);
-        } else {
-            toCsv(df_agg, output + "agg.csv");
-        }
+
+        printEvent("done_agg");
+
+        toCsv(df_agg, output + "agg.csv");
 
 
         // 8. compute mean per month
@@ -173,11 +184,8 @@ public class Pipeline  {
         df = df.groupBy();
         df.pop("year_month");
 
-        // careful with this! prints all
-        if (output == null) {
-            print(df);
-        } else {
-            toCsv(df, output + "result.csv");
-        }
+        printEvent("done_groupby");
+
+        toCsv(df, output + "grouped.csv");
     }
 }

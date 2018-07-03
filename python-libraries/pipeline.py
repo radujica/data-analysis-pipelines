@@ -1,4 +1,5 @@
 import argparse
+from datetime import datetime
 
 import numpy as np
 
@@ -7,20 +8,22 @@ from netcdf_parser import to_dataframe
 parser = argparse.ArgumentParser(description='Python-libraries Pipeline')
 parser.add_argument('-i', '--input', required=True, help='Path to folder containing input files')
 parser.add_argument('-s', '--slice', required=True, help='Start and stop of a subset of the data')
-parser.add_argument('-o', '--output', help='Path to output folder')
-parser.add_argument('-c', '--check', action='store_true', default=False,
-                    help='If passed, create output to check correctness of the pipeline, so output is saved '
-                         'to csv files in --output folder. Otherwise, prints to stdout')
+parser.add_argument('-o', '--output', required=True, help='Path to output folder')
 args = parser.parse_args()
-
-if args.check and args.output is None:
-    raise RuntimeError('--check requires an output folder path')
 
 PATH1 = args.input + 'data1.nc'
 PATH2 = args.input + 'data2.nc'
 
+
+def print_event(name):
+    print('#{}-{}'.format(datetime.now().strftime('%H:%M:%S'), name))
+
+
 df1 = to_dataframe(PATH1)
 df2 = to_dataframe(PATH2)
+
+
+print_event('done_read')
 
 
 def save_csv(dataframe, name, index=True):
@@ -33,14 +36,12 @@ df = df1.join(df2, how='inner', sort=False)
 
 # 2. quick preview on the data
 df_head = df.head(10)
-if args.check:
-    save_csv(df_head, 'head')
-else:
-    print(df_head)
 
-# 3. want a subset of the data, approx. 33%, here only latitude >= 42.375 & <= 60.125 (~ mainland Europe)
-# equivalent to df_r[(df_r['latitude'] >= 42.25) & (df_r['latitude'] <= 60.25)], where df_r = df.reset_index() and
-# latitude is the first dimension
+print_event('done_head')
+
+save_csv(df_head, 'head')
+
+# 3. want a subset of the data, approx. 33%
 slice_ = [int(x) for x in args.slice.split(':')]
 df = df[slice_[0]:slice_[1]]
 
@@ -63,12 +64,12 @@ df['abs_diff'] = compute_abs_maxmin(df['tx'], df['tn'])
 df_agg = df.agg(['min', 'max', 'mean', 'std'])\
     .reset_index()\
     .rename(columns={'index': 'agg'})
-if args.check:
-    save_csv(df_agg, 'agg', index=False)    # EVALUATE STEP
-else:
-    print(df_agg)
 
-# 8. compute std per month
+print_event('done_agg')
+
+save_csv(df_agg, 'agg', index=False)
+
+# 8. compute mean per month
 # need index as columns
 df = df.reset_index()
 # UDF 2: compute custom year+month format
@@ -78,15 +79,10 @@ df_grouped = df[['latitude', 'longitude', 'year_month', 'tg', 'tn', 'tx', 'pp', 
     .groupby(['latitude', 'longitude', 'year_month']) \
     .mean() \
     .rename(columns={'tg': 'tg_mean', 'tn': 'tn_mean', 'tx': 'tx_mean', 'pp': 'pp_mean', 'rr': 'rr_mean'}) \
-    .reset_index()
-# merge the results; TODO: this will probably be another EVALUATE STEP to avoid the merge
-df = df.merge(df_grouped, on=['latitude', 'longitude', 'year_month'], how='inner')
-# clean up
-del df_grouped
-df = df.drop('year_month', axis=1)
+    .df.drop('year_month', axis=1)\
+    .reset_index()\
+    .sum()
 
-# 9. EVALUATE
-if args.check:
-    save_csv(df, 'result', index=False)
-else:
-    print(df)
+print_event('done_groupby')
+
+save_csv(df, 'grouped', index=False)

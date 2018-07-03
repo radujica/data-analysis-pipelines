@@ -1,5 +1,7 @@
 import java.io.IOException
+import java.text.SimpleDateFormat
 import java.util
+import java.util.Calendar
 
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.spark.rdd.RDD
@@ -16,6 +18,8 @@ import scala.collection.mutable.ListBuffer
 object Main {
   private val CALENDAR: String = "proleptic_gregorian"
   private val UNITS: String = "days since 1950-01-01"
+  private val timeFormat = new SimpleDateFormat("HH:mm:ss")
+  private val calendarInstance = Calendar.getInstance()
 
   // TODO: read directly as required type
   @throws[IOException]
@@ -84,6 +88,10 @@ object Main {
     df.withColumn("time", floatTimeToString(df("time")))
   }
 
+  private def printEvent(name : String): Unit = {
+    println(timeFormat.format(calendarInstance.getTime))
+  }
+
   type ArgsMap = Map[Symbol, Any]
   @throws(classOf[RuntimeException])
   def parseArgs(map : ArgsMap, list: List[String]) : ArgsMap = {
@@ -97,18 +105,16 @@ object Main {
         parseArgs(map ++ Map('slice -> value), tail)
       case "--output" :: value :: tail =>
         parseArgs(map ++ Map('output -> value), tail)
-      case "--check" :: tail =>
-        parseArgs(map ++ Map('check -> true), tail)
-        //stop parsing here and catch in main
+      //stop parsing here and catch in main
       case string => throw new RuntimeException("invalid argument: " + string)
     }
   }
 
   def main(args: Array[String]): Unit = {
-    val validNumberArgs: List[Int] = List(6, 9)
+    val validNumberArgs: List[Int] = List(5, 8)
     if (!validNumberArgs.contains(args.length)) {
       throw new RuntimeException("Usage: --input <path> --partitions <number_partitions> --slice <a:b> or: " +
-        "--input <path> --partitions <number_partitions> --slice <a:b> --output <path> --check")
+        "--input <path> --partitions <number_partitions> --slice <a:b> --output <path>")
     }
     val options = parseArgs(Map(), args.toList)
 
@@ -123,25 +129,24 @@ object Main {
     val df2: DataFrame = readData(options('input) + "data2.nc", spark, dimensions, createIndex = false, numberPartitions)
       .repartition(numberPartitions, col("longitude"), col("latitude"), col("time"))
 
+    printEvent("done_read")
+
     // PIPELINE
     // 1. join the 2 dataframes
     var df: DataFrame = df1.join(df2, dimensions, "inner").cache()
 
     // 2. quick preview on the data
-    if (options.contains('check)) {
-      // this will not actually be the first 10 rows, so don't compare for correctness; to select the actual first 10
-      // would require more unnecessary work for spark (bringing all data to driver)
-      df.limit(10)
-        .coalesce(1)
-        .write
-        .option("header", "true")
-        .csv(options('output) + "head")
-    } else {
-      println(df.show(10))
-    }
+    df.show(10)
+    printEvent("done_head")
+    // don't print to csv as it requires extra computation
+//    df.limit(10)
+//    .coalesce(1)
+//    .write
+//    .option("header", "true")
+//    .csv(options('output) + "head")
 
     // 3. subset the data
-    // the only way to select by row number; more effectively would be to just filter by latitude as intended, though
+    // the only way to select by row number; more effectively would be to just filter by longitude as intended, though
     // this deviates even further from the other pipeline implementations
     val slice: Array[String] = options('slice).asInstanceOf[String].split(":")
     df = df.filter(df("index") >= slice(0).toFloat && df("index") < slice(1).toFloat)
@@ -158,16 +163,15 @@ object Main {
     // 7. explore the data through aggregations
     val df_agg = df.drop("longitude", "latitude", "time")
       .summary("min", "max", "mean", "stddev")
-    if (options.contains('check)) {
-      df_agg.coalesce(1)
-        .withColumnRenamed("summary", "agg")
-        .withColumn("agg", when(col("agg") === "stddev", "std").otherwise(col("agg")))
-        .write
-        .option("header", "true")
-        .csv(options('output) + "agg")
-    } else {
-      println(df_agg.show())
-    }
+
+    printEvent("done_agg")
+
+    df_agg.coalesce(1)
+      .withColumnRenamed("summary", "agg")
+      .withColumn("agg", when(col("agg") === "stddev", "std").otherwise(col("agg")))
+      .write
+      .option("header", "true")
+      .csv(options('output) + "agg")
 
     // 8. compute mean per month
     // UDF 2: compute custom year+month format
@@ -178,39 +182,29 @@ object Main {
     // group by
     val columnsToAgg: Array[String] = Array("tg", "tn", "tx", "pp", "rr")
     val groupOn: Seq[String] = Seq("longitude", "latitude", "year_month")
-    val grouped: DataFrame = df.groupBy(groupOn.head, groupOn.drop(1): _*)
+    val grouped_df: DataFrame = df.groupBy(groupOn.head, groupOn.drop(1): _*)
       .agg(columnsToAgg.map(column => column -> "mean").toMap)
-    // join
-    df = df.join(grouped, groupOn)
-    df = df.drop("year_month")
+      .drop("year_month")
 
-    // final evaluate
-    if (options.contains('check)) {
-      // want a single output file which means all data must fit in the memory of 1 machine;
-      // for this experiment, this is expected
-      df.coalesce(1)
-        .withColumnRenamed("avg(tg)", "tg_mean")
-        .withColumnRenamed("avg(tn)", "tn_mean")
-        .withColumnRenamed("avg(tx)", "tx_mean")
-        .withColumnRenamed("avg(rr)", "rr_mean")
-        .withColumnRenamed("avg(pp)", "pp_mean")
-        .orderBy("longitude", "latitude", "time")
-        .write
-        .option("header", "true")
-        .csv(options('output) + "result")
-    } else {
-      println(df.collect())
-    }
+    printEvent("done_groupby")
+
+    grouped_df.coalesce(1)
+      .withColumnRenamed("avg(tg)", "tg_mean")
+      .withColumnRenamed("avg(tn)", "tn_mean")
+      .withColumnRenamed("avg(tx)", "tx_mean")
+      .withColumnRenamed("avg(rr)", "rr_mean")
+      .withColumnRenamed("avg(pp)", "pp_mean")
+      .write
+      .option("header", "true")
+      .csv(options('output) + "grouped")
 
     // final rename of output csv's
-    if (options.contains('check)) {
-      val fs = FileSystem.get(spark.sparkContext.hadoopConfiguration)
-      val files: List[String] = List("head", "agg", "result")
-      for (f <- files) {
-        val file = fs.globStatus(new Path(options('output) + f + "/part*"))(0).getPath.getName
-        fs.rename(new Path(options('output) + f + "/" + file), new Path(options('output) + f + ".csv"))
-        fs.delete(new Path(options('output) + f), true)
-      }
+    val fs = FileSystem.get(spark.sparkContext.hadoopConfiguration)
+    val files: List[String] = List("head", "agg", "result")
+    for (f <- files) {
+      val file = fs.globStatus(new Path(options('output) + f + "/part*"))(0).getPath.getName
+      fs.rename(new Path(options('output) + f + "/" + file), new Path(options('output) + f + ".csv"))
+      fs.delete(new Path(options('output) + f), true)
     }
 
     spark.stop()

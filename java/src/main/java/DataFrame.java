@@ -340,12 +340,12 @@ public class DataFrame {
         return df;
     }
 
-    private float computeMean(float[] columnData, List<Integer> groupMembers) {
-        float sum = 0;
+    private double computeMean(float[] columnData, List<Integer> groupMembers) {
+        double sum = 0;
         for (int i : groupMembers) {
             sum += columnData[i];
         }
-        return sum / ((float) groupMembers.size());
+        return sum / groupMembers.size();
     }
 
     private class Key {
@@ -381,9 +381,6 @@ public class DataFrame {
 
     DataFrame groupBy() {
         DataFrame result = new DataFrame(this.size);
-        for (Map.Entry<String, Object> entry : this.data.entrySet()) {
-            result.put(entry.getKey(), entry.getValue());
-        }
 
         String[] groupOn = {"longitude", "latitude", "year_month"};
         String[] aggregateOn = {"tg", "tn", "tx", "pp", "rr"};
@@ -414,33 +411,30 @@ public class DataFrame {
         }
 
         // can already store the means in the new column; fake join
-        float[] meansTg = new float[lon.length];
-        float[] meansTn = new float[lon.length];
-        float[] meansTx = new float[lon.length];
-        float[] meansPp = new float[lon.length];
-        float[] meansRr = new float[lon.length];
+        double[] meansTg = new double[groups.size()];
+        double[] meansTn = new double[groups.size()];
+        double[] meansTx = new double[groups.size()];
+        double[] meansPp = new double[groups.size()];
+        double[] meansRr = new double[groups.size()];
+        int i = 0;
         for (Map.Entry entry : groups.entrySet()) {
             List<Integer> groupMembers = (List<Integer>) entry.getValue();
-            float mean = computeMean(tg, groupMembers);
-            for (int i : groupMembers) {
-                meansTg[i] = mean;
-            }
+            double mean = computeMean(tg, groupMembers);
+            meansTg[i] = mean;
+
             mean = computeMean(tn, groupMembers);
-            for (int i : groupMembers) {
-                meansTn[i] = mean;
-            }
+            meansTn[i] = mean;
+
             mean = computeMean(tx, groupMembers);
-            for (int i : groupMembers) {
-                meansTx[i] = mean;
-            }
+            meansTx[i] = mean;
+
             mean = computeMean(pp, groupMembers);
-            for (int i : groupMembers) {
-                meansPp[i] = mean;
-            }
+            meansPp[i] = mean;
+
             mean = computeMean(rr, groupMembers);
-            for (int i : groupMembers) {
-                meansRr[i] = mean;
-            }
+            meansRr[i] = mean;
+
+            i++;
         }
         result.put("tg_mean", meansTg);
         result.put("tn_mean", meansTn);
