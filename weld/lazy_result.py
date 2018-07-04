@@ -39,6 +39,7 @@ class LazyResult(LazyOpResult):
     # to be able to set it globally (and compare with vs without)
     _cache_flag = False if os.getenv("LAZY_WELD_CACHE") == 'False' else True
     _threads = int(os.getenv("WELD_NUMBER_THREADS"))
+    _experimental = False if os.getenv("WELD_APPLY_EXPERIMENTAL") == 'False' else True
 
     def __init__(self, expr, weld_type, dim):
         super(LazyResult, self).__init__(expr, weld_type, dim)
@@ -287,6 +288,7 @@ class LazyResult(LazyOpResult):
                  apply_experimental_transforms=False):
 
         num_threads = LazyResult._threads
+        apply_experimental_transforms = LazyResult._experimental
 
         if isinstance(self.expr, WeldObject):
             # replace context values for every lazy recorded file input
