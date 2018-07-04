@@ -107,7 +107,8 @@ function main()
     cols = [:tg, :tn, :tx, :pp, :rr]
     new_cols = [Symbol(string(k) * "_mean") for k in cols]
     grouped_df = by(df[[on; cols]], on, df -> DataFrame(OrderedDict(zip(new_cols, colwise(mean, df[cols])))))
-    delete!(grouped_df, :year_month)
+    delete!(grouped_df, [:longitude, :latitude, :year_month])
+    grouped_df = DataFrame(OrderedDict("column" => new_cols, "grouped_sum" => colwise(sum, grouped_df)))
 
     print_event("done_groupby")
 

@@ -175,7 +175,7 @@ class DataFrame(object):
         else:
             raise TypeError('expected a str, slice, list, or Series in DataFrame.__getitem__')
 
-    def head(self, n=10, verbose=False, decode=True, passes=None,
+    def head(self, n=10, verbose=True, decode=True, passes=None,
              num_threads=1, apply_experimental_transforms=False):
         """ Eagerly evaluates the DataFrame
 
@@ -326,7 +326,7 @@ class DataFrame(object):
 
     # TODO: currently converts everything to float64; should act according to the input types
     # TODO: if there are strings it will fail, while in pandas for sum they are concatenated and prod are ignored
-    def _aggregate(self, operation, verbose=False, decode=True, passes=None,
+    def _aggregate(self, operation, verbose=True, decode=True, passes=None,
                    num_threads=1, apply_experimental_transforms=False):
         assert isinstance(operation, (str, unicode))
 
@@ -348,7 +348,7 @@ class DataFrame(object):
                       np.dtype(np.float64),
                       Index(np.array(index).astype(np.str), np.dtype(np.str)))
 
-    def sum(self, verbose=False, decode=True, passes=None,
+    def sum(self, verbose=True, decode=True, passes=None,
             num_threads=1, apply_experimental_transforms=False):
         """ Eager operation to sum all elements in their respective columns
 
@@ -366,7 +366,7 @@ class DataFrame(object):
         return self._aggregate('+', verbose, decode, passes,
                                num_threads, apply_experimental_transforms)
 
-    def prod(self, verbose=False, decode=True, passes=None,
+    def prod(self, verbose=True, decode=True, passes=None,
              num_threads=1, apply_experimental_transforms=False):
         """ Eager operation to multiply all elements in their respective columns
 
@@ -384,7 +384,7 @@ class DataFrame(object):
         return self._aggregate('*', verbose, decode, passes,
                                num_threads, apply_experimental_transforms)
 
-    def min(self, verbose=False, decode=True, passes=None,
+    def min(self, verbose=True, decode=True, passes=None,
             num_threads=1, apply_experimental_transforms=False):
         """ Eager operation to find the min value in each column
 
@@ -402,7 +402,7 @@ class DataFrame(object):
         return self._aggregate('min', verbose, decode, passes,
                                num_threads, apply_experimental_transforms)
 
-    def max(self, verbose=False, decode=True, passes=None,
+    def max(self, verbose=True, decode=True, passes=None,
             num_threads=1, apply_experimental_transforms=False):
         """ Eager operation to find the max value in each column
 
@@ -420,7 +420,7 @@ class DataFrame(object):
         return self._aggregate('max', verbose, decode, passes,
                                num_threads, apply_experimental_transforms)
 
-    def count(self, verbose=False, decode=True, passes=None,
+    def count(self, verbose=True, decode=True, passes=None,
               num_threads=1, apply_experimental_transforms=False):
         """ Eager operation to count the number of values in each column
 
@@ -449,7 +449,7 @@ class DataFrame(object):
                       Index(np.array(index).astype(np.str), np.dtype(np.str)))
 
     # see TODO at Series.mean()
-    def mean(self, verbose=False, decode=True, passes=None,
+    def mean(self, verbose=True, decode=True, passes=None,
              num_threads=1, apply_experimental_transforms=False):
         """ Eager operation to compute the mean of the values in each column
 
@@ -478,7 +478,7 @@ class DataFrame(object):
                       Index(np.array(index).astype(np.str), np.dtype(np.str)))
 
     # see TODO at Series.std()
-    def std(self, verbose=False, decode=True, passes=None,
+    def std(self, verbose=True, decode=True, passes=None,
             num_threads=1, apply_experimental_transforms=False):
         """ Eager operation to compute the standard deviation of the values in each column
 
@@ -565,7 +565,7 @@ class DataFrame(object):
 
         return DataFrame(new_data, new_index)
 
-    def agg(self, aggregations, verbose=False, decode=True, passes=None,
+    def agg(self, aggregations, verbose=True, decode=True, passes=None,
             num_threads=1, apply_experimental_transforms=False):
         """ Eagerly aggregate the columns on multiple queries
 

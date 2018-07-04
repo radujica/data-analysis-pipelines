@@ -241,7 +241,7 @@ class Series(LazyResult):
                           WeldDouble(),
                           0)
 
-    def agg(self, aggregations, verbose=False, decode=True, passes=None,
+    def agg(self, aggregations, verbose=True, decode=True, passes=None,
             num_threads=1, apply_experimental_transforms=False):
         """ Eagerly aggregate on multiple queries
 
@@ -315,3 +315,10 @@ class Series(LazyResult):
                       self.dtype,
                       self.index,
                       self.name)
+
+    def to_frame(self, name=None):
+        from frame import DataFrame
+
+        new_name = name if name is not None else self.name
+
+        return DataFrame({new_name: self.expr}, self.index)

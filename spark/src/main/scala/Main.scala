@@ -6,7 +6,7 @@ import java.util.Calendar
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.functions.{abs, col, udf, when}
-import org.apache.spark.sql.types.{FloatType, StructField, StructType}
+import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 import ucar.nc2.time.CalendarDate
 import ucar.nc2.{NetcdfFile, Variable}
@@ -38,12 +38,69 @@ object Main {
     data
   }
 
+  def cartesianArray(a: Array[Float], b: Array[Float], c: Array[Float]): Array[Array[Float]] = {
+    val totalLength = a.length * b.length * c.length
+    val long = new Array[Float](totalLength)
+    val lat = new Array[Float](totalLength)
+    val time = new Array[Float](totalLength)
+    var i = 0
+    for { x <- a; y <- b; z <- c } {
+      long(i) = x
+      lat(i) = y
+      time(i) = z
+      i += 1
+    }
+                                                
+    Array(long, lat, time)
+  }
+
   def cartesian[X, Y, Z](a: Array[X], b: Array[Y], c: Array[Z]): Array[ListBuffer[_]] = {
     for { x <- a; y <- b; z <- c } yield ListBuffer(x, y, z)
   }
 
+  @throws[IOException]
+  private def readDataDriver(path: String, ss: SparkSession, size: Int, addIndex: Boolean, numPartitions: Int): DataFrame = {
+    val file = NetcdfFile.open(path)
+    var sizeF = size
+    if (addIndex) sizeF += 1
+    val data: Array[Array[Float]] = new Array[Array[Float]](sizeF)
+    val names: Array[String] = new Array[String](sizeF)
+    var i = 0
+    for (variable : Variable <- file.getVariables) {
+      data(i) = readVariable(variable)
+      names(i) = variable.getShortName
+      i += 1
+    }
+
+    // cartesian product for dimensions
+    val dimensions = cartesianArray(data(names.indexOf("longitude")),
+      data(names.indexOf("latitude")),
+      data(names.indexOf("time")))
+    data(names.indexOf("longitude")) = dimensions(0)
+    data(names.indexOf("latitude")) = dimensions(1)
+    data(names.indexOf("time")) = dimensions(2)
+
+    // add index column (needed for subset by row numbers)
+    if (addIndex) {
+      data(i) = Array.tabulate(data(0).length)(_ + 1)
+      names(i) = "index"
+    }
+
+    val rdd: RDD[Row] = ss.sparkContext.parallelize(data.transpose.toSeq.map(x => Row.fromSeq(x.toSeq)), numPartitions)
+
+    val df: DataFrame = ss.createDataFrame(rdd, StructType(names.map(StructField(_, FloatType, nullable = false)).toSeq))
+
+    // convert time from (float) to String
+    val floatTimeToString = udf((time: Float) => {
+      val udunits = String.valueOf(time.asInstanceOf[Int]) + " " + UNITS
+
+      CalendarDate.parseUdunits(CALENDAR, udunits).toString.substring(0, 10)
+    })
+    df.withColumn("time", floatTimeToString(df("time")))
+  }
+
   // actually expects 3 dimensions; TODO: generalize
-  private def readData(path: String, ss: SparkSession, dims: List[String], createIndex: Boolean, numPartitions: Int): DataFrame = {
+  private def readDataRDD(path: String, ss: SparkSession, dims: List[String], createIndex: Boolean, numPartitions: Int): DataFrame = {
     val file: NetcdfFile = NetcdfFile.open(path)
     val vars: util.List[Variable] = file.getVariables
     // split variables into dimensions and regular data
@@ -89,7 +146,8 @@ object Main {
   }
 
   private def printEvent(name : String): Unit = {
-    println(timeFormat.format(calendarInstance.getTime))
+    println("#" + timeFormat.format(calendarInstance.getTime) + "-" + name)
+    Console.out.flush()
   }
 
   type ArgsMap = Map[Symbol, Any]
@@ -124,10 +182,14 @@ object Main {
 
     val dimensions: List[String] = List("longitude", "latitude", "time")
     val numberPartitions = options('partitions).asInstanceOf[Int]
-    val df1: DataFrame = readData(options('input) + "data1.nc", spark, dimensions, createIndex = true, numberPartitions)
+    val df1: DataFrame = readDataRDD(options('input) + "data1.nc", spark, dimensions, createIndex = true, numberPartitions)
       .repartition(numberPartitions, col("longitude"), col("latitude"), col("time"))
-    val df2: DataFrame = readData(options('input) + "data2.nc", spark, dimensions, createIndex = false, numberPartitions)
+    val df2: DataFrame = readDataRDD(options('input) + "data2.nc", spark, dimensions, createIndex = false, numberPartitions)
       .repartition(numberPartitions, col("longitude"), col("latitude"), col("time"))
+    //val df1: DataFrame = readDataDriver(options('input) + "data1.nc", spark, 9, addIndex = true, numberPartitions)
+    //                 .repartition(numberPartitions, col("longitude"), col("latitude"), col("time"))
+    //val df2: DataFrame = readDataDriver(options('input) + "data2.nc", spark, 7, addIndex = false, numberPartitions)
+    //                     .repartition(numberPartitions, col("longitude"), col("latitude"), col("time"))
 
     printEvent("done_read")
 
@@ -136,9 +198,9 @@ object Main {
     var df: DataFrame = df1.join(df2, dimensions, "inner").cache()
 
     // 2. quick preview on the data
-    df.show(10)
+    System.err.print(df.show(10))
     printEvent("done_head")
-    // don't print to csv as it requires extra computation
+    // don't print to csv as it requires extra computation, also for correct order
 //    df.limit(10)
 //    .coalesce(1)
 //    .write
@@ -163,15 +225,14 @@ object Main {
     // 7. explore the data through aggregations
     val df_agg = df.drop("longitude", "latitude", "time")
       .summary("min", "max", "mean", "stddev")
-
-    printEvent("done_agg")
-
-    df_agg.coalesce(1)
       .withColumnRenamed("summary", "agg")
       .withColumn("agg", when(col("agg") === "stddev", "std").otherwise(col("agg")))
+      .coalesce(1)
       .write
       .option("header", "true")
       .csv(options('output) + "agg")
+
+    printEvent("done_agg")
 
     // 8. compute mean per month
     // UDF 2: compute custom year+month format
@@ -184,28 +245,42 @@ object Main {
     val groupOn: Seq[String] = Seq("longitude", "latitude", "year_month")
     val grouped_df: DataFrame = df.groupBy(groupOn.head, groupOn.drop(1): _*)
       .agg(columnsToAgg.map(column => column -> "mean").toMap)
-      .drop("year_month")
+      .drop("longitude", "latitude", "year_month")
 
-    printEvent("done_groupby")
-
-    grouped_df.coalesce(1)
+    val columnsToSum: Array[String] = Array("tg_mean", "tn_mean", "tx_mean", "rr_mean", "pp_mean")
+    val grouped: Row  = grouped_df
       .withColumnRenamed("avg(tg)", "tg_mean")
       .withColumnRenamed("avg(tn)", "tn_mean")
       .withColumnRenamed("avg(tx)", "tx_mean")
       .withColumnRenamed("avg(rr)", "rr_mean")
       .withColumnRenamed("avg(pp)", "pp_mean")
+      .agg(columnsToSum.map(column => column -> "sum").toMap)
+      .withColumnRenamed("sum(tg_mean)", "tg_mean")
+      .withColumnRenamed("sum(tn_mean)", "tn_mean")
+      .withColumnRenamed("sum(tx_mean)", "tx_mean")
+      .withColumnRenamed("sum(rr_mean)", "rr_mean")
+      .withColumnRenamed("sum(pp_mean)", "pp_mean")
+      .coalesce(1)
+      .collect()(0)
+    val groupedAsMap: Map[String, Any] = grouped.getValuesMap(grouped.schema.fieldNames)
+    spark.createDataFrame(groupedAsMap.toList.map(x => Row(x._1, x._2)),
+      StructType(List(StructField("column", StringType, nullable = false),
+                      StructField("grouped_sum", DoubleType, nullable = false))))
+      .coalesce(1)
       .write
       .option("header", "true")
       .csv(options('output) + "grouped")
 
+    printEvent("done_groupby")
+
     // final rename of output csv's
-    val fs = FileSystem.get(spark.sparkContext.hadoopConfiguration)
-    val files: List[String] = List("head", "agg", "result")
-    for (f <- files) {
-      val file = fs.globStatus(new Path(options('output) + f + "/part*"))(0).getPath.getName
-      fs.rename(new Path(options('output) + f + "/" + file), new Path(options('output) + f + ".csv"))
-      fs.delete(new Path(options('output) + f), true)
-    }
+    //val fs = FileSystem.get(spark.sparkContext.hadoopConfiguration)
+    //val files: List[String] = List("head", "agg", "grouped")
+    //for (f <- files) {
+    //  val file = fs.globStatus(new Path(options('output) + f + "/part*"))(0).getPath.toString
+    //  fs.rename(new Path(file), new Path(options('output) + f + ".csv"))
+    //  fs.delete(new Path(options('output) + f), true)
+    //}
 
     spark.stop()
   }

@@ -61,8 +61,8 @@ def compute_abs_maxmin(series_max, series_min):
 df['abs_diff'] = compute_abs_maxmin(df['tx'], df['tn'])
 
 # 7. explore the data through aggregations
-df_agg = df.agg(['min', 'max', 'mean', 'std'])\
-    .reset_index()\
+df_agg = df.agg(['min', 'max', 'mean', 'std']) \
+    .reset_index() \
     .rename(columns={'index': 'agg'})
 
 print_event('done_agg')
@@ -79,10 +79,13 @@ df_grouped = df[['latitude', 'longitude', 'year_month', 'tg', 'tn', 'tx', 'pp', 
     .groupby(['latitude', 'longitude', 'year_month']) \
     .mean() \
     .rename(columns={'tg': 'tg_mean', 'tn': 'tn_mean', 'tx': 'tx_mean', 'pp': 'pp_mean', 'rr': 'rr_mean'}) \
-    .df.drop('year_month', axis=1)\
-    .reset_index()\
-    .sum()
+    .reset_index() \
+    .drop(['latitude', 'longitude', 'year_month'], axis=1) \
+    .sum() \
+    .to_frame('grouped_sum') \
+    .reset_index() \
+    .rename(columns={'index': 'column'})
 
 print_event('done_groupby')
 
-save_csv(df, 'grouped', index=False)
+save_csv(df_grouped, 'grouped', index=False)

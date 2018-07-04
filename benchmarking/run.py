@@ -5,23 +5,26 @@ import os
 
 "Script to run any/all benchmarks. This script only generates data"
 
-# nohup pipenv run python run.py &
+# tmux
+# pipenv run python -u run.py &> progress.txt
+# <ctrl-b & d>
+# tmux attach
 
 HOME2 = os.environ.get('HOME2')
 if HOME2 is None:
     raise RuntimeError('Cannot find HOME2 environment variable')
 
-all_pipelines = {'python-libraries': ('python-libraries', 'pipenv run python pipeline.py'),
-                 'weld-single': ('weld', 'pipenv run python pipeline.py --threads 1'),
-                 'weld-multi': ('weld', 'pipenv run python pipeline.py --threads 32'),
-                 'julia': ('julia', 'julia pipeline.jl'),
-                 'java': ('java', 'java -jar build/libs/pipeline.jar'),
-                 'R': ('R', 'R -f arg.R --args'),
-                 'spark-single': ('spark', 'spark-submit --master "local[1] --conf "spark.sql.shuffle.partitions=10" --driver-memory 200g \
-        target/scala-2.11/spark-assembly-1.0.jar --partitions 10'),
-                 'spark-multi': ('spark', 'spark-submit --master "local[32] --conf "spark.sql.shuffle.partitions=320" --driver-memory 200g \
-        target/scala-2.11/spark-assembly-1.0.jar --partitions 320')}
-number_runs = 3
+all_pipelines = {'python-libraries': ('python-libraries', ['pipenv', 'run', 'python', 'pipeline.py']),
+                 'weld-single': ('weld', ['pipenv', 'run', 'python', 'pipeline.py', '--threads', '1']),
+                 'weld-par': ('weld', ['pipenv', 'run', 'python', 'pipeline.py', '--threads', '32']),
+                 'julia': ('julia', ['julia', 'pipeline.jl']),
+                 'java': ('java', ['java', '-jar', 'build/libs/pipeline.jar']),
+                 'R': ('R', ['R', '-f', 'arg.R', '--args']),
+                 'spark-single': ('spark', ['spark-submit', '--master', 'local', '--conf', 'spark.sql.shuffle.partitions=4', '--conf', 'spark.executor.heartbeatInterval=115', '--driver-memory', '200g', \
+        'target/scala-2.11/spark-assembly-1.0.jar', '--partitions', '4']),
+                 'spark-par': ('spark', ['spark-submit', '--master', 'local[32]', '--conf', 'spark.sql.shuffle.partitions=64', '--conf', 'spark.executor.heartbeatInterval=115', '--driver-memory', '200g', \
+        'target/scala-2.11/spark-assembly-1.0.jar', '--partitions', '64'])}
+number_runs = 5
 # to obtain 'west' Europe, given longitude is the first dimension:
 # there are 464 unique longitude, 201 unique latitude, and x unique days depending on subset;
 # long -10.125 is index 121 and long 17.125 is at index 230;
@@ -51,53 +54,74 @@ os.system('cd ' + HOME2 + '/data-analysis-pipelines/spark' + ' && ' + 'sbt assem
 
 for input_, slice_ in inputs.items():
     for pipeline in pipelines:
+        if pipeline == 'weld-single':
+            os.putenv('WELD_NUMBER_THREADS', '1')
+        elif pipeline == 'weld-par':
+            os.putenv('WELD_NUMBER_THREADS', '32')
+
         # delete previous data (spark for example complains if file exists)
         os.system('rm -rf ' + HOME2 + '/results/pipelines/' + input_ + '/profile/' + pipeline)
         os.system('rm -rf ' + HOME2 + '/results/pipelines/' + input_ + '/time/' + pipeline)
+        os.system('rm -rf ' + HOME2 + '/results/pipelines/' + input_ + '/output/' + pipeline)
+        os.system('rm -rf ' + HOME2 + '/results/pipelines/' + input_ + '/markers/' + pipeline)
 
         # make required directories
         os.system('mkdir -p ' + HOME2 + '/results/pipelines/' + input_ + '/profile/' + pipeline)
         os.system('mkdir -p ' + HOME2 + '/results/pipelines/' + input_ + '/time/' + pipeline)
+        os.system('mkdir -p ' + HOME2 + '/results/pipelines/' + input_ + '/output/' + pipeline)
+        os.system('mkdir -p ' + HOME2 + '/results/pipelines/' + input_ + '/markers/' + pipeline)
 
         for i in range(runs):
             # clear caches; this should work on the cluster
             os.system('sync; echo 3 | sudo /usr/bin/tee /proc/sys/vm/drop_caches > /dev/null 2>&1')
 
             # setup the time command
-            time_path = HOME2 + '/results/pipelines/' + input_ + '/time/' + pipeline + '_' + str(i) + '_time.csv'
+            time_path = HOME2 + '/results/pipelines/' + input_ + '/time/' + pipeline + '/' + str(i) + '_time.csv'
             time_command = ['/usr/bin/time', '-a', '-o', time_path, '-f', '%e,%U,%S,%P,%K,%M,%F,%R,%W,%w,%I,%O']
 
             # setup the command to run a pipeline
             input_path = HOME2 + '/datasets/ECAD/' + input_ + '/'
-            output_path = HOME2 + '/results/pipelines/' + input_ + '/output/' + pipeline + '_' + str(i) + '_'
+            output_path = HOME2 + '/results/pipelines/' + input_ + '/output/' + pipeline + '/' + str(i) + '_'
             pipeline_run = all_pipelines[pipeline]
-            pipeline_path = HOME2 + '/data-analysis-pipelines/' + pipeline_run[0] + '/' + pipeline_run[1]
-            pipeline_command = [pipeline_path,
-                                '--input', input_path,
+            pipeline_path = HOME2 + '/data-analysis-pipelines/' + pipeline_run[0]
+            os.chdir(pipeline_path)
+            pipeline_command = pipeline_run[1] +\
+                               ['--input', input_path,
                                 '--slice', '{}:{}'.format(slice_[0], slice_[1]),
                                 '--output', output_path]
 
-            # add csv header to output file
+            # add csv header to time output file
             time_header = '"real,user,sys,cpu,mem_avg_tot(K),mem_max(K),' \
                           'major_page_faults,minor_page_faults,swaps,voluntary_context_switch,input,output\n"'
             os.system('printf ' + time_header + ' > ' + time_path)
 
+            # setup log file for markers
+            log_path = HOME2 + '/results/pipelines/' + input_ + '/markers/' + pipeline + '/' + str(i) + '_markers.txt'
+            log = open(log_path, 'w')
+
             # start pipeline
-            print('Running pipeline={} on input={}'.format(pipeline, input_))
-            pipeline_process = subprocess.Popen(time_command + pipeline_command,
-                                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            print('Running pipeline={} on input={}. Run={}'.format(pipeline, input_, str(i)))
+            pipeline_process = subprocess.Popen(time_command + pipeline_command, 
+                                                stdout=log, stderr=subprocess.DEVNULL)
+
             # start profiling
-            collectl_path = HOME2 + '/results/pipelines/' + input_ + '/profile/' + pipeline + '_' + str(i) + '_profile'
+            collectl_path = HOME2 + '/results/pipelines/' + input_ + '/profile/' + pipeline + '/' + str(i) + '_profile'
             collectl_process = subprocess.Popen(['collectl', '-scmd', '-P', '-f' + collectl_path,
                                                  '--sep', ',', '--procfilt', str(pipeline_process.pid)],
                                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             # wait for pipeline to finish, then sigterm (ctrl-C) profiling
             pipeline_process.wait()
-            print('Done')
             collectl_process.terminate()
 
+            # make sure log is saved
+            log.flush()
+            os.fsync(log.fileno())
+            log.close()
+
             # extract and rename the collectl output to csv
-            extract_command = ['gunzip', collectl_path + '*.gz']
-            os.system(' '.join(extract_command))
+            # extract_command = ['gunzip', collectl_path + '*.gz']
+            # os.system(' '.join(extract_command))
             rename_command = ['mv', collectl_path + '*.tab', collectl_path + '.csv']
             os.system(' '.join(rename_command))
+
+            print('Done')

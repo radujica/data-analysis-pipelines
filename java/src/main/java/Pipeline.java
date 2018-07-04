@@ -135,7 +135,7 @@ public class Pipeline  {
     }
 
     private void printEvent(String name) {
-        System.out.printf("#%s-%s", sdf.format(cal.getTime()), name);
+        System.out.printf("#%s-%s\n", sdf.format(cal.getTime()), name);
     }
 
     public void start(String input, String slice, String output) throws IOException {
@@ -181,11 +181,14 @@ public class Pipeline  {
         // UDF 2: compute custom year+month format
         df.put("year_month", computeYearMonth(df.get("time")));
         // also handles the join back
-        df = df.groupBy();
-        df.pop("year_month");
+        DataFrame grouped_df = df.groupBy();
+        grouped_df.pop("year_month");
+        grouped_df.pop("longitude");
+        grouped_df.pop("latitude");
+        grouped_df = grouped_df.sum();
 
         printEvent("done_groupby");
 
-        toCsv(df, output + "grouped.csv");
+        toCsv(grouped_df, output + "grouped.csv");
     }
 }

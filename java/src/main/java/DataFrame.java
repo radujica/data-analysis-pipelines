@@ -444,4 +444,48 @@ public class DataFrame {
 
         return result;
     }
+
+    DataFrame sum() {
+        DataFrame result = new DataFrame(this.data.size());
+
+        String[] aggregateOn = {"tg_mean", "tn_mean", "tx_mean", "pp_mean", "rr_mean"};
+
+        double[] tg = (double[]) this.get(aggregateOn[0]);
+        double[] tn = (double[]) this.get(aggregateOn[1]);
+        double[] tx = (double[]) this.get(aggregateOn[2]);
+        double[] pp = (double[]) this.get(aggregateOn[3]);
+        double[] rr = (double[]) this.get(aggregateOn[4]);
+
+        double[] sums = new double[this.data.size()];
+        double sum = 0;
+        for (double aTg : tg) {
+            sum += aTg;
+        }
+        sums[0] = sum;
+        sum = 0;
+        for (double aTn : tn) {
+            sum += aTn;
+        }
+        sums[1] = sum;
+        sum = 0;
+        for (double aTx : tx) {
+            sum += aTx;
+        }
+        sums[2] = sum;
+        sum = 0;
+        for (double aPp : pp) {
+            sum += aPp;
+        }
+        sums[3] = sum;
+        sum = 0;
+        for (double aRr : rr) {
+            sum += aRr;
+        }
+        sums[4] = sum;
+
+        result.put("column", aggregateOn);
+        result.put("grouped_sum", sums);
+
+        return result;
+    }
 }

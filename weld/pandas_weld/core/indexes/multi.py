@@ -77,7 +77,7 @@ class MultiIndex(object):
                                                            str(self.names))
 
     @staticmethod
-    def _evaluate_if_necessary(data, verbose=False, decode=True, passes=None, num_threads=1,
+    def _evaluate_if_necessary(data, verbose=True, decode=True, passes=None, num_threads=1,
                                apply_experimental_transforms=False):
         if isinstance(data, LazyResult):
             return data.evaluate(verbose=verbose, decode=decode, passes=passes, num_threads=num_threads,
