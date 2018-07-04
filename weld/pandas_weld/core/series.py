@@ -8,7 +8,7 @@ from weld.weldobject import WeldObject
 from indexes import Index
 from lazy_result import LazyResult
 from pandas_weld.weld import weld_aggregate, weld_compare, weld_filter, weld_element_wise_op, weld_count, weld_mean, \
-    weld_standard_deviation, weld_udf, weld_array_op
+    weld_standard_deviation, weld_udf, weld_array_op, weld_describe
 from utils import replace_slice_defaults, get_expression_or_raw
 
 
@@ -271,7 +271,32 @@ class Series(LazyResult):
 
         return Series(values.astype(np.float64),
                       np.dtype(np.float64),
-                      Index(index, np.dtype(np.float64)),
+                      Index(index, np.dtype(np.str)),
+                      self.name)
+
+    def describe(self, aggregations):
+        """ Lazily aggregate on multiple queries using single evaluation
+
+        Parameters
+        ----------
+        aggregations : list of str
+            supported aggregations are = {'sum', 'prod', 'min', 'max', 'mean', 'std'}
+
+        Returns
+        -------
+        DataFrame
+
+        """
+        if len(aggregations) < 1:
+            raise TypeError('expected at least 1 aggregation')
+
+        data = weld_describe(self.expr, self.weld_type, aggregations)
+
+        index = np.array(aggregations, dtype=np.str)
+
+        return Series(data,
+                      np.dtype(np.float64),
+                      Index(index, np.dtype(np.str)),
                       self.name)
 
     # TODO: implement something like reduce for single result? though this is not supported even by pandas

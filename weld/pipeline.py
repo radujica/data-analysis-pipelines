@@ -72,7 +72,7 @@ def compute_abs_maxmin(series_max, series_min):
 df['abs_diff'] = compute_abs_maxmin(df['tx'], df['tn'])
 
 # 7. explore the data through aggregations
-df_agg = df.agg(['min', 'max', 'mean', 'std'])\
+df_agg = df.describe(['min', 'max', 'mean', 'std'])\
     .reset_index()\
     .rename(columns={'Index': 'agg'})\
     .evaluate()

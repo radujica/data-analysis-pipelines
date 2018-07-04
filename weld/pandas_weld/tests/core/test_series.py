@@ -28,8 +28,8 @@ def test_equal_series(series1, series2):
     else:
         np.testing.assert_array_equal(evaluate_if_necessary(series1.index),
                                       evaluate_if_necessary(series2.index))
-    np.testing.assert_array_equal(evaluate_if_necessary(series1),
-                                  evaluate_if_necessary(series2))
+    np.testing.assert_array_almost_equal(evaluate_if_necessary(series1),
+                                         evaluate_if_necessary(series2), decimal=4)
 
 
 class SeriesTests(unittest.TestCase):
@@ -134,6 +134,16 @@ class SeriesTests(unittest.TestCase):
 
         expected_result = 6
         result = series.sum()
+
+        np.testing.assert_equal(expected_result, evaluate_if_necessary(result))
+
+    # noinspection PyMethodMayBeStatic
+    def test_describe(self):
+        data = np.array([1, 2, 3])
+        series = Series(data, np.dtype(np.int64), RangeIndex(0, 3, 1))
+
+        expected_result = np.array([1, 3, 2, 1], np.float64)
+        result = series.describe(['min', 'max', 'mean', 'std'])
 
         np.testing.assert_equal(expected_result, evaluate_if_necessary(result))
 

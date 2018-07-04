@@ -144,6 +144,21 @@ class DataFrameTests(unittest.TestCase):
 
         test_equal_series(expected_result, result)
 
+    def test_describe(self):
+        # reversed because of dict and not OrderedDict
+        expected_result = pdw.DataFrame({'col1': np.array([1, 4, 2.5, 1.29089], np.float64),
+                                         'col2': np.array([5, 8, 6.5, 1.29099], np.float64)},
+                                        pdw.Index(np.array(['min', 'max', 'mean', 'std'], dtype=np.str),
+                                                  np.dtype(np.str),
+                                                  "Index"))
+
+        result = self.df.describe(['min', 'max', 'mean', 'std']).evaluate()
+
+        np.testing.assert_array_equal(evaluate_if_necessary(expected_result.index),
+                                      evaluate_if_necessary(result.index))
+        test_equal_series(expected_result['col1'].evaluate(), result['col1'].evaluate())
+        test_equal_series(expected_result['col2'].evaluate(), result['col2'].evaluate())
+
     def test_aggregate_min(self):
         # reversed because of dict and not OrderedDict
         expected_result = pdw.Series(np.array([5., 1.], dtype=np.float64),

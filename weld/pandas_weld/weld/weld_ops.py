@@ -1101,3 +1101,106 @@ def weld_udf(weld_template, mapping):
 # TODO: be able to sort a dataframe since the groupby output is expected to be sorted
 def weld_sort():
     pass
+
+
+def weld_describe(array, weld_type, aggregations):
+    """ Aggregate during the same evaluation as opposed to separately as in Series.agg
+
+    Parameters
+    ----------
+    array :  np.ndarray or WeldObject
+        to aggregate on
+    weld_type : WeldType
+        of the array
+    aggregations : list of str
+        supported are = {'min', 'max', 'sum', 'prod', 'mean', 'std'}
+
+    Returns
+    -------
+    WeldObject
+
+    """
+    assert isinstance(aggregations, list)
+    assert len(aggregations) > 0
+
+    weld_obj = WeldObject(_encoder, _decoder)
+
+    array_var = weld_obj.update(array)
+    if isinstance(array, WeldObject):
+        array_var = array.obj_id
+        weld_obj.dependencies[array_var] = array
+
+    merger_chunk = """
+    let agg_%(name)s = f64(
+        result(
+            for(
+                %(array)s,
+                merger[%(type)s, %(operation)s],
+                |b, i, e| 
+                    merge(b, e)
+            )
+        )
+    );"""
+
+    mean_chunk_solo = """
+    let agg_mean = f64(
+        result(
+            for(
+                %(array)s,
+                merger[%(type)s, +],
+                |b, i, n|
+                    merge(b, n)
+            )
+        )
+    ) / f64(len(%(array)s));"""
+
+    mean_chunk_with_sum = """
+    let agg_mean = agg_sum / f64(len(%(array)s));
+    """
+
+    std_chunk_solo = """
+    %(mean)s
+    let agg_std = sqrt(
+        result(
+            for(
+                %(array)s,
+                merger[f64, +],
+                |b, i, n|
+                    merge(b, pow(f64(n) - agg_mean, 2.0))
+            )
+        ) / f64(len(%(array)s) - 1L)
+    );""".replace('%(mean)s', mean_chunk_with_sum if 'sum' in aggregations else mean_chunk_solo)
+
+    std_chunk_with_mean = """
+    let agg_std = sqrt(
+        result(
+            for(
+                %(array)s,
+                merger[f64, +],
+                |b, i, n|
+                    merge(b, pow(f64(n) - agg_mean, 2.0))
+            )
+        ) / f64(len(%(array)s) - 1L)
+    );"""
+
+    aggregations_dict = {'min': merger_chunk.replace('%(operation)s', 'min').replace('%(name)s', 'min'),
+                         'max': merger_chunk.replace('%(operation)s', 'max').replace('%(name)s', 'max'),
+                         'sum': merger_chunk.replace('%(operation)s', '+').replace('%(name)s', 'sum'),
+                         'prod': merger_chunk.replace('%(operation)s', '*').replace('%(name)s', 'prod'),
+                         'mean': mean_chunk_with_sum if 'sum' in aggregations else mean_chunk_solo,
+                         'std': std_chunk_with_mean if 'mean' in aggregations else std_chunk_solo}
+
+    weld_template = """
+    %(chunks)s
+    let agg_result = appender[f64];
+    %(merges)s
+    result(agg_result)
+    """
+
+    chunks = ''.join([aggregations_dict[agg] for agg in aggregations])
+    merges = ''.join(['let agg_result = merge(agg_result, %s);\n\t' % ('agg_' + agg) for agg in aggregations])
+
+    weld_obj.weld_code = weld_template % {'chunks': chunks, 'merges': merges} \
+                                       % {'array': array_var, 'type': weld_type}
+
+    return weld_obj

@@ -592,6 +592,29 @@ class DataFrame(object):
 
         return DataFrame(new_data, new_index)
 
+    def describe(self, aggregations):
+        """ Lazily aggregate the columns in a single evaluate
+
+        Parameters
+        ----------
+        aggregations : list of str
+            list of desired aggregations; currently supported are
+            {'sum', 'prod', 'min', 'max', 'mean', 'std'}
+
+        Returns
+        -------
+        DataFrame
+
+        """
+        if len(aggregations) < 1:
+            raise TypeError('expected at least 1 aggregation')
+
+        new_data = {column_name: self[str(column_name)].describe(aggregations) for column_name in self}
+        # get any column's index, since they're (should be) the same
+        new_index = new_data[new_data.keys()[0]].index
+
+        return DataFrame(new_data, new_index)
+
     # noinspection SpellCheckingInspection
     def groupby(self, by):
         """ Group by one or more columns
