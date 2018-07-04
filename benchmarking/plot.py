@@ -45,7 +45,6 @@ def plot_time_bars_single(input_):
 
     # fix index
     df = df.reset_index().drop(columns='index').sort_values(by='real').reset_index()
-    print(df)
 
     plt.figure()
     plt.bar(df.index.values, df['real'] / 60)
