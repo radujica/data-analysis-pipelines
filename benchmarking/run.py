@@ -19,7 +19,7 @@ all_pipelines = {'python-libraries': ('python-libraries', ['pipenv', 'run', 'pyt
                  'weld-par': ('weld', ['pipenv', 'run', 'python', 'pipeline.py', '--threads', '32']),
                  'julia': ('julia', ['julia', 'pipeline.jl']),
                  'java': ('java', ['java', '-jar', 'build/libs/pipeline.jar']),
-                 'R': ('R', ['R', '-f', 'arg.R', '--args']),
+                 'R': ('R', ['Rscript', 'pipeline.R']),
                  'spark-single': ('spark', ['spark-submit', '--master', 'local', '--conf', 'spark.sql.shuffle.partitions=4', '--conf', 'spark.executor.heartbeatInterval=115', '--driver-memory', '200g', \
         'target/scala-2.11/spark-assembly-1.0.jar', '--partitions', '4']),
                  'spark-par': ('spark', ['spark-submit', '--master', 'local[32]', '--conf', 'spark.sql.shuffle.partitions=64', '--conf', 'spark.executor.heartbeatInterval=115', '--driver-memory', '200g', \
@@ -101,7 +101,7 @@ for input_, slice_ in inputs.items():
 
             # start pipeline
             print('Running pipeline={} on input={}. Run={}'.format(pipeline, input_, str(i)))
-            pipeline_process = subprocess.Popen(time_command + pipeline_command, 
+            pipeline_process = subprocess.Popen(time_command + pipeline_command,
                                                 stdout=log, stderr=subprocess.DEVNULL)
 
             # start profiling
