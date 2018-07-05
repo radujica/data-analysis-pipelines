@@ -19,7 +19,6 @@ object Main {
   private val CALENDAR: String = "proleptic_gregorian"
   private val UNITS: String = "days since 1950-01-01"
   private val timeFormat = new SimpleDateFormat("HH:mm:ss")
-  private val calendarInstance = Calendar.getInstance()
 
   // TODO: read directly as required type
   @throws[IOException]
@@ -146,8 +145,7 @@ object Main {
   }
 
   private def printEvent(name : String): Unit = {
-    println("#" + timeFormat.format(calendarInstance.getTime) + "-" + name)
-    Console.out.flush()
+    println("#" + timeFormat.format(System.currentTimeMillis()) + "-" + name)
   }
 
   type ArgsMap = Map[Symbol, Any]
