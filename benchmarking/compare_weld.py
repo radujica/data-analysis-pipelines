@@ -5,8 +5,6 @@ import os
 
 "Script to run all weld variants. This script only generates data"
 
-# nohup pipenv run python compare_weld.py &
-
 HOME2 = os.environ.get('HOME2')
 if HOME2 is None:
     raise RuntimeError('Cannot find HOME2 environment variable')
@@ -31,8 +29,6 @@ else:
 def run_pipeline(pipeline_command, name, output_path):
     print('Running={}'.format(name))
 
-    # save output to check correctness; since it's the same csv-creation code, can simply time the pipeline while
-    # saving the output
     output_args = ['--output', output_path + '/output_' + name + '_']
 
     # clear caches; this should work on the cluster
@@ -79,6 +75,8 @@ def run_pipeline(pipeline_command, name, output_path):
     print('Done')
 
 
+os.putenv('WELD_NUMBER_THREADS', '1')
+
 for input_, slice_ in inputs.items():
     print('Running on input={}'.format(input_))
 
@@ -88,8 +86,8 @@ for input_, slice_ in inputs.items():
     os.system('mkdir -p ' + output_folder)
 
     input_path = HOME2 + '/datasets/ECAD/' + input_ + '/'
-    base_command = ['pipenv', 'run', 'python', PIPELINE_PATH + '/pipeline.py', '--input', input_path,
-                    '--slice', '{}:{}'.format(slice_[0], slice_[1]), '--check']
+    base_command = ['pipenv', 'run', 'python', '-u', 'pipeline.py', '--input', input_path,
+                    '--slice', '{}:{}'.format(slice_[0], slice_[1]), '--threads', '1']
 
     # no lazy parsing, no cache
     os.putenv('LAZY_WELD_CACHE', 'False')
