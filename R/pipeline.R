@@ -81,7 +81,7 @@ to_csv <- function(df, name) {
 df <- dplyr::inner_join(df1, df2)
 
 # 2. quick preview on the data
-df_head <- head(df)
+df_head <- head(df, 10)
 
 print_event('done_head')
 
@@ -146,7 +146,7 @@ df_grouped$year_month <- NULL
 df_grouped$longitude <- NULL
 df_grouped$latitude <- NULL
 df_grouped <- dplyr::summarize_all(df_grouped, dplyr::funs(sum))
-df_grouped_res <- data.frame(column=names(df_grouped), grouped_sum=c(df_grouped$tg_mean, df_grouped$tx_mean, df_grouped$tn_mean, df_grouped$pp_mean, df_grouped$rr_mean))
+df_grouped_res <- data.frame(column=names(df_grouped), grouped_sum=c(df_grouped$tg_mean, df_grouped$tn_mean, df_grouped$tx_mean, df_grouped$pp_mean, df_grouped$rr_mean))
 
 print_event('done_groupby')
 
