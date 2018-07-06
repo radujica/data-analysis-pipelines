@@ -107,13 +107,13 @@ df$abs_diff <- udf1(df$tx, df$tn)
 # 7. explore the data through aggregations
 columns_to_aggregate <- c("tg", "tn", "tx", "pp", "rr", "tg_stderr", "tx_stderr", "tn_stderr")
 df_min <- dplyr::summarize_all(dplyr::select(df, columns_to_aggregate), dplyr::funs(min))
-df_min$op <- "min"
+df_min$agg <- "min"
 df_max <- dplyr::summarize_all(dplyr::select(df, columns_to_aggregate), dplyr::funs(max))
-df_max$op <- "max"
+df_max$agg <- "max"
 df_mean <- dplyr::summarize_all(dplyr::select(df, columns_to_aggregate), dplyr::funs(mean))
-df_mean$op <- "mean"
+df_mean$agg <- "mean"
 df_sd <- dplyr::summarize_all(dplyr::select(df, columns_to_aggregate), dplyr::funs(sd))
-df_sd$op <- "sd"
+df_sd$agg <- "sd"
 
 df_agg <- dplyr::bind_rows(df_min, df_max, df_mean, df_sd)
 
