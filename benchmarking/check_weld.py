@@ -11,7 +11,7 @@ if HOME2 is None:
 
 configurations = ['no-lazy-no-cache', 'no-cache', 'no-lazy', 'all']
 all_inputs = ['data_0', 'data_1', 'data_3', 'data_6', 'data_12', 'data_25', 'data_10', 'data_100']
-all_files = ['head.csv', 'agg.csv']     # TODO: add this when groupby implemented: 'result.csv'
+all_files = ['head.csv', 'agg.csv', 'grouped.csv']
 
 parser = argparse.ArgumentParser(description='Check Pipelines')
 parser.add_argument('--input',
