@@ -10,7 +10,7 @@ if HOME2 is None:
 
 OUTPUT_FOLDER = HOME2 + '/results/graphs'
 
-all_pipelines = ['python-libraries', 'weld', 'julia', 'java', 'spark']
+all_pipelines = ['python-libraries', 'weld-single', 'weld-par', 'julia', 'java', 'R', 'spark-single', 'spark-par']
 all_inputs = ['data_0', 'data_1', 'data_3', 'data_6', 'data_12', 'data_25', 'data_10', 'data_100']
 all_weld_types = ['no-lazy-no-cache', 'no-cache', 'no-lazy', 'all']
 
@@ -27,12 +27,17 @@ args = parser.parse_args()
 
 
 def read_time_input_df(input_, pipeline):
-    input_path = HOME2 + '/results/pipelines/' + input_ + '/time/' + pipeline + '/time.csv'
-    df = pd.read_csv(input_path)
-    # keep track of which pipeline the data refers to
-    df['pipeline'] = pipeline
+    first_df_path = HOME2 + '/results/pipelines/' + input_ + '/time/' + pipeline + '/0_time.csv'
+    df = pd.read_csv(first_df_path)
+    for run in range(1, 5):
+        input_path = HOME2 + '/results/pipelines/' + input_ + '/time/' + pipeline + '/' + str(run) + '_time.csv'
+        df = df.append(pd.read_csv(input_path))
 
-    return df
+    res = pd.DataFrame({'real_mean': [df['real'].mean()],
+                        'real_diff': [(df['real'].max() - df['real'].min()) / 2],
+                        'pipeline': [pipeline]})
+
+    return res
 
 
 def plot_time_bars_single(input_):
@@ -44,13 +49,25 @@ def plot_time_bars_single(input_):
         df = df.append(d)
 
     # fix index
-    df = df.reset_index().drop(columns='index').sort_values(by='real').reset_index()
+    df = df.reset_index().drop(columns='index').sort_values(by='real_mean').reset_index()
 
-    plt.figure()
-    plt.bar(df.index.values, df['real'] / 60)
-    plt.ylabel('Time (min)')
-    plt.title('Real time to run pipeline for input={}'.format(input_))
+    # fix spark-single bar
+    spark_single_val = df['real_mean'][7]
+    df.loc[df['pipeline'] == 'spark-single', 'real_mean'] = df['real_mean'][6] + 10
+    df.loc[df['pipeline'] == 'spark-single', 'real_diff'] = 0
+
+    # remove error bars if too small?
+    # df['real_diff'] = df['real_diff'].map(lambda x: 0 if x < 10 else x)
+
+    plt.figure(figsize=(10, 6))
+    bar = plt.bar(df.index.values, df['real_mean'] / 60, yerr=df['real_diff'] / 120)  # capsize=6
+    plt.ylabel('Time (minutes)')
+    plt.title('Mean real time to run pipeline for input={}'.format(input_))
     plt.xticks(df.index.values, df['pipeline'])
+    # add value of spark-single
+    plt.text(bar[-1].get_x() + bar[-1].get_width() / 3, 0.1, '{0:.1f}'.format(spark_single_val / 60))
+    plt.scatter(df.index.values[-1], df['real_mean'][7] / 60 + 0.1, c='black', s=1)
+    plt.scatter(df.index.values[-1], df['real_mean'][7] / 60 + 0.2, c='black', s=1)
 
     if args.save:
         plt.savefig(OUTPUT_FOLDER + '/' + input_ + '/time_bars.png')
@@ -67,20 +84,32 @@ def plot_time_bars(inputs):
 
 
 def read_collectl_input_df(input_, pipeline):
-    input_path = HOME2 + '/results/pipelines/' + input_ + '/profile/' + pipeline + '/profile.csv'
-    df = pd.read_csv(input_path, skiprows=range(0, 15))
+    first_df_path = HOME2 + '/results/pipelines/' + input_ + '/profile/' + pipeline + '/0_profile.csv'
+    df = pd.DataFrame({'real_0': pd.read_csv(first_df_path, skiprows=range(0, 15), usecols=['[MEM]Used'])['[MEM]Used']})
+    for run in range(1, 5):
+        input_path = HOME2 + '/results/pipelines/' + input_ + '/profile/' + pipeline + '/' + str(run) + '_profile.csv'
+        df['real_' + str(run)] = pd.read_csv(input_path, skiprows=range(0, 15), usecols=['[MEM]Used'])['[MEM]Used']
+
+    series_mean = df.mean(axis=1) / 1000000
+    df['mem_diff'] = (df.max(axis=1) / 1000000 - df.min(axis=1) / 1000000) / 2
+    df['mem_mean'] = series_mean
+    df = df[['mem_mean', 'mem_diff']]
+
     # keep track of which pipeline the data refers to
     df['pipeline'] = pipeline
+    # remove the last 2 values
     df = df[0:len(df) - 2]
 
     return df
 
 
 def plot_profile_scatter_single(input_):
-    dfs = {pipeline: read_collectl_input_df(input_, pipeline) for pipeline in all_pipelines}
+    pipelines = ['python-libraries', 'weld-single', 'weld-par', 'julia', 'java', 'R']
+    dfs = {pipeline: read_collectl_input_df(input_, pipeline) for pipeline in pipelines}
 
     plt.figure()
-    [plt.plot(df.index.values, df['[MEM]Used'] / 1000000, label=name) for name, df in dfs.items()]
+    [plt.plot(df.index.values, df['mem_mean'], '-', label=name) for name, df in dfs.items()]
+    [plt.fill_between(df.index.values, df['mem_mean'] - df['mem_diff'], df['mem_mean'] + df['mem_diff'], alpha=0.3) for df in dfs.values()]
     plt.ylabel('Memory (GB)')
     plt.xlabel('Time (s)')
     plt.title('Memory usage over input={}'.format(input_))
@@ -116,7 +145,7 @@ def read_weld_time_input_df(input_, pipeline):
     df_compile['time'] = df_compile['time'].apply(pd.to_numeric)
     df_compile = df_compile.groupby('type').sum().transpose().reset_index()
     df = pd.concat([df, df_compile], axis=1)
-    df['total_compile'] = df['Python->Weld'] + df['Weld'] + df['Weld compile time'] + df['Weld->Python']
+    df['total_convert'] = df['Python->Weld'] + df['Weld->Python']
 
     return df
 
@@ -135,29 +164,34 @@ def plot_weld_time_bars_single(input_):
     fig, ax = plt.subplots()
     p1 = plt.bar(df.index.values, df['sys'])
     p2 = plt.bar(df.index.values, df['Weld compile time'], bottom=df['sys'])
-    p3 = plt.bar(df.index.values, df['user'] - df['Weld compile time'], bottom=df['Weld compile time'] + df['sys'])
+    p3 = plt.bar(df.index.values, df['total_convert'],
+                 bottom=df['Weld compile time'] + df['sys'])
+    p4 = plt.bar(df.index.values, df['user'] - df['Weld compile time'] - df['total_convert'],
+                 bottom=df['total_convert'] + df['Weld compile time'] + df['sys'])
     plt.ylabel('Time (s)')
     plt.title('Time to run pipeline for input={}'.format(input_))
+    plt.ylim(ymax=(df['user'] + df['sys']).max() + 10)
     plt.xticks([])
-    plt.legend((p1[0], p2[0], p3[0]), ('sys', 'compile', 'user'))
+    plt.legend((p1[0], p2[0], p3[0], p4[0]), ('sys', 'compile', 'en-/decode', 'user'))
 
     # add values as numbers over the bars and celltext
     cell_text = []
-    for rect1, rect2, rect3 in zip(p1, p2, p3):
+    for rect1, rect2, rect3, rect4 in zip(p1, p2, p3, p4):
         h1 = rect1.get_height()
         h2 = rect2.get_height()
         h3 = rect3.get_height()
+        h4 = rect4.get_height()
         # total numbers
-        total = '{0:.2f}'.format(h1 + h2 + h3)
-        ax.text(rect2.get_x() + rect2.get_width() / 3.5, h1 + h2 + h3 + 2, total)
-        cell_text.append(['{0:.2f}'.format(h1), '{0:.2f}'.format(h2), '{0:.2f}'.format(h3), total])
+        total = '{0:.2f}'.format(h1 + h2 + h3 + h4)
+        ax.text(rect2.get_x() + rect2.get_width() / 3.5, h1 + h2 + h3 + h4 + 2, total)
+        cell_text.append(['{0:.2f}'.format(h1), '{0:.2f}'.format(h2), '{0:.2f}'.format(h3), '{0:.2f}'.format(h4), total])
 
     # transpose
     cell_text = list(map(list, zip(*cell_text)))
 
     # build table with weld compile time
     plt.table(cellText=cell_text,
-              rowLabels=['sys', 'Weld compile', 'user - compile', 'total'],
+              rowLabels=['sys', 'compile', 'en-/decode', 'python', 'total'],
               colLabels=df['pipeline'],
               cellLoc='center',
               loc='bottom')
@@ -192,7 +226,6 @@ def read_weld_markers(input_, pipeline):
     # filter out the markers
     df = df[df['data'].str[0] == '#']
     # split the data
-    df['data'] = df['data'].str.split(' ', 1).str[1]
     df['time'], df['marker'] = df['data'].str.split('-', 1).str
     df['time'] = df['time'].apply(lambda x: x.split('.', 1)[0])
     del df['data']
