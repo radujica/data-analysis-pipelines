@@ -41,7 +41,7 @@ parser.add_argument('--pipeline',
 parser.add_argument('--input',
                     help='Which input to use. If more than 1, separate with comma, e.g. --input data_1,data_25')
 parser.add_argument('--runs',
-                    help='How many runs per pipeline-input pair. Default=3')
+                    help='How many runs per pipeline-input pair. Default=5')
 args = parser.parse_args()
 
 pipelines = args.pipeline.split(',') if args.pipeline is not None else all_pipelines.keys()
