@@ -1,6 +1,8 @@
 import argparse
 import subprocess
 
+from datetime import datetime
+
 import os
 
 "Script to run any/all benchmarks. This script only generates data"
@@ -100,7 +102,7 @@ for input_, slice_ in inputs.items():
             log = open(log_path, 'w')
 
             # start pipeline
-            print('Running pipeline={} on input={}. Run={}'.format(pipeline, input_, str(i)))
+            print('{} Running pipeline={} on input={}. Run={}'.format(str(datetime.now()), pipeline, input_, str(i)))
             pipeline_process = subprocess.Popen(time_command + pipeline_command,
                                                 stdout=log, stderr=subprocess.DEVNULL)
 
@@ -124,4 +126,4 @@ for input_, slice_ in inputs.items():
             rename_command = ['mv', collectl_path + '*.tab', collectl_path + '.csv']
             os.system(' '.join(rename_command))
 
-            print('Done')
+            print('{} Done'.format(str(datetime.now())))
