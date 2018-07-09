@@ -102,7 +102,8 @@ for input_, slice_ in inputs.items():
             log = open(log_path, 'w')
 
             # start pipeline
-            print('{} Running pipeline={} on input={}. Run={}'.format(str(datetime.now()), pipeline, input_, str(i)))
+            print('{} Running pipeline={} on input={}. Run={}/{}'.format(str(datetime.now()), pipeline, input_,
+                                                                         str(i), runs))
             pipeline_process = subprocess.Popen(time_command + pipeline_command,
                                                 stdout=log, stderr=subprocess.DEVNULL)
 

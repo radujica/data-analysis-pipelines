@@ -2,6 +2,7 @@ import argparse
 import subprocess
 
 import os
+from datetime import datetime
 
 "Script to run all weld variants. This script only generates data"
 
@@ -28,7 +29,7 @@ runs = int(args.runs) if args.runs is not None else number_runs
 
 
 def run_pipeline(pipeline_command, name, output_path, run):
-    print('Running={}'.format(name))
+    print('{} Running={}. Run={}/{}'.format(str(datetime.now()), name, run + 1, runs))
 
     output_args = ['--output', output_path + '/output_' + name + '_' + str(run) + '_']
 
@@ -36,10 +37,10 @@ def run_pipeline(pipeline_command, name, output_path, run):
     os.system('echo 3 | sudo /usr/bin/tee /proc/sys/vm/drop_caches > /dev/null 2>&1')
 
     # setup the WeldObject compile-etc output and custom markers
-    log = open(output_path + '/compile_' + name + '.txt', 'w')
+    log = open(output_path + '/compile_' + name + '_' + str(run) + '.txt', 'w')
 
     # setup the time command
-    time_path = output_path + '/time_' + name + '.csv'
+    time_path = output_path + '/time_' + name + '_' + str(run) + '.csv'
     time_command = ['/usr/bin/time', '-a', '-o', time_path, '-f', '%e,%U,%S,%P,%K,%M,%F,%R,%W,%w,%I,%O']
 
     # add csv header to output file
@@ -68,12 +69,12 @@ def run_pipeline(pipeline_command, name, output_path, run):
     log.close()
 
     # extract and rename the collectl output to csv
-    extract_command = ['gunzip', collectl_path + '*.gz']
-    os.system(' '.join(extract_command))
-    rename_command = ['mv', collectl_path + '*.tab', collectl_path + '_' + name + '.csv']
+    # extract_command = ['gunzip', collectl_path + '*.gz']
+    # os.system(' '.join(extract_command))
+    rename_command = ['mv', collectl_path + '*.tab', collectl_path + '_' + name + '_' + str(run) + '.csv']
     os.system(' '.join(rename_command))
 
-    print('Done')
+    print('{} Done'.format(str(datetime.now())))
 
 
 os.putenv('WELD_NUMBER_THREADS', '1')
