@@ -55,8 +55,9 @@ for input_ in inputs:
                 output_path = HOME2 + '/results/pipelines/' + input_ + '/output/' + pipeline + '/' + str(run) + '_'
                 files.append(output_path + f)
 
-            print('Checking input={} file={}'.format(input_, f))
-            print('----------------')
+        print('Checking input={} file={}'.format(input_, f))
+        print('----------------')
 
-            command = ['pipenv', 'run', 'python', '-u', 'check_correctness.py'] + files
-            os.system(' '.join(command))
+        command = ['pipenv', 'run', 'python', '-u', 'check_correctness.py'] + files
+        os.system(' '.join(command))
+        print('')
