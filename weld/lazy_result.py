@@ -343,10 +343,10 @@ class LazyResult(LazyOpResult):
         # if WeldObject, could either be 1) from lazy data or 2) raw with some lazy operation;
         # for 1), update_args is enough, however for 2) need to TODO
         elif isinstance(self.expr, WeldObject):
-            # # TODO: this is a step towards it but doesn't work by itself; probably going over the dependencies is req.
-            # for k, v in self.expr.context.items():
-            #     if isinstance(v, np.ndarray):
-            #         self.expr.context[k] = v[slice_]
+            # TODO: this is a step towards it but doesn't seem general enough
+            for k, v in self.expr.context.iteritems():
+                if isinstance(v, np.ndarray):
+                    self.expr.context[k] = v[slice_]
             self._update_args('lazy_slice_rows', slice_)
 
     def _copy(self):

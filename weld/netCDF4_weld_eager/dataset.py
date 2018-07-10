@@ -67,6 +67,9 @@ class Dataset(LazyFile):
                                 kv[1].__dict__, weld_obj, kv[1].dtype)
             LazyResult.register_lazy_data(data_id, variable)
 
+            # force an evaluate to parse and cache this data
+            variable.evaluate(verbose=False)
+
             variables[kv[0]] = variable
 
         return variables
