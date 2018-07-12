@@ -13,10 +13,8 @@ parser.add_argument('-i', '--input', required=True, help='Path to folder contain
 parser.add_argument('-s', '--slice', required=True, help='Start and stop of a subset of the data')
 parser.add_argument('-o', '--output', required=True, help='Path to output folder')
 parser.add_argument('-e', '--eager', action='store_true')
-parser.add_argument('-t', '--threads', required=True, help='Number of threads to run Weld with')
 args = parser.parse_args()
 
-os.putenv('WELD_NUMBER_THREADS', args.threads)
 
 PATH1 = args.input + 'data1.nc'
 PATH2 = args.input + 'data2.nc'

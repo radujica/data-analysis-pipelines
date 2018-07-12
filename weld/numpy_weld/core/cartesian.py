@@ -263,7 +263,8 @@ def cartesian_product_indices(arrays, cache=True):
     weld_ids = []
     if cache:
         id_ = LazyResult.generate_intermediate_id('cartesian_product')
-        LazyResult.register_intermediate_result(id_, result)
+        weld_input_name = WeldObject.generate_input_name(id_)
+        LazyResult.register_intermediate_result(weld_input_name, result)
 
         for i in range(len(arrays)):
             weld_obj = WeldObject(_encoder, _decoder)

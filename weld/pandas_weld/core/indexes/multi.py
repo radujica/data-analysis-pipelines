@@ -107,6 +107,14 @@ class MultiIndex(object):
 
         return MultiIndex(evaluated_levels, evaluated_labels, self.names)
 
+    def head(self, n=10):
+        evaluated_levels = [level.head(n) if isinstance(level, LazyResult) else level[:n]
+                            for level in self.levels]
+        evaluated_labels = [label.head(n) if isinstance(label, LazyResult) else label[:n]
+                            for label in self.labels]
+
+        return MultiIndex(evaluated_levels, evaluated_labels, self.names)
+
     def __getitem__(self, item):
         """ Retrieve a portion of the MultiIndex
 

@@ -17,8 +17,8 @@ if HOME2 is None:
     raise RuntimeError('Cannot find HOME2 environment variable')
 
 all_pipelines = {'python-libraries': ('python-libraries', ['pipenv', 'run', 'python', 'pipeline.py']),
-                 'weld-single': ('weld', ['pipenv', 'run', 'python', 'pipeline.py', '--threads', '1']),
-                 'weld-par': ('weld', ['pipenv', 'run', 'python', 'pipeline.py', '--threads', '32']),
+                 'weld-single': ('weld', ['pipenv', 'run', 'python', 'pipeline.py']),
+                 'weld-par': ('weld', ['pipenv', 'run', 'python', 'pipeline.py']),
                  'julia': ('julia', ['julia', 'pipeline.jl']),
                  'java': ('java', ['java', '-jar', 'build/libs/pipeline.jar']),
                  'R': ('R', ['Rscript', 'pipeline.R']),
@@ -105,7 +105,7 @@ for input_, slice_ in inputs.items():
             print('{} Running pipeline={} on input={}. Run={}/{}'.format(str(datetime.now()), pipeline, input_,
                                                                          str(i), runs))
             pipeline_process = subprocess.Popen(time_command + pipeline_command,
-                                                stdout=log, stderr=subprocess.DEVNULL)
+                                                stdout=log)
 
             # start profiling
             collectl_path = HOME2 + '/results/pipelines/' + input_ + '/profile/' + pipeline + '/' + str(i) + '_profile'

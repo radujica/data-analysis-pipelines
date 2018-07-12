@@ -97,6 +97,7 @@ class Variable(LazyData, LazyResult):
                                                                                    calendar=attributes['calendar'])],
                             dtype=np.str)
 
+        # this is a fail-safe to avoid slicing dimensions
         if self._slice is not None and self.column_name not in self.dimensions:
             return data[self._slice]
         else:

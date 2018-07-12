@@ -10,13 +10,14 @@ from lazy_result import LazyResult
 
 
 # TODO: tests with intermediate results
+# TODO: these are currently broken due to LazyResult being rewritten
 class IntegrationTests(unittest.TestCase):
     DIR_PATH = (os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) + '/pandas_weld/tests/io'
     PATH_NETCDF4 = DIR_PATH + '/sample_ext.nc'
     PATH_CSV = DIR_PATH + '/sample.csv'
 
     def is_placeholder(self, value):
-        self.assertTrue(value in LazyResult.data_mapping)
+        self.assertTrue(value in LazyResult.input_mapping)
 
     def is_raw(self, value):
         self.assertIsInstance(value, np.ndarray)

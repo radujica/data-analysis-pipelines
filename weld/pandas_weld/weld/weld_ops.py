@@ -487,7 +487,8 @@ def weld_merge_single_index(indexes, cache=True):
 
     if cache:
         id_ = LazyResult.generate_intermediate_id('sindex_merge')
-        LazyResult.register_intermediate_result(id_, result)
+        weld_input_id = WeldObject.generate_input_name(id_)
+        LazyResult.register_intermediate_result(weld_input_id, result)
 
         for i in range(2):
             weld_obj = WeldObject(_encoder, _decoder)
@@ -697,7 +698,8 @@ def weld_merge_triple_index(indexes, cache=True):
 
     if cache:
         id_ = LazyResult.generate_intermediate_id('mindex_merge')
-        LazyResult.register_intermediate_result(id_, result)
+        weld_input_name = WeldObject.generate_input_name(id_)
+        LazyResult.register_intermediate_result(weld_input_name, result)
 
         for i in range(2):
             weld_obj = WeldObject(_encoder, _decoder)
@@ -797,9 +799,9 @@ def weld_groupby(by, by_types, columns, columns_types):
 
     by = ', '.join(by_list_var) if len(by_list_var) > 1 else '%s' % by_list_var[0]
     columns = 'zip(%s)' % ', '.join(columns_list_var) if len(columns_list_var) > 1 else '%s' % columns_list_var[0]
-    to_merge_keys = '{%s}' % ', '.join(['e.$%s' % str(k) for k in range(len(by_types))]) # if len(by_types) > 1 else '{e.$0}'
+    to_merge_keys = '{%s}' % ', '.join(['e.$%s' % str(k) for k in range(len(by_types))])
     to_merge_values = '{%s}' % ', '.join(['e.$%s.$%s' % (str(len(by_types)), str(k)) for k in range(len(columns_types))]) if len(columns_types) > 1 else '{e.$%s}' % str(len(by_types))
-    by_types = '{%s}' % ', '.join([str(k) for k in by_types]) # if len(by_types) > 1 else '%s' % by_types[0]
+    by_types = '{%s}' % ', '.join([str(k) for k in by_types])
     columns_types = '{%s}' % ', '.join([str(k) for k in columns_types]) if len(columns_types) > 1 else '{%s}' % columns_types[0]
 
     weld_obj.weld_code = weld_template % {'by': by,

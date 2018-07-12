@@ -24,7 +24,9 @@ def read_netcdf4_eager(path):
     DataFrame
 
     """
-    # This is how it should look like
+    # This is how it should look like but currently the data is corrupted somehow
+    # import netCDF4
+    # import pandas as pd
     # ds = netCDF4.Dataset(path)
     #
     # [ds.variables[k].set_auto_mask(False) for k in ds.variables]

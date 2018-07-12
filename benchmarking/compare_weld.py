@@ -89,7 +89,7 @@ for input_, slice_ in inputs.items():
 
     input_path = HOME2 + '/datasets/ECAD/' + input_ + '/'
     base_command = ['pipenv', 'run', 'python', '-u', 'pipeline.py', '--input', input_path,
-                    '--slice', '{}:{}'.format(slice_[0], slice_[1]), '--threads', '1']
+                    '--slice', '{}:{}'.format(slice_[0], slice_[1])]
 
     for i in range(runs):
         # no lazy parsing, no cache
