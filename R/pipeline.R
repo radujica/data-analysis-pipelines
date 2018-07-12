@@ -78,7 +78,7 @@ to_csv <- function(df, name) {
 
 # PIPELINE
 # 1. join the 2 dataframes
-df <- dplyr::inner_join(df1, df2)
+df <- dplyr::inner_join(df1, df2, by = c("longitude" = "longitude", "latitude" = "latitude", "time" = "time"))
 
 # 2. quick preview on the data
 df_head <- head(df, 10)
