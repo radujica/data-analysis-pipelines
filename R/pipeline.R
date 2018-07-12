@@ -71,6 +71,8 @@ print_event <- function(name) {
     cat(paste("#", format(Sys.time(), "%H:%M:%S"), "-", name, "\n", sep=""))
 }
 
+print_event('done_read')
+
 to_csv <- function(df, name) {
     readr::write_csv(df, paste(args$output, name, ".csv", sep = ""))
 }
