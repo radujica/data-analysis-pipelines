@@ -61,11 +61,13 @@ class Dataset(LazyFile):
         for kv in self.ds.variables.items():
             # generate a data_id to act as placeholder to the data
             data_id = LazyResult.generate_data_id(kv[0])
-            weld_obj = LazyResult.generate_placeholder_weld_object(data_id, Variable.encoder, Variable.decoder)
+            weld_obj, weld_input_id = LazyResult.generate_placeholder_weld_object(data_id,
+                                                                                  Variable.encoder,
+                                                                                  Variable.decoder)
 
             variable = Variable(self.file_id, kv[0], kv[1].dimensions, kv[1].shape,
                                 kv[1].__dict__, weld_obj, kv[1].dtype)
-            LazyResult.register_lazy_data(data_id, variable)
+            LazyResult.register_lazy_data(weld_input_id, variable)
 
             variables[kv[0]] = variable
 

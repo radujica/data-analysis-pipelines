@@ -194,6 +194,8 @@ class DataFrame(object):
             the output of evaluate on the sliced DataFrame
 
         """
+        new_index = self.index.head(n)
+
         new_data = {}
         for column_name in self:
             # making series because Series has the proper method to slice something; re-use the code above
@@ -203,9 +205,6 @@ class DataFrame(object):
                                            series.dtype,
                                            series.index,
                                            series.name)
-
-        slice_ = replace_slice_defaults(slice(n))
-        new_index = self.index[slice_]
 
         return DataFrame(new_data, new_index).evaluate(verbose, decode, passes,
                                                        num_threads, apply_experimental_transforms)
