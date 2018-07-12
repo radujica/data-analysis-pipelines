@@ -11,15 +11,12 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
-import java.util.Calendar;
-import java.util.Map;
 
 // TODO: convert for loops to streams? no native support for floats though
 // https://stackoverflow.com/questions/26951431/how-to-get-an-observablefloatarray-from-a-stream/26970398#26970398
 public class Pipeline  {
     private static final String CALENDAR = "proleptic_gregorian";
     private static final String UNITS = "days since 1950-01-01";
-    private static final Calendar cal = Calendar.getInstance();
     private static final SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
 
     private Object readVariable(Variable variable) throws IOException {
@@ -135,7 +132,7 @@ public class Pipeline  {
     }
 
     private void printEvent(String name) {
-        System.out.printf("#%s-%s\n", sdf.format(cal.getTime()), name);
+        System.out.printf("#%s-%s\n", sdf.format(System.currentTimeMillis()), name);
     }
 
     public void start(String input, String slice, String output) throws IOException {
