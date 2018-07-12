@@ -9,10 +9,12 @@ HOME2 = os.environ.get('HOME2')
 if HOME2 is None:
     raise RuntimeError('Cannot find HOME2 environment variable')
 
-configurations = ['no-lazy-no-cache', 'no-cache', 'no-lazy', 'all']
 all_inputs = ['data_0', 'data_1', 'data_3', 'data_6', 'data_12', 'data_25', 'data_50', 'data_100']
 all_files = ['head.csv', 'agg.csv', 'grouped.csv']
 all_runs = [0, 1, 2, 3, 4]
+all_experiments = {'lazy': ['eager', 'lazy'],
+                   'cache': ['no-cache', 'cache'],
+                   'ir-cache': ['no-ir-cache', 'ir-cache']}
 
 parser = argparse.ArgumentParser(description='Check Pipelines')
 parser.add_argument('--input',
@@ -21,8 +23,10 @@ parser.add_argument('--files',
                     help='Which files to check. If more than 1, separate with comma, e.g. --files head,agg')
 parser.add_argument('--runs',
                     help='Which runs to check. If more than 1, separate with comma, e.g. --runs 2,3')
+parser.add_argument('--experiment',
+                    help='Which experiment to run out of: lazy,cache,ir-cache')
+
 args = parser.parse_args()
-runs = [int(i) for i in args.runs.split(',')] if args.runs is not None else all_runs
 
 
 def check_arg(arg, default):
@@ -34,22 +38,28 @@ def check_arg(arg, default):
 
 inputs = check_arg(args.input, all_inputs)
 files = check_arg(args.files, all_files)
+runs = [int(i) for i in args.runs.split(',')] if args.runs is not None else all_runs
+experiments = args.experiment.split(',') if args.experiment is not None else all_experiments.keys()
 
 
 # essentially checking if the outputs are the same since check.py checks if they're correct
 for input_ in inputs:
-    truth_path = HOME2 + '/results/weld/' + input_ + '/output_all_'
+    truth_path = HOME2 + '/results/weld/' + input_ + '/ir-cache/output_ir-cache_'
 
     for f in files:
         # picking one of the python output files
         files = [truth_path + '0_' + f]
         for run in runs:
-            for configuration in configurations[:-1]:
-                output_path = HOME2 + '/results/weld/' + input_ + '/output_' + configuration + '_' + str(run) + '_'
-                files.append(output_path + f)
+            for experiment in experiments:
+                for output_name in all_experiments[experiment]:
+                    output_path = HOME2 + '/results/weld/' + input_ + '/' + experiment + \
+                                  '/output_' + output_name + '_' + str(run) + '_'
+                    files.append(output_path + f)
 
         print('Checking input={} file={}'.format(input_, f))
         print('----------------')
+
         command = ['pipenv', 'run', 'python', '-u', 'check_correctness.py'] + files
         os.system(' '.join(command))
+
         print('')

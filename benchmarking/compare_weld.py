@@ -17,15 +17,9 @@ parser.add_argument('--input',
                     help='Which input to check. If more than 1, separate with comma, e.g. --input data_1,data_25')
 parser.add_argument('--runs',
                     help='How many runs per pipeline-input pair. Default=5')
+parser.add_argument('--experiment',
+                    help='Which experiment to run out of: lazy,cache,ir-cache')
 args = parser.parse_args()
-
-all_inputs = {'data_0': (4718274, 9007614), 'data_1': (9436548, 18015228), 'data_3': (18873096, 36030456),
-              'data_6': (37746192, 72060912), 'data_12': (75492384, 144121824), 'data_25': (151009089, 288290079),
-              'data_50': (302018178, 576580158), 'data_100': (604060677, 1153206747)}
-number_runs = 5
-
-inputs = {k: all_inputs[k] for k in args.input.split(',')} if args.input is not None else all_inputs
-runs = int(args.runs) if args.runs is not None else number_runs
 
 
 def run_pipeline(pipeline_command, name, output_path, run):
@@ -77,31 +71,70 @@ def run_pipeline(pipeline_command, name, output_path, run):
     print('{} Done'.format(str(datetime.now())))
 
 
-os.putenv('WELD_NUMBER_THREADS', '1')
+def run_lazy_experiment(command, n_runs, output_path):
+    output_path = output_path + '/lazy/'
+    # delete previous data and remake directory
+    os.system('rm -rf ' + output_path)
+    os.system('mkdir -p ' + output_path)
+
+    os.putenv('LAZY_WELD_CACHE', 'False')
+    os.putenv('WELD_INPUT_CACHE', 'False')
+
+    for run in range(n_runs):
+        run_pipeline(command + ['--eager'], 'eager', output_path, run)
+        run_pipeline(command, 'lazy', output_path, run)
+
+
+def run_cache_experiment(command, n_runs, output_path):
+    output_path = output_path + '/cache/'
+    # delete previous data and remake directory
+    os.system('rm -rf ' + output_path)
+    os.system('mkdir -p ' + output_path)
+
+    os.putenv('LAZY_WELD_CACHE', 'False')
+
+    for run in range(n_runs):
+        os.putenv('WELD_INPUT_CACHE', 'False')
+        run_pipeline(command, 'no-cache', output_path, run)
+
+        os.putenv('WELD_INPUT_CACHE', 'True')
+        run_pipeline(command, 'cache', output_path, run)
+
+
+def run_ir_cache_experiment(command, n_runs, output_path):
+    output_path = output_path + '/ir-cache/'
+    # delete previous data and remake directory
+    os.system('rm -rf ' + output_path)
+    os.system('mkdir -p ' + output_path)
+
+    for run in range(n_runs):
+        os.putenv('LAZY_WELD_CACHE', 'False')
+        run_pipeline(command, 'no-ir-cache', output_path, run)
+
+        os.putenv('LAZY_WELD_CACHE', 'True')
+        run_pipeline(command, 'ir-cache', output_path, run)
+
+
+all_inputs = {'data_0': (4718274, 9007614), 'data_1': (9436548, 18015228), 'data_3': (18873096, 36030456),
+              'data_6': (37746192, 72060912), 'data_12': (75492384, 144121824), 'data_25': (151009089, 288290079),
+              'data_50': (302018178, 576580158), 'data_100': (604060677, 1153206747)}
+number_runs = 5
+all_experiments = {'lazy': run_lazy_experiment, 'cache': run_cache_experiment, 'ir-cache': run_ir_cache_experiment}
+
+inputs = {k: all_inputs[k] for k in args.input.split(',')} if args.input is not None else all_inputs
+runs = int(args.runs) if args.runs is not None else number_runs
+experiments = args.experiment.split(',') if args.experiment is not None else all_experiments.keys()
+
 
 for input_, slice_ in inputs.items():
     print('Running on input={}'.format(input_))
 
     output_folder = HOME2 + '/results/weld/' + input_
-    # delete previous data and remake directory
-    os.system('rm -rf ' + output_folder)
-    os.system('mkdir -p ' + output_folder)
 
     input_path = HOME2 + '/datasets/ECAD/' + input_ + '/'
     base_command = ['pipenv', 'run', 'python', '-u', 'pipeline.py', '--input', input_path,
-                    '--slice', '{}:{}'.format(slice_[0], slice_[1]), '--threads', '1']
+                    '--slice', '{}:{}'.format(slice_[0], slice_[1])]
 
-    for i in range(runs):
-        # no lazy parsing, no cache
-        os.putenv('LAZY_WELD_CACHE', 'False')
-        run_pipeline(base_command + ['--eager'], 'no-lazy-no-cache', output_folder, i)
-
-        # lazy, no cache
-        run_pipeline(base_command, 'no-cache', output_folder, i)
-
-        # no lazy, cache
-        os.putenv('LAZY_WELD_CACHE', 'True')
-        run_pipeline(base_command + ['--eager'], 'no-lazy', output_folder, i)
-
-        # lazy, cache
-        run_pipeline(base_command, 'all', output_folder, i)
+    for experiment in experiments:
+        experiment_func = all_experiments[experiment]
+        experiment_func(base_command, runs, output_folder)
