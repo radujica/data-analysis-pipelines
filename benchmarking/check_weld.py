@@ -12,7 +12,7 @@ if HOME2 is None:
 all_inputs = ['data_0', 'data_1', 'data_3', 'data_6', 'data_12', 'data_25', 'data_50', 'data_100']
 all_files = ['head.csv', 'agg.csv', 'grouped.csv']
 all_runs = [0, 1, 2, 3, 4]
-all_experiments = {'lazy': ['eager', 'lazy'],
+all_experiments = {'lazy': ['eager', 'lazy'],#, 'eager-csv', 'lazy-csv'],
                    'cache': ['no-cache', 'cache'],
                    'ir-cache': ['no-ir-cache', 'ir-cache']}
 

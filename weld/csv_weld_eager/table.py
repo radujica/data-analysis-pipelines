@@ -14,12 +14,12 @@ class Table(LazyFile):
 
         self.path = path
         header_df = self.read_metadata()
-        self.columns = self._create_columns(header_df)
-
         # the params used to lazy_slice_rows and lazy_skip_columns
         self.slice_start = None
         self.nrows = None
-        self.usecols = self.columns.keys()
+        self.usecols = list(header_df)
+
+        self.columns = self._create_columns(header_df)
 
     def _create_columns(self, header_df):
         from weld.weldobject import WeldObject
@@ -28,9 +28,14 @@ class Table(LazyFile):
         for column_name in header_df:
             data_id = LazyResult.generate_data_id(column_name)
             column = Column(column_name, self, data_id, header_df[column_name].dtype)
-            columns[column_name] = column
+
             weld_input_name = WeldObject.generate_input_name(data_id)
             LazyResult.register_lazy_data(weld_input_name, column)
+
+            # force read it eagerly
+            LazyResult.input_mapping[str(weld_input_name)] = column.eager_read()
+
+            columns[column_name] = column
 
         return columns
 

@@ -4,6 +4,7 @@ import numpy as np
 from grizzly.encoders import numpy_to_weld_type
 
 import csv_weld
+import csv_weld_eager
 import netCDF4_weld
 import netCDF4_weld_eager
 from lazy_result import LazyResult
@@ -111,7 +112,35 @@ def read_csv(path):
     new_columns = {}
     for column_name in table.columns:
         column = table.columns[column_name]
-        weld_obj = LazyResult.generate_placeholder_weld_object(column.data_id, column.encoder, column.decoder)
+        weld_obj, weld_input_name = LazyResult.generate_placeholder_weld_object(column.data_id, column.encoder, column.decoder)
+        new_columns[column_name] = LazyResult(weld_obj, numpy_to_weld_type(column.dtype), 1)
+
+    random_column = new_columns[new_columns.keys()[0]]
+    index_weld_obj = weld_range(0, 'len({})'.format(random_column.expr.weld_code), 1)
+    index_weld_obj.update(random_column.expr)
+
+    return DataFrame(new_columns, Index(index_weld_obj, np.dtype(np.int64)))
+
+
+def read_csv_eager(path):
+    """ Read eagerly a csv file as a DataFrame
+
+    Parameters
+    ----------
+    path : str
+        path of the file
+
+    Returns
+    -------
+    DataFrame
+
+    """
+    table = csv_weld_eager.Table(path)
+
+    new_columns = {}
+    for column_name in table.columns:
+        column = table.columns[column_name]
+        weld_obj, weld_input_name = LazyResult.generate_placeholder_weld_object(column.data_id, column.encoder, column.decoder)
         new_columns[column_name] = LazyResult(weld_obj, numpy_to_weld_type(column.dtype), 1)
 
     random_column = new_columns[new_columns.keys()[0]]

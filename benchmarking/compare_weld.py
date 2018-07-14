@@ -81,8 +81,13 @@ def run_lazy_experiment(command, n_runs, output_path):
     os.putenv('WELD_INPUT_CACHE', 'False')
 
     for run in range(n_runs):
+        # netcdf
         run_pipeline(command + ['--eager'], 'eager', output_path, run)
         run_pipeline(command, 'lazy', output_path, run)
+
+        # # csv
+        # run_pipeline(command + ['--eager', '--csv'], 'eager-csv', output_path, run)
+        # run_pipeline(command + ['--csv'], 'lazy-csv', output_path, run)
 
 
 def run_cache_experiment(command, n_runs, output_path):

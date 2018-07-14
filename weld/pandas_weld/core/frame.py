@@ -738,3 +738,13 @@ class DataFrame(object):
                     row.append(data[j][i])
 
                 writer.writerow(row)
+
+    # TODO: needs more robust code
+    def set_index(self, columns):
+        new_index = MultiIndex.from_arrays([self[col] for col in columns], columns)
+
+        new_columns = dict(self.data)
+        for column in columns:
+            del new_columns[column]
+
+        return DataFrame(new_columns, new_index)

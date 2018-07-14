@@ -237,25 +237,49 @@ def plot_time_bars_single(input_):
         df = df.append(d)
 
     # fix index
-    df = df.reset_index().drop(columns='index').sort_values(by='real_mean').reset_index()
+    df = df.reset_index().drop(columns='index').sort_values(by='real_mean').reset_index().drop(columns='index')
 
-    # fix spark-single bar
-    spark_single_val = df['real_mean'][7]
-    df.loc[df['pipeline'] == 'spark-s', 'real_mean'] = df['real_mean'][6] + 0.1 * df['real_mean'][6]
-    df.loc[df['pipeline'] == 'spark-s', 'real_diff'] = 0
+    # set scale
+    scale = 60
+    df['real_mean'] = df['real_mean'] / scale
+    df['real_diff'] = df['real_diff'] / scale
 
     # remove error bars if too small?
     # df['real_diff'] = df['real_diff'].map(lambda x: 0 if x < 10 else x)
 
-    plt.figure(figsize=(6, 4))
-    bar = plt.bar(df.index.values, df['real_mean'] / 60, width=0.6, yerr=df['real_diff'] / 60, capsize=2.5)
-    plt.ylabel('Time (minutes)')
-    plt.title('Mean real time to run pipeline for input={}'.format(input_))
-    plt.xticks(df.index.values, df['pipeline'])
-    # add value of spark-single
-    plt.text(bar[-1].get_x(), 0.1, '{0:.1f}'.format(spark_single_val / 60))
-    plt.scatter(df.index.values[-1], df['real_mean'][7] / 60 + 0.03 * df['real_mean'][7] / 60, c='black', s=1)
-    plt.scatter(df.index.values[-1], df['real_mean'][7] / 60 + 0.06 * df['real_mean'][7] / 60, c='black', s=1)
+    # plt.figure(figsize=(6, 4))
+    fig, (ax1, ax2) = plt.subplots(2, 1, sharex='all')
+    ax1.bar(df['pipeline'], df['real_mean'], width=0.7, yerr=df['real_diff'], capsize=2.5)
+    ax2.bar(df['pipeline'], df['real_mean'], width=0.7, yerr=df['real_diff'], capsize=2.5)
+
+    # set y_axis limits
+    spark_single_y = df.loc[df['pipeline'] == 'spark-s']
+    spark_par_y = df.loc[df['pipeline'] == 'spark-p']
+    ax1.set_ylim(spark_par_y['real_mean'].values - spark_par_y['real_diff'].values - 0.05 * spark_par_y['real_mean'].values,
+                 spark_single_y['real_mean'].values + spark_single_y['real_diff'].values + 0.03 * spark_single_y['real_mean'].values)
+    julia_y = df.loc[df['pipeline'] == 'julia']
+    ax2.set_ylim(0, julia_y['real_mean'].values + julia_y['real_diff'].values + 0.01 * julia_y['real_mean'].values)
+
+    # hide spines
+    ax1.spines['bottom'].set_visible(False)
+    ax2.spines['top'].set_visible(False)
+    ax1.xaxis.tick_top()
+    ax1.tick_params(labeltop='off')
+    ax2.xaxis.tick_bottom()
+
+    # diagonal lines
+    d = .015
+    kwargs = dict(transform=ax1.transAxes, color='k', clip_on=False)
+    ax1.plot((-d, +d), (-d, +d), **kwargs)
+    ax1.plot((1 - d, 1 + d), (-d, +d), **kwargs)
+    kwargs.update(transform=ax2.transAxes)
+    ax2.plot((-d, +d), (1 - d, 1 + d), **kwargs)
+    ax2.plot((1 - d, 1 + d), (1 - d, 1 + d), **kwargs)
+
+    fig.subplots_adjust(hspace=0.1)
+    ax1.set_ylabel('Time (minutes)')
+    ax2.set_ylabel('Time (minutes)')
+    ax1.set_title('Mean time to run pipelines over input={}'.format(input_))
 
     if args.save:
         plt.savefig(OUTPUT_FOLDER + '/' + input_ + '/time_bars.png')

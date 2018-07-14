@@ -13,18 +13,29 @@ parser.add_argument('-i', '--input', required=True, help='Path to folder contain
 parser.add_argument('-s', '--slice', required=True, help='Start and stop of a subset of the data')
 parser.add_argument('-o', '--output', required=True, help='Path to output folder')
 parser.add_argument('-e', '--eager', action='store_true')
+parser.add_argument('-c', '--csv', action='store_true')
 args = parser.parse_args()
 
 
 PATH1 = args.input + 'data1.nc'
 PATH2 = args.input + 'data2.nc'
+PATH1_CSV = args.input + 'data1.csv'
+PATH2_CSV = args.input + 'data2.csv'
 
 if args.eager:
-    df1 = pdw.read_netcdf4_eager(PATH1)
-    df2 = pdw.read_netcdf4_eager(PATH2)
+    if args.csv:
+        df1 = pdw.read_csv_eager(PATH1_CSV).set_index(['longitude', 'latitude', 'time'])
+        df2 = pdw.read_csv_eager(PATH2_CSV).set_index(['longitude', 'latitude', 'time'])
+    else:
+        df1 = pdw.read_netcdf4_eager(PATH1)
+        df2 = pdw.read_netcdf4_eager(PATH2)
 else:
-    df1 = pdw.read_netcdf4(PATH1)
-    df2 = pdw.read_netcdf4(PATH2)
+    if args.csv:
+        df1 = pdw.read_csv(PATH1_CSV).set_index(['longitude', 'latitude', 'time'])
+        df2 = pdw.read_csv(PATH2_CSV).set_index(['longitude', 'latitude', 'time'])
+    else:
+        df1 = pdw.read_netcdf4(PATH1)
+        df2 = pdw.read_netcdf4(PATH2)
 
 
 def print_event(name):
