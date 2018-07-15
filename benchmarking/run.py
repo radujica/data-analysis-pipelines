@@ -22,10 +22,16 @@ all_pipelines = {'python-libraries': ('python-libraries', ['pipenv', 'run', 'pyt
                  'julia': ('julia', ['julia', 'pipeline.jl']),
                  'java': ('java', ['java', '-Xmx200G' ,'-jar', 'build/libs/pipeline.jar']),
                  'R': ('R', ['Rscript', 'pipeline.R']),
-                 'spark-single': ('spark', ['spark-submit', '--master', 'local', '--conf', 'spark.sql.shuffle.partitions=4', '--conf', 'spark.executor.heartbeatInterval=115', '--driver-memory', '200g', \
-        'target/scala-2.11/spark-assembly-1.0.jar', '--partitions', '4']),
-                 'spark-par': ('spark', ['spark-submit', '--master', 'local[32]', '--conf', 'spark.sql.shuffle.partitions=64', '--conf', 'spark.executor.heartbeatInterval=115', '--driver-memory', '200g', \
-        'target/scala-2.11/spark-assembly-1.0.jar', '--partitions', '64'])}
+                 'spark-single': ('spark', ['spark-submit', '--master', 'local',
+                                            '--conf', 'spark.sql.shuffle.partitions=4',
+                                            '--conf', 'spark.executor.heartbeatInterval=115',
+                                            '--driver-memory', '200g',
+                                            'target/scala-2.11/spark-assembly-1.0.jar', '--partitions', '4']),
+                 'spark-par': ('spark', ['spark-submit', '--master', 'local[32]',
+                                         '--conf', 'spark.sql.shuffle.partitions=64',
+                                         '--conf', 'spark.executor.heartbeatInterval=115',
+                                         '--driver-memory', '200g',
+                                         'target/scala-2.11/spark-assembly-1.0.jar', '--partitions', '64'])}
 number_runs = 5
 # to obtain 'west' Europe, given longitude is the first dimension:
 # there are 464 unique longitude, 201 unique latitude, and x unique days depending on subset;

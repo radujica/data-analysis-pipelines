@@ -174,7 +174,9 @@ class DataFrame(object):
             return DataFrame(new_data, new_index)
         else:
             raise TypeError('expected a str, slice, list, or Series in DataFrame.__getitem__')
-
+    
+    # TODO: this doesn't cache intermediate results which could speed it up further;
+    # if implementing this cache, it must NOT interfere with the global one
     def head(self, n=10, verbose=True, decode=True, passes=None,
              num_threads=1, apply_experimental_transforms=False):
         """ Eagerly evaluates the DataFrame

@@ -71,14 +71,15 @@ def run_pipeline(pipeline_command, name, output_path, run):
     print('{} Done'.format(str(datetime.now())))
 
 
+# this shall actually be the last experiment, after caches
 def run_lazy_experiment(command, n_runs, output_path):
     output_path = output_path + '/lazy/'
     # delete previous data and remake directory
     os.system('rm -rf ' + output_path)
     os.system('mkdir -p ' + output_path)
 
-    os.putenv('LAZY_WELD_CACHE', 'False')
-    os.putenv('WELD_INPUT_CACHE', 'False')
+    os.putenv('LAZY_WELD_CACHE', 'True')
+    os.putenv('WELD_INPUT_CACHE', 'True')
 
     for run in range(n_runs):
         # netcdf
@@ -100,10 +101,10 @@ def run_cache_experiment(command, n_runs, output_path):
 
     for run in range(n_runs):
         os.putenv('WELD_INPUT_CACHE', 'False')
-        run_pipeline(command, 'no-cache', output_path, run)
+        run_pipeline(command + ['--eager'], 'no-cache', output_path, run)
 
         os.putenv('WELD_INPUT_CACHE', 'True')
-        run_pipeline(command, 'cache', output_path, run)
+        run_pipeline(command + ['--eager'], 'cache', output_path, run)
 
 
 def run_ir_cache_experiment(command, n_runs, output_path):
@@ -112,12 +113,14 @@ def run_ir_cache_experiment(command, n_runs, output_path):
     os.system('rm -rf ' + output_path)
     os.system('mkdir -p ' + output_path)
 
+    os.putenv('WELD_INPUT_CACHE', 'True')
+
     for run in range(n_runs):
         os.putenv('LAZY_WELD_CACHE', 'False')
-        run_pipeline(command, 'no-ir-cache', output_path, run)
+        run_pipeline(command + ['--eager'], 'no-ir-cache', output_path, run)
 
         os.putenv('LAZY_WELD_CACHE', 'True')
-        run_pipeline(command, 'ir-cache', output_path, run)
+        run_pipeline(command + ['--eager'], 'ir-cache', output_path, run)
 
 
 all_inputs = {'data_0': (4718274, 9007614), 'data_1': (9436548, 18015228), 'data_3': (18873096, 36030456),

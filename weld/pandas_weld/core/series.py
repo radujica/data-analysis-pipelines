@@ -61,7 +61,8 @@ class Series(LazyResult):
         data = super(Series, self).evaluate(verbose, decode, passes, num_threads, apply_experimental_transforms)
 
         return Series(data, self.dtype, self.index, self.name)
-
+    
+    # TODO: slicing here only slices the input, not this series; should have 2 different methods
     def __getitem__(self, item):
         """ Lazy operation to select a subset of the series
 

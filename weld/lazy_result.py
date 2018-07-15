@@ -293,6 +293,9 @@ class LazyResult(LazyOpResult):
         num_threads = LazyResult._threads
         apply_experimental_transforms = LazyResult._experimental
 
+        # TODO: might be a good idea to first copy context such that it can be reverted to after the evaluate;
+        # this way, data won't remain in context.values which may or may not be replaced anyway in future evaluates
+
         if isinstance(self.expr, WeldObject):
             # replace context values for every lazy recorded file input
             for key in self.expr.context.iterkeys():

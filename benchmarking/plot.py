@@ -15,6 +15,7 @@ all_inputs = ['data_0', 'data_1', 'data_3', 'data_6', 'data_12', 'data_25', 'dat
 all_weld_experiments = {'lazy': ['eager', 'lazy'],
                         'cache': ['no-cache', 'cache'],
                         'ir-cache': ['no-ir-cache', 'ir-cache']}
+# colors: time = b, memory = g, io = m, over-inputs = time (c), mem (y)
 
 
 parser = argparse.ArgumentParser(description='Plot results')
@@ -96,8 +97,8 @@ def read_collectl_pipelines_time_single(input_, pipeline, run):
     return df
 
 
-def read_markers_pipelines_single(input_, pipeline):
-    input_path = HOME2 + '/results/pipelines/' + input_ + '/markers/' + pipeline + '/0_markers.txt'
+def read_markers_pipelines_single(input_, pipeline, run):
+    input_path = HOME2 + '/results/pipelines/' + input_ + '/markers/' + pipeline + '/' + str(run) + '_markers.txt'
     df = pd.read_csv(input_path, header=None, names=['data'])
     # filter out the markers
     df = df[df['data'].str[0] == '#']
@@ -249,8 +250,8 @@ def plot_time_bars_single(input_):
 
     # plt.figure(figsize=(6, 4))
     fig, (ax1, ax2) = plt.subplots(2, 1, sharex='all')
-    ax1.bar(df['pipeline'], df['real_mean'], width=0.7, yerr=df['real_diff'], capsize=2.5)
-    ax2.bar(df['pipeline'], df['real_mean'], width=0.7, yerr=df['real_diff'], capsize=2.5)
+    ax1.bar(df['pipeline'], df['real_mean'], width=0.7, yerr=df['real_diff'], capsize=2.5, color='b')
+    ax2.bar(df['pipeline'], df['real_mean'], width=0.7, yerr=df['real_diff'], capsize=2.5, color='b')
 
     # set y_axis limits
     spark_single_y = df.loc[df['pipeline'] == 'spark-s']
@@ -307,7 +308,7 @@ def plot_time_inputs_single(pipeline):
     df = df.reset_index()[['real_mean', 'real_diff']]
 
     plt.figure(figsize=(12, 8))
-    plt.bar(df.index.values, df['real_mean'] / 60, yerr=df['real_diff'] / 60, color='y', capsize=4)
+    plt.bar(df.index.values, df['real_mean'] / 60, yerr=df['real_diff'] / 60, color='c', capsize=4)
     plt.ylabel('Time (minutes)')
     plt.xlabel('Datasets')
     plt.title('Mean real time to run pipeline={} for all inputs'.format(pipeline))
@@ -411,7 +412,7 @@ def plot_profile_scatter_single_cpu(input_):
     plt.title('CPU Total usage over input={}'.format(input_))
     plt.legend()
 
-    plt.axhline(y=100, color='k')
+    plt.axhline(y=100, color='k', linewidth=0.5)
     plt.text(max_x - 3, 130, '100')
 
     if args.save:
@@ -429,8 +430,8 @@ def plot_profile_scatter_cpu(inputs):
 
 
 def plot_profile_scatter_markers_single(input_, pipeline):
-    df = read_collectl_pipelines_time_single(input_, pipeline)
-    df_markers = read_markers_pipelines_single(input_, pipeline)
+    df = read_collectl_pipelines_time_single(input_, pipeline, 1)
+    df_markers = read_markers_pipelines_single(input_, pipeline, 1)
 
     plt.figure(figsize=(12, 8))
     plt.plot(df.index.values, df['[MEM]Used'] / 1000000)
@@ -448,7 +449,7 @@ def plot_profile_scatter_markers_single(input_, pipeline):
         x_val = time_index.get_loc(t)
         if t != previous_time:
             plt.axvline(x=x_val, color='red')
-            plt.text(x_val + 1, max_y / 1000000, m, rotation=90)
+            plt.text(x_val + 0.005 * df.index.values[-1], max_y / 1000000, m, rotation=90)
         previous_time = t
 
     if args.save:
@@ -538,7 +539,7 @@ def plot_weld_profile_scatter_single(input_, experiment):
 
     plt.figure(figsize=(6, 5))
     plt.subplots_adjust(hspace=0.6, wspace=0.4)
-    plt.suptitle('Weld memory usage over time', fontsize=16)
+    # plt.suptitle('Weld memory usage over time', fontsize=16)
     # find max y
     max_y = max([df['[MEM]Used'].max() for df in dfs.values()])
     # find max x
@@ -613,6 +614,45 @@ def plot_weld_io_bars(inputs):
             plot_weld_io_bars_single(input_, experiment)
 
 
+def plot_weld_final_single(input_):
+    df = read_weld_time_single(input_, 'lazy', 'eager')
+    df = df.append(read_weld_time_single(input_, 'ir-cache', 'ir-cache')).reset_index().drop(columns='index')
+
+    # fix scales
+    df['real_mean'] = df['real_mean'] / 60
+    df['real_diff'] = df['real_diff'] / 60
+    df['mem_max(K)_mean'] = df['mem_max(K)_mean'] / 1000000
+    df['mem_max(K)_diff'] = df['mem_max(K)_diff'] / 1000000
+    df['input_mean'] = df['input_mean'] / 1000
+    df['input_diff'] = df['input_diff'] / 1000
+
+    plt.figure(figsize=(8, 4))
+    subplots = [131, 132, 133]
+    columns = ['real', 'mem_max(K)', 'input']
+    ylabels = ['Mean real time (min)', 'Mean max memory (GB)', 'File system inputs (K)']
+    colors = ['b', 'g', 'm']
+    for subplot, column, ylabel, color in zip(subplots, columns, ylabels, colors):
+        plt.subplot(subplot)
+        plt.bar(df['pipeline'], df[column + '_mean'], yerr=df[column + '_diff'], color=color, width=0.7)
+        plt.ylabel(ylabel)
+
+    plt.tight_layout()
+
+    if args.save:
+        plt.savefig(OUTPUT_FOLDER + '/' + input_ + '/final_bars.png')
+    else:
+        plt.show()
+
+
+def plot_weld_final(inputs):
+    # total mem, total io, total time
+    for input_ in inputs:
+        # make sure directory exists
+        os.system('mkdir -p ' + OUTPUT_FOLDER + '/' + input_)
+
+        plot_weld_final_single(input_)
+
+
 # all available plots
 all_plots = {'time_bars': plot_time_bars,
              'profile_scatter': plot_profile_scatter,
@@ -622,7 +662,8 @@ all_plots = {'time_bars': plot_time_bars,
              'mem_inputs': plot_mem_inputs,
              'weld_time_bars': plot_weld_time_bars,
              'weld_scatter': plot_weld_profile_scatter,
-             'weld_io': plot_weld_io_bars}
+             'weld_io': plot_weld_io_bars,
+             'weld_final': plot_weld_final}
 
 if args.plot is not None:
     plots = {k: all_plots[k] for k in args.plot.split(',')}
