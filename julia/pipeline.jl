@@ -3,6 +3,7 @@ using DataFrames
 using DataStructures
 using ArgParse
 using CSV
+using ProfileView
 
 include("netcdf_parser.jl")
 
@@ -22,6 +23,9 @@ function parse_command_line()
             help = "Path to output folder"
             arg_type = String
             required = true
+        "--profile", "-p"
+            help = "If profiling the script"
+            action = :store_true
     end
 
     return parse_args(s)
@@ -31,8 +35,7 @@ end
 print_event(name::String) = println("#" * Dates.format(now(), "HH:MM:SS") * "-" * name)
 
 
-function main()
-    parsed_args = parse_command_line()
+function main(parsed_args)
     df1 = readnetcdf(parsed_args["input"] * "data1.nc")
     df2 = readnetcdf(parsed_args["input"] * "data2.nc")
 
@@ -116,4 +119,17 @@ function main()
 
 end
 
-main()
+
+function run()
+    parsed_args = parse_command_line()
+    if parsed_args["profile"]
+        Profile.clear()
+        Profile.init(n = 10^9, delay = 0.01)
+        @profile main(parsed_args)
+        ProfileView.svgwrite(parsed_args["output"] * "profile.svg")
+    else
+        main(parsed_args)
+    end
+end
+
+run()
