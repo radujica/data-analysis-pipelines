@@ -44,22 +44,22 @@ experiments = args.experiment.split(',') if args.experiment is not None else all
 
 # essentially checking if the outputs are the same since check.py checks if they're correct
 for input_ in inputs:
-    truth_path = HOME2 + '/results/weld/' + input_ + '/ir-cache/output_ir-cache_'
+    truth_path = HOME2 + '/results/weld/' + input_ + '/lazy/output_lazy_'
 
     for f in files:
         # picking one of the python output files
-        files = [truth_path + '0_' + f]
+        files_ = [truth_path + '0_' + f]
         for run in runs:
             for experiment in experiments:
                 for output_name in all_experiments[experiment]:
                     output_path = HOME2 + '/results/weld/' + input_ + '/' + experiment + \
                                   '/output_' + output_name + '_' + str(run) + '_'
-                    files.append(output_path + f)
+                    files_.append(output_path + f)
 
         print('Checking input={} file={}'.format(input_, f))
         print('----------------')
 
-        command = ['pipenv', 'run', 'python', '-u', 'check_correctness.py'] + files
+        command = ['pipenv', 'run', 'python', '-u', 'check_correctness.py'] + files_
         os.system(' '.join(command))
 
         print('')

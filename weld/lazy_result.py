@@ -293,10 +293,8 @@ class LazyResult(LazyOpResult):
         num_threads = LazyResult._threads
         apply_experimental_transforms = LazyResult._experimental
 
-        # TODO: might be a good idea to first copy context such that it can be reverted to after the evaluate;
-        # this way, data won't remain in context.values which may or may not be replaced anyway in future evaluates
-
         if isinstance(self.expr, WeldObject):
+            old_context = dict(self.expr.context)
             # replace context values for every lazy recorded file input
             for key in self.expr.context.iterkeys():
                 key = str(key)
@@ -306,7 +304,11 @@ class LazyResult(LazyOpResult):
                     if key in LazyResult.intermediate_mapping:
                         self.expr.context[key] = LazyResult.fetch_intermediate_result(key)
 
-            return super(LazyResult, self).evaluate(verbose, decode, passes, num_threads, apply_experimental_transforms)
+            evaluated = super(LazyResult, self).evaluate(verbose, decode, passes, num_threads, apply_experimental_transforms)
+            # return to previous state such that context placeholders do not confusingly remain replaced
+            self.expr.context = old_context
+
+            return evaluated
         else:
             return self.expr
 

@@ -478,6 +478,7 @@ def weld_merge_single_index(indexes, cache=True):
     weld_obj.weld_code = weld_template % {'array1': weld_ids[0],
                                           'array2': weld_ids[1]}
     # this has both required bool arrays into 1 ndarray; note that arrays have been padded with False until of same len
+    # TODO: this could still be a single vec/array with the arrays concatenated instead to avoid decoder with ndim=2 mallocs
     result = LazyResult(weld_obj, WeldBit(), 2)
 
     # creating the actual results to return

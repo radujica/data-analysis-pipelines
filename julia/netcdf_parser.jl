@@ -58,7 +58,7 @@ function cartesianproduct(long::Array{Float32}, lat::Array{Float32}, time::Array
     index = 1
     for i = 1:length_long
         for j = 1:length_lat
-            new_lat_temp[index] = long[j]
+            new_lat_temp[index] = lat[j]
             index += 1
         end
     end

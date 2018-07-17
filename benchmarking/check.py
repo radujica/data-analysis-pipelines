@@ -44,7 +44,7 @@ for input_ in inputs:
 
     for f in files:
         # picking one of the python output files
-        files = [truth_path + '0_' + f]
+        filess = [truth_path + '0_' + f]
         for run in runs:
             for pipeline in pipelines:
                 # skip spark head files (yea, could rewrite to avoid continue) as they're expected to fail
@@ -53,11 +53,11 @@ for input_ in inputs:
                     continue
 
                 output_path = HOME2 + '/results/pipelines/' + input_ + '/output/' + pipeline + '/' + str(run) + '_'
-                files.append(output_path + f)
+                filess.append(output_path + f)
 
         print('Checking input={} file={}'.format(input_, f))
         print('----------------')
 
-        command = ['pipenv', 'run', 'python', '-u', 'check_correctness.py'] + files
+        command = ['pipenv', 'run', 'python', '-u', 'check_correctness.py'] + filess
         os.system(' '.join(command))
         print('')
