@@ -8,7 +8,8 @@ name = "pypi"
 [packages]
 
 pandas = "*"
-"netCDF4" = "*"
+"netcdf4" = "*"
+dask = {extras = ["complete"]}
 
 
 [dev-packages]

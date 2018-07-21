@@ -17,6 +17,7 @@ if HOME2 is None:
     raise RuntimeError('Cannot find HOME2 environment variable')
 
 all_pipelines = {'python-libraries': ('python-libraries', ['pipenv', 'run', 'python', 'pipeline.py']),
+                 'python-dask': ('python-libraries', ['pipenv', 'run', 'python', 'pipeline_dask.py', '--partitions', '128']),
                  'weld-single': ('weld', ['pipenv', 'run', 'python', 'pipeline.py']),
                  'weld-par': ('weld', ['pipenv', 'run', 'python', 'pipeline.py']),
                  'julia': ('julia', ['julia', 'pipeline.jl']),
