@@ -10,7 +10,7 @@ HOME2 = os.environ.get('HOME2')
 if HOME2 is None:
     raise RuntimeError('Cannot find HOME2 environment variable')
 
-PIPELINE_PATH = HOME2 + '/data-analysis-pipelines/weld'
+PIPELINE_PATH = '/ufs/radujica/Workspace' + '/data-analysis-pipelines/weld'
 
 parser = argparse.ArgumentParser(description='Compare Weld')
 parser.add_argument('--input',
@@ -28,7 +28,7 @@ def run_pipeline(pipeline_command, name, output_path, run):
     output_args = ['--output', output_path + '/output_' + name + '_' + str(run) + '_']
 
     # clear caches; this should work on the cluster
-    os.system('echo 3 | sudo /usr/bin/tee /proc/sys/vm/drop_caches > /dev/null 2>&1')
+    # os.system('echo 3 | sudo /usr/bin/tee /proc/sys/vm/drop_caches > /dev/null 2>&1')
 
     # setup the WeldObject compile-etc output and custom markers
     log = open(output_path + '/compile_' + name + '_' + str(run) + '.txt', 'w')
@@ -45,7 +45,7 @@ def run_pipeline(pipeline_command, name, output_path, run):
     # start pipeline
     os.chdir(PIPELINE_PATH)
     pipeline_process = subprocess.Popen(time_command + pipeline_command + output_args,
-                                        stdout=log, stderr=subprocess.DEVNULL)
+                                        stdout=log)
 
     # start profiling
     collectl_path = output_path + '/profile'
@@ -69,6 +69,24 @@ def run_pipeline(pipeline_command, name, output_path, run):
     os.system(' '.join(rename_command))
 
     print('{} Done'.format(str(datetime.now())))
+
+# separate experiment
+def run_lazy_simple_experiment(command, n_runs, output_path):
+    input_path = HOME2 + '/datasets/ECAD/' + input_ + '/'
+    command = ['pipenv', 'run', 'python', '-u', 'lazy_profile.py', '--input', input_path,
+               '--slice', '{}:{}'.format(slice_[0], slice_[1])]
+    output_path = output_path + '/lazy-profile/'
+    # delete previous data and remake directory
+    os.system('rm -rf ' + output_path)
+    os.system('mkdir -p ' + output_path)
+
+    os.putenv('LAZY_WELD_CACHE', 'True')
+    os.putenv('WELD_INPUT_CACHE', 'True')
+
+    for run in range(n_runs):
+        # netcdf
+        run_pipeline(command + ['--eager'], 'eager', output_path, run)
+        run_pipeline(command, 'lazy', output_path, run)
 
 
 # experimet #2
@@ -127,7 +145,10 @@ all_inputs = {'data_0': (4718274, 9007614), 'data_1': (9436548, 18015228), 'data
               'data_6': (37746192, 72060912), 'data_12': (75492384, 144121824), 'data_25': (151009089, 288290079),
               'data_50': (302018178, 576580158), 'data_100': (604060677, 1153206747)}
 number_runs = 5
-all_experiments = {'lazy': run_lazy_experiment, 'cache': run_cache_experiment, 'ir-cache': run_ir_cache_experiment}
+all_experiments = {'lazy': run_lazy_experiment,
+                   'cache': run_cache_experiment,
+                   'ir-cache': run_ir_cache_experiment,
+                   'lazy-profile': run_lazy_simple_experiment}
 
 inputs = {k: all_inputs[k] for k in args.input.split(',')} if args.input is not None else all_inputs
 runs = int(args.runs) if args.runs is not None else number_runs
