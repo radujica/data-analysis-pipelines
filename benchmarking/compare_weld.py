@@ -10,7 +10,7 @@ HOME2 = os.environ.get('HOME2')
 if HOME2 is None:
     raise RuntimeError('Cannot find HOME2 environment variable')
 
-PIPELINE_PATH = '/ufs/radujica/Workspace' + '/data-analysis-pipelines/weld'
+PIPELINE_PATH = HOME2 + '/data-analysis-pipelines/weld'
 
 parser = argparse.ArgumentParser(description='Compare Weld')
 parser.add_argument('--input',
@@ -28,7 +28,7 @@ def run_pipeline(pipeline_command, name, output_path, run):
     output_args = ['--output', output_path + '/output_' + name + '_' + str(run) + '_']
 
     # clear caches; this should work on the cluster
-    # os.system('echo 3 | sudo /usr/bin/tee /proc/sys/vm/drop_caches > /dev/null 2>&1')
+    os.system('echo 3 | sudo /usr/bin/tee /proc/sys/vm/drop_caches > /dev/null 2>&1')
 
     # setup the WeldObject compile-etc output and custom markers
     log = open(output_path + '/compile_' + name + '_' + str(run) + '.txt', 'w')
