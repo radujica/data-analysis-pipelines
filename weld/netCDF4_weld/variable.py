@@ -97,9 +97,11 @@ class Variable(LazyData, LazyResult):
                                                                                    calendar=attributes['calendar'])],
                             dtype=np.str)
 
-        # this is a fail-safe to avoid slicing dimensions
+        # at this point, netcdf is expected to read a subset; however, it reads slightly more at the end, so slice;
+        # self._slice is empty when using eager head
         if self._slice is not None and self.column_name not in self.dimensions:
-            return data[self._slice]
+            len_slice = self._slice.stop - self._slice.start
+            return data[:len_slice]
         else:
             return data
 

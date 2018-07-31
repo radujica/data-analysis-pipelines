@@ -116,7 +116,7 @@ class Variable(LazyData, LazyResult):
         # user wants a slice of rows, so convert to netCDF4 slices for all dimensions
         if isinstance(slice_, slice):
             slice_ = replace_slice_defaults(slice_)
-            self._slice = slice_
+            # self._slice = slice_
             # self.tuple_slices = convert_row_to_nd_slices(slice_, self.shape)
         elif isinstance(slice_, tuple):  # assumed correct
             # self.tuple_slices = slice_

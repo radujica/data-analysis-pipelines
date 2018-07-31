@@ -45,7 +45,7 @@ def run_pipeline(pipeline_command, name, output_path, run):
     # start pipeline
     os.chdir(PIPELINE_PATH)
     pipeline_process = subprocess.Popen(time_command + pipeline_command + output_args,
-                                        stdout=log)
+                                        stdout=log, stderr=subprocess.DEVNULL)
 
     # start profiling
     collectl_path = output_path + '/profile'

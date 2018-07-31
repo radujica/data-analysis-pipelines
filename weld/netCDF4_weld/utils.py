@@ -37,11 +37,7 @@ def convert_row_to_nd_slices(slice_, shape):
         if new_stop > dimension:
             new_stop = dimension
 
-        div = start_rows / cumulative_dimension
-        if start_rows % cumulative_dimension == 0:
-            new_start = div
-        else:
-            new_start = div + 1
+        new_start = start_rows / cumulative_dimension
 
         if new_start > dimension:
             new_start = 0
