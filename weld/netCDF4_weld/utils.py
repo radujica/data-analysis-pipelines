@@ -1,4 +1,4 @@
-# TODO: handle different start and step, not only stop
+# TODO: handle different step too
 def convert_row_to_nd_slices(slice_, shape):
     """ Convert from 1d slice to nd slices
 
@@ -23,6 +23,7 @@ def convert_row_to_nd_slices(slice_, shape):
         raise ValueError('expected a tuple with a single slice')
 
     number_rows = slice_.stop
+    start_rows = slice_.start
     slices_list = []
     cumulative_dimension = 1
 
@@ -36,7 +37,16 @@ def convert_row_to_nd_slices(slice_, shape):
         if new_stop > dimension:
             new_stop = dimension
 
-        slices_list.append(slice(new_stop))
+        div = start_rows / cumulative_dimension
+        if start_rows % cumulative_dimension == 0:
+            new_start = div
+        else:
+            new_start = div + 1
+
+        if new_start > dimension:
+            new_start = 0
+
+        slices_list.append(slice(new_start, new_stop))
         cumulative_dimension *= dimension
 
     return tuple(reversed(slices_list))
